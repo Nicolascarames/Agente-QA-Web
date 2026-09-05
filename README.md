@@ -8,18 +8,28 @@ consola.
 
 - Se abre dentro de la carpeta de tu proyecto y te enseña de verdad cuántas pantallas y localizadores
   tiene el mapa que ya conoce, si tiene tests generados, y si le falta algo para empezar (`init`).
-- Tiene 8 secciones (pestañas). Solo el Dashboard funciona de verdad por ahora; las otras 7 se pueden
-  abrir y cada una te dice, con claridad, qué necesita para funcionar — nunca te enseña datos
-  inventados.
+- **Configuración**: cambia el proveedor de IA, el modelo de cada perfil, el modo de coste y las
+  claves de API sin salir de la web — cada campo dice de dónde viene (variable de entorno, `.env` del
+  proyecto o global) y las claves se ven enmascaradas hasta que pulsas el botón de ver. También puedes
+  probar el proveedor y ejecutar el diagnóstico (`doctor`) desde aquí.
+- **Explorar**: lanza el explorador por cualquiera de sus cuatro puertas (instantánea, grabación a
+  mano, grabación conducida por Claude Code, o el bucle agéntico con un objetivo) y ve la corrida
+  ocurrir: el árbol del mapa creciendo, el coste subiendo, y "Detener" siempre a mano. Puedes
+  escribirle al agente a mitad de corrida para redirigirlo, o lanzar una exploración nueva
+  simplemente escribiendo lo que quieres en lenguaje normal. Si un localizador quedó marcado como
+  ambiguo, lo corriges desde el propio árbol, sin tocar `map.json` a mano.
+- Las otras 4 secciones (Redactar, Generar, Ejecutar, Reparar) y Reports se pueden abrir y cada una te
+  dice, con claridad, qué necesita para funcionar — todavía no existen los agentes que las llenarían,
+  y la web nunca te enseña datos inventados mientras tanto.
 - Los paneles de cada pantalla se pueden mover y redimensionar a tu gusto; la próxima vez que abras
   esa pestaña, siguen donde los dejaste.
 
 ## Qué le falta
 
-- Configurar el proyecto (URL, proveedor de IA, claves) desde la propia web — hoy solo por consola en
-  `Agente-QA-MCP`.
-- Lanzar la exploración y verla ocurrir en vivo, con el coste subiendo y un botón para pararla.
-- Hablarle al agente mientras trabaja y corregir un localizador desde la propia pantalla.
+- Las 4 secciones sin agente (Redactar, Generar, Ejecutar, Reparar) y Reports — necesitan agentes que
+  todavía no existen en el resto del ecosistema.
+- Resolver desde la web los candidatos de localizador que el sistema no pudo distinguir solo (hoy solo
+  se corrige un localizador ya resuelto, no los que quedaron sin decidir).
 
 ## Cómo se arranca
 
