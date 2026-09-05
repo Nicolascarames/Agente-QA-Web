@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { obtenerCorridaActiva, obtenerMapa } from "./api";
 import { BarraLanzamiento } from "./BarraLanzamiento";
 import { Chat } from "./Chat";
+import { DetalleLocalizador } from "./DetalleLocalizador";
 import { Panel } from "./Panel";
 import type { EventoNdjson, MapaCompleto, RespuestaMensaje } from "../shared/tipos";
 
@@ -172,7 +173,7 @@ export function Explorar() {
           titulo="Detalle de la selección"
           disposicionPorDefecto={{ x: 412, y: 16, width: 400, height: 460 }}
         >
-          <DetalleSeleccion pantalla={pantalla} />
+          <DetalleSeleccion pantalla={pantalla} onCorregido={recargarMapa} />
         </Panel>
 
         <Panel
@@ -257,7 +258,7 @@ function ArbolMapa({
   );
 }
 
-function DetalleSeleccion({ pantalla }: { pantalla: Screen | undefined }) {
+function DetalleSeleccion({ pantalla, onCorregido }: { pantalla: Screen | undefined; onCorregido: () => void }) {
   if (!pantalla) return <p className="text-text/50">Selecciona una pantalla del árbol para ver su detalle.</p>;
 
   return (
@@ -268,15 +269,7 @@ function DetalleSeleccion({ pantalla }: { pantalla: Screen | undefined }) {
       </div>
 
       <div>
-        <p className="mb-1 text-text/60">Localizadores ({pantalla.locators.length})</p>
-        <ul className="flex flex-col gap-0.5">
-          {pantalla.locators.map((loc) => (
-            <li key={loc.name}>
-              <span className="font-mono">{loc.name}</span> — {loc.kind}
-              {loc.fragile && <span className="ml-1 text-warning" title={loc.fragile.reason}>(frágil)</span>}
-            </li>
-          ))}
-        </ul>
+        <DetalleLocalizador screenId={pantalla.id} locators={pantalla.locators} onGuardado={onCorregido} />
         {pantalla.ambiguous.length > 0 && (
           <p className="mt-1 text-warning">{pantalla.ambiguous.length} localizador(es) ambiguo(s) sin resolver.</p>
         )}

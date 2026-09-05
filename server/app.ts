@@ -1,10 +1,11 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Fastify, { type FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
 import spawn from "cross-spawn";
 import { leerEstadoProyecto, leerMapaCompleto } from "./estado.js";
+import { corregirLocalizador } from "./mapa.js";
 import { anadirReciente, leerRecientes } from "./proyecto.js";
 import { escribirClave, listarClaves, verClave } from "./claves.js";
 import { escribirConfigGlobal, escribirConfigProyecto, leerConfigGlobal, leerConfigProyecto, verCredencialProyecto } from "./config.js";
@@ -27,11 +28,13 @@ import type {
   ClaveInfo,
   ConfigGlobal,
   ConfigProyectoRespuesta,
+  CuerpoCorreccionLocalizador,
   CuerpoExplorar,
   EstadoCorridaActiva,
   EstadoProyectoActivo,
   MapaCompleto,
   ResultadoCli,
+  RespuestaCorreccionLocalizador,
   RespuestaExplorar,
   RespuestaMensaje,
 } from "../shared/tipos.js";
@@ -46,6 +49,10 @@ const dirActual = path.dirname(fileURLToPath(import.meta.url));
 // Este fichero compila a dist-server/app.js; dist-client/ es hermana de dist-server/
 // en la raíz del repo, no del proyecto que se está inspeccionando.
 const distClient = path.resolve(dirActual, "..", "dist-client");
+// La versión de este repo (no la del proyecto inspeccionado) estampa el `producedBy.version` de
+// cada corrección manual de localizador (Bloque 7). package.json es hermano de dist-server/ en la
+// raíz del repo, igual que dist-client/ arriba.
+const versionAgenteQaWeb = (JSON.parse(readFileSync(path.resolve(dirActual, "..", "package.json"), "utf8")) as { version: string }).version;
 
 interface ResultadoProceso {
   codigo: number | null;
@@ -215,6 +222,24 @@ export function buildApp(opts: AppOptions): FastifyInstance {
   // --- Explorar (Bloque 5): las cuatro puertas al mapeador-mcp, en vivo ------------------
 
   app.get("/api/mapa", async (): Promise<MapaCompleto> => leerMapaCompleto(proyectoActivo));
+
+  // Bloque 7: la única edición inline de toda la web — corrige kind/ts/disambiguatedBy de un
+  // localizador ya existente y lo estampa como `web-manual`. Revalida el AppMap completo antes de
+  // escribir: si la corrección lo deja inválido, no se toca map.json.
+  app.put<{ Body: CuerpoCorreccionLocalizador }>("/api/mapa/localizador", async (req, reply) => {
+    const { screenId, locatorName, kind, ts, disambiguatedBy } = req.body ?? ({} as Partial<CuerpoCorreccionLocalizador>);
+    if (!screenId || !locatorName || !kind || ts === undefined) {
+      await reply.status(400).send({ error: 'faltan "screenId", "locatorName", "kind" o "ts"' });
+      return;
+    }
+    const resultado = await corregirLocalizador(proyectoActivo, { screenId, locatorName, kind, ts, disambiguatedBy }, versionAgenteQaWeb);
+    if (!resultado.ok) {
+      await reply.status(400).send({ error: resultado.motivo });
+      return;
+    }
+    const respuesta: RespuestaCorreccionLocalizador = resultado.locator;
+    await reply.send(respuesta);
+  });
 
   app.get("/api/corridas/activa", (): EstadoCorridaActiva => ({
     activa: hayCorridaActiva(proyectoActivo),

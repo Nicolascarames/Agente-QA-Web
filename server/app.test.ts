@@ -1,13 +1,17 @@
 import { EventEmitter } from "node:events";
 import type { ChildProcess } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { projectPaths } from "agente-qa-contract/project";
 import { buildApp } from "./app.js";
 import { enviarMensaje, hayCorridaActiva } from "./corridas.js";
 import type { ResultadoLocalizarCli } from "./cli.js";
 import type { EstadoProyecto, EstadoProyectoActivo, EventoNdjson, RespuestaMensaje } from "../shared/tipos.js";
+
+const fixtureMapa = path.join(path.dirname(fileURLToPath(import.meta.url)), "__fixtures__", "map-valido.json");
 
 // Solo `hayCorridaActiva`/`enviarMensaje` se espían (call-through por defecto): el resto del
 // módulo (`lanzarCorrida`, `construirArgsCorrida`...) sigue siendo el real, así el camino
@@ -137,6 +141,85 @@ describe("buildApp", () => {
       expect(respuesta.json<{ error: string }>().error).toContain("ya terminó");
       // No debe caer en el camino de "lanzar una corrida nueva": el mensaje no se pierde en silencio.
       expect(spawnFn).not.toHaveBeenCalled();
+      await app.close();
+    });
+  });
+
+  describe("PUT /api/mapa/localizador (Bloque 7)", () => {
+    async function conMapaFixture(): Promise<void> {
+      const paths = projectPaths(proyecto);
+      await mkdir(paths.mapDir, { recursive: true });
+      await writeFile(paths.mapPath, await readFile(fixtureMapa, "utf8"), "utf8");
+    }
+
+    it("escribe map.json con producedBy: {agent: \"web-manual\", ...} y devuelve el localizador corregido", async () => {
+      await conMapaFixture();
+      const app = buildApp({ proyectoInicial: proyecto });
+
+      const respuesta = await app.inject({
+        method: "PUT",
+        url: "/api/mapa/localizador",
+        payload: { screenId: "home", locatorName: "submitButton", kind: "button", ts: "page.getByTestId('enviar')" },
+      });
+
+      expect(respuesta.statusCode).toBe(200);
+      const cuerpo = respuesta.json<{ ts: string; producedBy: { agent: string; version: string; at: string } }>();
+      expect(cuerpo.ts).toBe("page.getByTestId('enviar')");
+      expect(cuerpo.producedBy.agent).toBe("web-manual");
+
+      const paths = projectPaths(proyecto);
+      const mapaEscrito = JSON.parse(await readFile(paths.mapPath, "utf8")) as {
+        screens: { id: string; locators: { name: string; ts: string; producedBy: { agent: string } }[] }[];
+      };
+      const localizador = mapaEscrito.screens[0].locators.find((l) => l.name === "submitButton");
+      expect(localizador?.ts).toBe("page.getByTestId('enviar')");
+      expect(localizador?.producedBy.agent).toBe("web-manual");
+
+      await app.close();
+    });
+
+    it("rechaza un body que deja el AppMap inválido, sin escribir nada a disco", async () => {
+      await conMapaFixture();
+      const app = buildApp({ proyectoInicial: proyecto });
+      const paths = projectPaths(proyecto);
+      const antes = await readFile(paths.mapPath, "utf8");
+
+      const respuesta = await app.inject({
+        method: "PUT",
+        url: "/api/mapa/localizador",
+        payload: { screenId: "home", locatorName: "submitButton", kind: "no-es-un-kind-valido", ts: "page.getByRole('button')" },
+      });
+
+      expect(respuesta.statusCode).toBe(400);
+      expect(respuesta.json<{ error: string }>().error).toBeTruthy();
+      expect(await readFile(paths.mapPath, "utf8")).toBe(antes);
+
+      await app.close();
+    });
+
+    it("rechaza referenciar una pantalla o un localizador que no existe", async () => {
+      await conMapaFixture();
+      const app = buildApp({ proyectoInicial: proyecto });
+      const paths = projectPaths(proyecto);
+      const antes = await readFile(paths.mapPath, "utf8");
+
+      const respuestaPantalla = await app.inject({
+        method: "PUT",
+        url: "/api/mapa/localizador",
+        payload: { screenId: "no-existe", locatorName: "submitButton", kind: "button", ts: "page.getByRole('button')" },
+      });
+      expect(respuestaPantalla.statusCode).toBe(400);
+      expect(respuestaPantalla.json<{ error: string }>().error).toContain("no-existe");
+
+      const respuestaLocalizador = await app.inject({
+        method: "PUT",
+        url: "/api/mapa/localizador",
+        payload: { screenId: "home", locatorName: "no-existe", kind: "button", ts: "page.getByRole('button')" },
+      });
+      expect(respuestaLocalizador.statusCode).toBe(400);
+      expect(respuestaLocalizador.json<{ error: string }>().error).toContain("no-existe");
+
+      expect(await readFile(paths.mapPath, "utf8")).toBe(antes);
       await app.close();
     });
   });

@@ -1,7 +1,7 @@
 // Tipos compartidos entre server/ y src/. Deliberadamente sin dependencias de
 // Node ni del navegador: los importan los dos lados, cada uno con su propio
 // tsconfig (tsconfig.server.json / tsconfig.app.json).
-import type { ScenarioCandidate, Screen } from "agente-qa-contract";
+import type { LocatorEntry, ScenarioCandidate, Screen } from "agente-qa-contract";
 
 /** Cómo de avanzado está un bloque del proyecto QA, derivado del disco en cada petición. */
 export type EstadoBloque = "no existe" | "borrador" | "listo";
@@ -200,3 +200,23 @@ export interface EventoNdjson {
  * Explorar: seleccionar una pantalla exige ver sus localizadores/transiciones de verdad.
  */
 export type MapaCompleto = { existe: false } | { existe: true; screens: Screen[]; scenarios: ScenarioCandidate[] };
+
+// --- Corregir un localizador (Bloque 7): la única edición inline de datos estructurados -------
+
+/**
+ * Cuerpo de `PUT /api/mapa/localizador`. La pantalla y el localizador a corregir se referencian
+ * por sus ids/nombres ya presentes en `map.json` (`screenId` de la pantalla, `locatorName` es el
+ * `name` del localizador dentro de ella — mismo dato que ya usa el árbol como clave de React).
+ * `kind`/`ts`/`disambiguatedBy` son el subconjunto editable de un `LocatorEntry`: el resto del
+ * localizador (nombre, `accessibleName`, `count`, `attributes`, `fragile`...) es de solo lectura.
+ */
+export interface CuerpoCorreccionLocalizador {
+  screenId: string;
+  locatorName: string;
+  kind: LocatorEntry["kind"];
+  ts: string;
+  disambiguatedBy?: string;
+}
+
+/** Respuesta de `PUT /api/mapa/localizador`: el localizador ya corregido y con su `producedBy` estampado. */
+export type RespuestaCorreccionLocalizador = LocatorEntry;

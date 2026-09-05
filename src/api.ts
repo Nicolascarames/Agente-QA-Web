@@ -4,6 +4,7 @@ import type {
   ClaveInfo,
   ConfigGlobal,
   ConfigProyectoRespuesta,
+  CuerpoCorreccionLocalizador,
   CuerpoExplorar,
   EstadoCorridaActiva,
   EstadoProyecto,
@@ -12,6 +13,7 @@ import type {
   Proveedor,
   ResultadoCli,
   ResultadoSubproceso,
+  RespuestaCorreccionLocalizador,
   RespuestaExplorar,
   RespuestaMensaje,
 } from "../shared/tipos";
@@ -158,6 +160,15 @@ export function obtenerMapa(): Promise<MapaCompleto> {
 
 export function obtenerCorridaActiva(): Promise<EstadoCorridaActiva> {
   return pedirJson<EstadoCorridaActiva>("/api/corridas/activa");
+}
+
+// Bloque 7: la única edición inline de toda la web, sobre datos estructurados de map.json.
+export function corregirLocalizador(cuerpo: CuerpoCorreccionLocalizador): Promise<RespuestaCorreccionLocalizador> {
+  return pedirJsonEstricto<RespuestaCorreccionLocalizador>("/api/mapa/localizador", {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(cuerpo),
+  });
 }
 
 export function lanzarExploracion(cuerpo: CuerpoExplorar): Promise<RespuestaExplorar> {
