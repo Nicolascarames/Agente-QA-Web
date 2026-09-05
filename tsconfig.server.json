@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "allowJs": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist-server",
+    "types": ["node"]
+  },
+  "include": [
+    "server",
+    "shared",
+    "eslint.config.js",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "postcss.config.js",
+    "scripts/dev.mjs"
+  ]
+}

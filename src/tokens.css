@@ -1,0 +1,14 @@
+/*
+ * Paleta y tipografía portadas de
+ * `Agente-QA-MCP/inspiraciones/QA Agent (standalone).html`.
+ * Variables CSS, no colores hardcodeados sueltos por los componentes:
+ * tailwind.config.ts las lee para construir las clases de utilidad.
+ */
+:root {
+  --color-bg: #0a0e13;
+  --color-text: #e8edf5;
+  --color-panel: #1f2530;
+  --color-accent: #7fb1ff;
+  --color-warning: #f5a623;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
+}
