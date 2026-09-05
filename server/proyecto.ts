@@ -7,12 +7,17 @@ interface FicheroRecientes {
   proyectos: string[];
 }
 
-function rutaFicheroRecientes(): string {
+/** Carpeta de datos propia de esta web (recientes, ruta del CLI guardada a mano — `server/cli.ts`). */
+export function carpetaDatosApp(): string {
   const appData = process.env.APPDATA;
   if (!appData) {
-    throw new Error("APPDATA no está definido: no se puede persistir la lista de proyectos recientes");
+    throw new Error("APPDATA no está definido: no se puede persistir datos de la aplicación");
   }
-  return path.join(appData, "agente-qa-web", "recientes.json");
+  return path.join(appData, "agente-qa-web");
+}
+
+function rutaFicheroRecientes(): string {
+  return path.join(carpetaDatosApp(), "recientes.json");
 }
 
 /** Resuelve el proyecto activo: `--project <ruta>` del argv gana, si no, la ruta de `npm run dev` (env), si no, cwd. */

@@ -36,3 +36,104 @@ export interface EstadoProyectoActivo {
   actual: string;
   recientes: string[];
 }
+
+// --- Configuración (Bloque 4) --------------------------------------------------------
+// Convención de capas replicada de `agente-qa-mcp/src/config/resolve.ts` (nunca importada):
+// entorno (`process.env`) > proyecto (`.agente-qa/.env`) > global (`.env` de `agente-qa-mcp`).
+
+export type CapaConfig = "entorno" | "proyecto" | "global";
+
+/** Campo siempre resuelto (config.json de proyecto: no tiene capa "entorno"). */
+export interface CampoConfig<T> {
+  valor: T;
+  capa: CapaConfig;
+  /** false solo cuando `capa === "entorno"`: una variable de entorno del sistema no se edita desde la web. */
+  editable: boolean;
+}
+
+/** Campo que puede no tener valor en ninguna capa (claves, provider/model de un perfil sin configurar). */
+export interface CampoConfigVacio<T> {
+  valor: T | null;
+  capa: CapaConfig | null;
+  editable: boolean;
+}
+
+export type EnvironmentApp = "dev" | "test" | "staging" | "production";
+
+/** Como `ClaveInfo`: nunca viaja el valor completo salvo que se pida explícitamente por `/ver`. */
+export interface CampoSecreto {
+  hayValor: boolean;
+  ultimos4: string | null;
+  capa: CapaConfig | null;
+  editable: boolean;
+}
+
+export interface ConfigProyecto {
+  appUrl: CampoConfig<string>;
+  environment: CampoConfig<EnvironmentApp>;
+  limits: {
+    maxIterations: CampoConfig<number>;
+    maxScreens: CampoConfig<number>;
+    maxCostUsd: CampoConfig<number>;
+  };
+  credenciales: {
+    usuario: CampoSecreto;
+    password: CampoSecreto;
+  };
+  /** Contenido crudo de `.agente-qa/memory.json`: sin esquema todavía en agente-qa-mcp. */
+  memoria: unknown;
+}
+
+export type ConfigProyectoRespuesta = { inicializado: false } | { inicializado: true; config: ConfigProyecto };
+
+export type Proveedor = "anthropic" | "openai" | "google" | "groq";
+export type Perfil = "rapido" | "experto";
+export type ModoCoste = "ahorro" | "equilibrado" | "calidad";
+export type Rol = "map-loop" | "run-translate" | "login-fallback" | "web-chat" | "diagnosis";
+
+export interface PerfilConfig {
+  provider: CampoConfigVacio<Proveedor>;
+  model: CampoConfigVacio<string>;
+}
+
+export interface ConfigGlobal {
+  perfiles: Record<Perfil, PerfilConfig>;
+  modoCoste: CampoConfig<ModoCoste>;
+  roles: Record<Rol, CampoConfig<Perfil>>;
+}
+
+export interface ClaveInfo {
+  proveedor: Proveedor;
+  hayClave: boolean;
+  ultimos4: string | null;
+  capa: CapaConfig | null;
+}
+
+export interface ResultadoCli {
+  encontrado: boolean;
+  ruta?: string;
+  origen?: "PATH" | "repo-hermano" | "guardado";
+  diagnostico: string[];
+}
+
+export interface ResultadoSubproceso {
+  codigo: number | null;
+  stdout: string;
+  stderr: string;
+}
+
+/** Cuerpo de `PUT /api/config/proyecto`: solo los campos que cambian, el resto se conserva. */
+export interface CambiosConfigProyecto {
+  appUrl?: string;
+  environment?: EnvironmentApp;
+  limits?: Partial<{ maxIterations: number; maxScreens: number; maxCostUsd: number }>;
+  credenciales?: Partial<{ usuario: string; password: string }>;
+  memoria?: unknown;
+}
+
+/** Cuerpo de `PUT /api/config/global`: solo los campos que cambian, el resto se conserva. */
+export interface CambiosConfigGlobal {
+  perfiles?: Partial<Record<Perfil, Partial<{ provider: Proveedor; model: string }>>>;
+  modoCoste?: ModoCoste;
+  roles?: Partial<Record<Rol, Perfil>>;
+}
