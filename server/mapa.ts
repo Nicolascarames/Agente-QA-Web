@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import { AppMapSchema, LocatorEntrySchema, parseAppMap, type LocatorEntry } from "agente-qa-contract";
 import { projectPaths } from "agente-qa-contract/project";
+import { hayCorridaActiva } from "./corridas.js";
 import type { CuerpoCorreccionLocalizador } from "../shared/tipos.js";
 
 /**
@@ -32,6 +33,13 @@ export async function corregirLocalizador(
   }
   if (camposValidados.data.ts.trim().length === 0) {
     return { ok: false, motivo: 'Localizador inválido: "ts" no puede estar vacío.' };
+  }
+
+  // Hallazgo 2 de la revisión final de rama: el bucle agéntico (Bloque 5) fusiona pantallas nuevas
+  // en `map.json` con lectura-modificación-escritura del fichero entero, igual que esta corrección
+  // manual. Si las dos coinciden, una pisa a la otra en silencio — se rechaza en vez de arriesgarse.
+  if (hayCorridaActiva(rootDir)) {
+    return { ok: false, motivo: "No se puede corregir un localizador mientras hay una corrida en marcha para este proyecto." };
   }
 
   const paths = projectPaths(rootDir);

@@ -18,10 +18,15 @@ export function DetalleLocalizador({
   screenId,
   locators,
   onGuardado,
+  deshabilitado = false,
 }: {
   screenId: string;
   locators: LocatorEntry[];
   onGuardado: () => void;
+  /** `true` mientras hay una corrida en marcha (Explorar.tsx, estado `corriendo`): el servidor
+   * rechaza la corrección en ese caso (hallazgo 2 de la revisión final de rama), así que el botón
+   * se deshabilita también aquí para no dejar que el usuario pierda el cambio en un 400. */
+  deshabilitado?: boolean;
 }) {
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
   const [kind, setKind] = useState<LocatorEntry["kind"]>("button");
@@ -155,12 +160,13 @@ export function DetalleLocalizador({
 
           <button
             type="button"
-            disabled={guardando || ts.trim().length === 0}
+            disabled={guardando || deshabilitado || ts.trim().length === 0}
             onClick={guardar}
             className="self-start rounded-md border border-accent/30 px-2 py-1 text-accent disabled:opacity-50"
           >
             {guardando ? "Guardando…" : "Guardar corrección"}
           </button>
+          {deshabilitado && <p className="text-warning">Hay una corrida en marcha: espera a que termine para corregir un localizador.</p>}
           {mensaje && <p className="text-text/60">{mensaje}</p>}
         </div>
       )}

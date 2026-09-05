@@ -187,6 +187,53 @@ describe("lanzarCorrida", () => {
     proceso.emit("close");
     expect(hayCorridaActiva(proyecto)).toBe(false);
   });
+
+  it("sintetiza operation.error y lo difunde a los suscriptores si el proceso cierra sin ningún evento terminal", async () => {
+    const proyecto = "C:/proyectos/siete";
+    const { proceso } = crearProcesoFake();
+
+    const p1 = lanzarCorrida(proyecto, ["snapshot", "http://x", "--json"], {
+      localizarCli: () => Promise.resolve(LOCALIZADO_OK),
+      spawnFn: vi.fn().mockReturnValue(proceso),
+    });
+    await esperarUnTick();
+    proceso.stdout?.emit("data", Buffer.from(lineaEvento({ runId: "run-7", type: "operation.started" })));
+    await p1;
+
+    const recibidos: EventoNdjson[] = [];
+    suscribirseAEventos(proyecto, (evento) => recibidos.push(evento));
+
+    // Muere sin emitir nunca operation.completed/stopped/error (p.ej. la puerta "instantanea", que
+    // no lee control.stop del stdin, o un crash tras operation.started).
+    proceso.emit("close");
+
+    expect(recibidos).toHaveLength(1);
+    expect(recibidos[0].type).toBe("operation.error");
+    expect(hayCorridaActiva(proyecto)).toBe(false);
+  });
+
+  it("sintetiza operation.stopped en vez de operation.error si el cierre llega tras pedir detenerCorrida", async () => {
+    const proyecto = "C:/proyectos/ocho";
+    const { proceso } = crearProcesoFake();
+
+    const p1 = lanzarCorrida(proyecto, ["snapshot", "http://x", "--json"], {
+      localizarCli: () => Promise.resolve(LOCALIZADO_OK),
+      spawnFn: vi.fn().mockReturnValue(proceso),
+    });
+    await esperarUnTick();
+    proceso.stdout?.emit("data", Buffer.from(lineaEvento({ runId: "run-8", type: "operation.started" })));
+    await p1;
+
+    const recibidos: EventoNdjson[] = [];
+    suscribirseAEventos(proyecto, (evento) => recibidos.push(evento));
+
+    detenerCorrida(proyecto);
+    // El proceso "obedece" pero cierra sin emitir ningún evento terminal por stdout antes de morir.
+    proceso.emit("close");
+
+    expect(recibidos).toHaveLength(1);
+    expect(recibidos[0].type).toBe("operation.stopped");
+  });
 });
 
 describe("construirArgsCorrida", () => {

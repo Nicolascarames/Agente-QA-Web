@@ -173,7 +173,7 @@ export function Explorar() {
           titulo="Detalle de la selección"
           disposicionPorDefecto={{ x: 412, y: 16, width: 400, height: 460 }}
         >
-          <DetalleSeleccion pantalla={pantalla} onCorregido={recargarMapa} />
+          <DetalleSeleccion pantalla={pantalla} onCorregido={recargarMapa} corriendo={corriendo} />
         </Panel>
 
         <Panel
@@ -258,7 +258,15 @@ function ArbolMapa({
   );
 }
 
-function DetalleSeleccion({ pantalla, onCorregido }: { pantalla: Screen | undefined; onCorregido: () => void }) {
+function DetalleSeleccion({
+  pantalla,
+  onCorregido,
+  corriendo,
+}: {
+  pantalla: Screen | undefined;
+  onCorregido: () => void;
+  corriendo: boolean;
+}) {
   if (!pantalla) return <p className="text-text/50">Selecciona una pantalla del árbol para ver su detalle.</p>;
 
   return (
@@ -269,7 +277,7 @@ function DetalleSeleccion({ pantalla, onCorregido }: { pantalla: Screen | undefi
       </div>
 
       <div>
-        <DetalleLocalizador screenId={pantalla.id} locators={pantalla.locators} onGuardado={onCorregido} />
+        <DetalleLocalizador screenId={pantalla.id} locators={pantalla.locators} onGuardado={onCorregido} deshabilitado={corriendo} />
         {pantalla.ambiguous.length > 0 && (
           <p className="mt-1 text-warning">{pantalla.ambiguous.length} localizador(es) ambiguo(s) sin resolver.</p>
         )}

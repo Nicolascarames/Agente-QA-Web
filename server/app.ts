@@ -20,6 +20,7 @@ import {
   lanzarCorrida,
   runIdActivo,
   suscribirseAEventos,
+  TIPOS_FIN_CORRIDA,
   type OpcionesCorridas,
 } from "./corridas.js";
 import type {
@@ -329,8 +330,16 @@ export function buildApp(opts: AppOptions): FastifyInstance {
       reply.raw.write(`data: ${JSON.stringify(evento)}\n\n`);
     }
 
+    // Hallazgo 3 de la revisión final de rama: cuando la corrida suscrita termina (real o
+    // sintéticamente, ver `corridas.ts`), esta conexión se cierra explícitamente en vez de
+    // quedarse muda para siempre — así la lógica de reconexión de `Explorar.tsx`
+    // (`intentoConexion`) se dispara sola y engancha con la corrida siguiente cuando aparezca.
     const cancelar = suscribirseAEventos(proyectoActivo, (evento) => {
       reply.raw.write(`data: ${JSON.stringify(evento)}\n\n`);
+      if (TIPOS_FIN_CORRIDA.has(evento.type)) {
+        cancelar?.();
+        reply.raw.end();
+      }
     });
     req.raw.on("close", () => {
       cancelar?.();

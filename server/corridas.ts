@@ -32,6 +32,12 @@ interface CorridaActiva {
   proceso: ChildProcess | null;
   historial: EventoNdjson[];
   suscriptores: Set<(evento: EventoNdjson) => void>;
+  /**
+   * `true` desde que `detenerCorrida` manda `control.stop`: si el proceso cierra después sin haber
+   * emitido su propio evento terminal, el cierre se sintetiza como `operation.stopped` en vez de
+   * `operation.error` (revisión final de rama, hallazgo 1).
+   */
+  detencionSolicitada: boolean;
 }
 
 const corridasPorProyecto = new Map<string, CorridaActiva>();
@@ -62,7 +68,9 @@ export function suscribirseAEventos(proyecto: string, cb: (evento: EventoNdjson)
   return () => corrida.suscriptores.delete(cb);
 }
 
-const TIPOS_FIN_CORRIDA = new Set(["operation.completed", "operation.stopped", "operation.error"]);
+/** Exportado: `app.ts` lo reutiliza en `GET /api/eventos` para cerrar las conexiones SSE de una
+ * corrida ya terminada (revisión final de rama, hallazgo 3) en vez de duplicar el catálogo. */
+export const TIPOS_FIN_CORRIDA = new Set(["operation.completed", "operation.stopped", "operation.error"]);
 
 export type ResultadoLanzarCorrida = { ok: true; runId: string } | { ok: false; motivo: string };
 
@@ -77,7 +85,7 @@ export async function lanzarCorrida(proyecto: string, args: string[], opciones: 
     return { ok: false, motivo: "Ya hay una corrida activa para este proyecto. Detenla antes de lanzar otra." };
   }
 
-  const corrida: CorridaActiva = { runId: "", proceso: null, historial: [], suscriptores: new Set() };
+  const corrida: CorridaActiva = { runId: "", proceso: null, historial: [], suscriptores: new Set(), detencionSolicitada: false };
   corridasPorProyecto.set(clave, corrida);
 
   const localizar = opciones.localizarCli ?? localizarCliReal;
@@ -94,6 +102,11 @@ export async function lanzarCorrida(proyecto: string, args: string[], opciones: 
   return new Promise((resolve) => {
     let resuelto = false;
     let bufer = "";
+    // Hallazgo 1 de la revisión final de rama: si el proceso cierra sin haber emitido ya un
+    // evento terminal real (p.ej. la puerta "instantanea", cuyo `snapshot.ts` no lee `control.stop`
+    // del stdin), esta web sintetiza uno propio para que los suscriptores SSE (y por tanto
+    // `Explorar.tsx`) se enteren de que la corrida acabó en vez de quedarse "corriendo" para siempre.
+    let finReal = false;
 
     function limpiar(): void {
       if (corridasPorProyecto.get(clave) === corrida) {
@@ -138,6 +151,7 @@ export async function lanzarCorrida(proyecto: string, args: string[], opciones: 
 
         difundir(evento);
         if (TIPOS_FIN_CORRIDA.has(evento.type)) {
+          finReal = true;
           limpiar();
         }
       }
@@ -148,6 +162,21 @@ export async function lanzarCorrida(proyecto: string, args: string[], opciones: 
     });
 
     proceso.on("close", () => {
+      if (!finReal) {
+        // El proceso murió (crash o fin de la puerta) sin pasar por el evento terminal de arriba:
+        // se sintetiza uno y se difunde a los suscriptores ANTES de limpiar el estado, para que
+        // nadie se quede "corriendo" para siempre esperando un evento que nunca va a llegar.
+        difundir({
+          runId: corrida.runId,
+          ts: new Date().toISOString(),
+          agent: "web",
+          type: corrida.detencionSolicitada ? "operation.stopped" : "operation.error",
+          data: corrida.detencionSolicitada
+            ? { motivo: "Se pidió detener la corrida y el proceso terminó, pero no confirmó su estado final." }
+            : { motivo: "El proceso terminó sin reportar su estado final." },
+        });
+        finReal = true;
+      }
       resolverError("El proceso terminó sin emitir ningún evento.");
       limpiar();
     });
@@ -182,6 +211,7 @@ export function detenerCorrida(proyecto: string): ResultadoDetenerCorrida {
     return { ok: false, motivo: "No hay ninguna corrida activa para este proyecto." };
   }
 
+  corrida.detencionSolicitada = true;
   escribirComando(proyecto, { type: "control.stop" });
 
   const proceso = corrida.proceso;

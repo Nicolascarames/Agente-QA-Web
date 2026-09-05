@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { projectPaths } from "agente-qa-contract/project";
 import { buildApp } from "./app.js";
-import { enviarMensaje, hayCorridaActiva } from "./corridas.js";
+import { enviarMensaje, hayCorridaActiva, lanzarCorrida } from "./corridas.js";
 import type { ResultadoLocalizarCli } from "./cli.js";
 import type { EstadoProyecto, EstadoProyectoActivo, EventoNdjson, RespuestaMensaje } from "../shared/tipos.js";
 
@@ -40,6 +40,12 @@ function crearProcesoFake() {
 function lineaEvento(evento: Partial<EventoNdjson> & { runId: string; type: string }): string {
   const completo: EventoNdjson = { ts: new Date().toISOString(), agent: "mapeador-mcp", data: {}, ...evento };
   return `${JSON.stringify(completo)}\n`;
+}
+
+/** Mismo motivo que en `corridas.test.ts`: `lanzarCorrida` engancha el listener de `stdout`
+ * después de un `await` interno, hay que dejar pasar un tick de verdad antes de emitir datos. */
+function esperarUnTick(): Promise<void> {
+  return new Promise((resolve) => setImmediate(resolve));
 }
 
 describe("buildApp", () => {
@@ -141,6 +147,32 @@ describe("buildApp", () => {
       expect(respuesta.json<{ error: string }>().error).toContain("ya terminó");
       // No debe caer en el camino de "lanzar una corrida nueva": el mensaje no se pierde en silencio.
       expect(spawnFn).not.toHaveBeenCalled();
+      await app.close();
+    });
+  });
+
+  describe("GET /api/eventos", () => {
+    it("cierra la conexion SSE cuando la corrida suscrita termina, aunque sea con un evento sintetico (hallazgo 1 y 3)", async () => {
+      const proceso = crearProcesoFake();
+      const p1 = lanzarCorrida(proyecto, ["snapshot", "http://x", "--json"], {
+        localizarCli: () => Promise.resolve(LOCALIZADO_OK),
+        spawnFn: vi.fn().mockReturnValue(proceso),
+      });
+      await esperarUnTick();
+      proceso.stdout?.emit("data", Buffer.from(lineaEvento({ runId: "run-eventos-1", type: "operation.started" })));
+      await p1;
+
+      const app = buildApp({ proyectoInicial: proyecto });
+      const inyeccion = app.inject({ method: "GET", url: "/api/eventos" });
+      await esperarUnTick();
+
+      // El proceso muere sin emitir ningún evento terminal por stdout (p.ej. la puerta
+      // "instantanea", que no lee control.stop): esta web sintetiza uno y, al difundirlo, debe
+      // cerrar la conexión SSE en vez de dejarla colgada para siempre.
+      proceso.emit("close");
+
+      const respuesta = await inyeccion;
+      expect(respuesta.body).toContain("operation.error");
       await app.close();
     });
   });
