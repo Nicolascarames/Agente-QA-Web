@@ -3,7 +3,7 @@ import type { Dirent } from "node:fs";
 import path from "node:path";
 import { parseAppMap } from "agente-qa-contract";
 import { projectPaths } from "agente-qa-contract/project";
-import type { EstadoFicheros, EstadoMapa, EstadoProyecto } from "../shared/tipos.js";
+import type { EstadoFicheros, EstadoMapa, EstadoProyecto, MapaCompleto } from "../shared/tipos.js";
 
 async function existeDirectorio(ruta: string): Promise<boolean> {
   try {
@@ -67,6 +67,34 @@ async function leerEstadoFicheros(dir: string, extension?: string): Promise<Esta
   }
   const ficheros = await contarFicheros(dir, extension);
   return { estado: ficheros > 0 ? "listo" : "borrador", ficheros };
+}
+
+/**
+ * Pantallas y candidatos de escenario tal como los valida `parseAppMap`, para el árbol/detalle de
+ * Explorar (Bloque 5) — `leerEstadoMapa` de arriba solo cuenta, no basta para pintar localizadores
+ * ni transiciones de una pantalla seleccionada. Mismo parser del contrato, nunca JSON a mano.
+ */
+export async function leerMapaCompleto(rootDir: string): Promise<MapaCompleto> {
+  const paths = projectPaths(rootDir);
+  let contenido: string;
+  try {
+    contenido = await fs.readFile(paths.mapPath, "utf8");
+  } catch {
+    return { existe: false };
+  }
+
+  let json: unknown;
+  try {
+    json = JSON.parse(contenido);
+  } catch {
+    return { existe: false };
+  }
+
+  const resultado = parseAppMap(json);
+  if (!resultado.ok) {
+    return { existe: false };
+  }
+  return { existe: true, screens: resultado.map.screens, scenarios: resultado.map.scenarios };
 }
 
 /** Deriva el estado del proyecto activo del disco, en cada llamada: nada se cachea. */

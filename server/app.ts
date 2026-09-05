@@ -4,20 +4,25 @@ import { fileURLToPath } from "node:url";
 import Fastify, { type FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
 import spawn from "cross-spawn";
-import { leerEstadoProyecto } from "./estado.js";
+import { leerEstadoProyecto, leerMapaCompleto } from "./estado.js";
 import { anadirReciente, leerRecientes } from "./proyecto.js";
 import { escribirClave, listarClaves, verClave } from "./claves.js";
 import { escribirConfigGlobal, escribirConfigProyecto, leerConfigGlobal, leerConfigProyecto, verCredencialProyecto } from "./config.js";
 import { aResultadoCli, ejecutarCli, localizarCli } from "./cli.js";
 import { esProveedor } from "./entornoMcp.js";
+import { construirArgsCorrida, detenerCorrida, hayCorridaActiva, historialActivo, lanzarCorrida, runIdActivo, suscribirseAEventos } from "./corridas.js";
 import type {
   CambiosConfigGlobal,
   CambiosConfigProyecto,
   ClaveInfo,
   ConfigGlobal,
   ConfigProyectoRespuesta,
+  CuerpoExplorar,
+  EstadoCorridaActiva,
   EstadoProyectoActivo,
+  MapaCompleto,
   ResultadoCli,
+  RespuestaExplorar,
 } from "../shared/tipos.js";
 
 export interface AppOptions {
@@ -191,6 +196,68 @@ export function buildApp(opts: AppOptions): FastifyInstance {
     if (req.body?.profile) args.push("--profile", req.body.profile);
     const resultado = await ejecutarCli(args, proyectoActivo);
     await reply.status(resultado.codigo === 0 ? 200 : 500).send(resultado);
+  });
+
+  // --- Explorar (Bloque 5): las cuatro puertas al mapeador-mcp, en vivo ------------------
+
+  app.get("/api/mapa", async (): Promise<MapaCompleto> => leerMapaCompleto(proyectoActivo));
+
+  app.get("/api/corridas/activa", (): EstadoCorridaActiva => ({
+    activa: hayCorridaActiva(proyectoActivo),
+    runId: runIdActivo(proyectoActivo),
+  }));
+
+  app.post<{ Body: CuerpoExplorar }>("/api/explorar", async (req, reply) => {
+    const args = construirArgsCorrida(req.body ?? { puerta: "instantanea" });
+    if (!args.ok) {
+      await reply.status(400).send({ error: args.motivo });
+      return;
+    }
+    const resultado = await lanzarCorrida(proyectoActivo, args.args);
+    if (!resultado.ok) {
+      await reply.status(409).send({ error: resultado.motivo });
+      return;
+    }
+    const respuesta: RespuestaExplorar = { runId: resultado.runId };
+    await reply.send(respuesta);
+  });
+
+  app.post("/api/detener", async (_req, reply) => {
+    const resultado = detenerCorrida(proyectoActivo);
+    if (!resultado.ok) {
+      await reply.status(409).send({ error: resultado.motivo });
+      return;
+    }
+    await reply.send({ ok: true });
+  });
+
+  // SSE: reenvía el historial acumulado de la corrida activa y luego sigue en vivo — así
+  // recargar el navegador con una corrida en marcha no pierde lo anterior. Sin corrida activa,
+  // cierra la conexión con un mensaje claro en vez de dejarla colgada.
+  app.get("/api/eventos", (req, reply) => {
+    reply.hijack();
+    reply.raw.writeHead(200, {
+      "content-type": "text/event-stream",
+      "cache-control": "no-cache",
+      connection: "keep-alive",
+    });
+
+    if (!hayCorridaActiva(proyectoActivo)) {
+      reply.raw.write(`event: sin-corrida\ndata: ${JSON.stringify({ motivo: "No hay ninguna corrida activa para este proyecto." })}\n\n`);
+      reply.raw.end();
+      return;
+    }
+
+    for (const evento of historialActivo(proyectoActivo)) {
+      reply.raw.write(`data: ${JSON.stringify(evento)}\n\n`);
+    }
+
+    const cancelar = suscribirseAEventos(proyectoActivo, (evento) => {
+      reply.raw.write(`data: ${JSON.stringify(evento)}\n\n`);
+    });
+    req.raw.on("close", () => {
+      cancelar?.();
+    });
   });
 
   if (existsSync(distClient)) {

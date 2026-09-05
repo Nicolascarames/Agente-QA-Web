@@ -4,11 +4,15 @@ import type {
   ClaveInfo,
   ConfigGlobal,
   ConfigProyectoRespuesta,
+  CuerpoExplorar,
+  EstadoCorridaActiva,
   EstadoProyecto,
   EstadoProyectoActivo,
+  MapaCompleto,
   Proveedor,
   ResultadoCli,
   ResultadoSubproceso,
+  RespuestaExplorar,
 } from "../shared/tipos";
 
 /** true si la respuesta es el 501 documentado de /api/actividad; false si es cualquier otro fallo. */
@@ -143,4 +147,26 @@ export function probarProveedor(body: { provider?: string; model?: string; profi
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
+}
+
+// --- Explorar (Bloque 5): las cuatro puertas al mapeador-mcp, en vivo -----------------
+
+export function obtenerMapa(): Promise<MapaCompleto> {
+  return pedirJson<MapaCompleto>("/api/mapa");
+}
+
+export function obtenerCorridaActiva(): Promise<EstadoCorridaActiva> {
+  return pedirJson<EstadoCorridaActiva>("/api/corridas/activa");
+}
+
+export function lanzarExploracion(cuerpo: CuerpoExplorar): Promise<RespuestaExplorar> {
+  return pedirJsonEstricto<RespuestaExplorar>("/api/explorar", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(cuerpo),
+  });
+}
+
+export function detenerExploracion(): Promise<{ ok: true }> {
+  return pedirJsonEstricto<{ ok: true }>("/api/detener", { method: "POST" });
 }
