@@ -154,6 +154,22 @@ export async function lanzarCorrida(proyecto: string, args: string[], opciones: 
   });
 }
 
+type ResultadoEscribirComando = { ok: true } | { ok: false; motivo: string };
+
+/**
+ * Escribe un comando NDJSON en el stdin del subproceso activo (canal del Bloque 2 de
+ * Agente-QA-MCP): `detenerCorrida` lo usa para `control.stop`, `enviarMensaje` para
+ * `user.message`. `ok: false` si no hay corrida activa para el proyecto — nunca lanza.
+ */
+function escribirComando(proyecto: string, comando: object): ResultadoEscribirComando {
+  const corrida = corridasPorProyecto.get(claveProyecto(proyecto));
+  if (!corrida?.proceso) {
+    return { ok: false, motivo: "No hay ninguna corrida activa para este proyecto." };
+  }
+  corrida.proceso.stdin?.write(`${JSON.stringify(comando)}\n`);
+  return { ok: true };
+}
+
 export type ResultadoDetenerCorrida = { ok: true } | { ok: false; motivo: string };
 
 /**
@@ -166,7 +182,7 @@ export function detenerCorrida(proyecto: string): ResultadoDetenerCorrida {
     return { ok: false, motivo: "No hay ninguna corrida activa para este proyecto." };
   }
 
-  corrida.proceso.stdin?.write(`${JSON.stringify({ type: "control.stop" })}\n`);
+  escribirComando(proyecto, { type: "control.stop" });
 
   const proceso = corrida.proceso;
   const temporizador = setTimeout(() => {
@@ -177,6 +193,17 @@ export function detenerCorrida(proyecto: string): ResultadoDetenerCorrida {
   });
 
   return { ok: true };
+}
+
+export type ResultadoEnviarMensaje = { ok: true } | { ok: false; motivo: string };
+
+/**
+ * Manda `user.message` por el stdin de la corrida activa (mismo canal que `control.stop`): el
+ * bucle agéntico lo recoge en su siguiente turno. `ok: false` con motivo explícito si no hay
+ * corrida activa — la ruta que llama a esto decide entonces si lanza una nueva (Bloque 6).
+ */
+export function enviarMensaje(proyecto: string, texto: string): ResultadoEnviarMensaje {
+  return escribirComando(proyecto, { type: "user.message", text: texto });
 }
 
 /** Traduce puerta + ámbito + objetivo a los argumentos reales del CLI, según la tabla de la spec. */
@@ -210,6 +237,12 @@ export function construirArgsCorrida(cuerpo: CuerpoExplorar): { ok: true; args: 
       // ambito === "objetivo"
       if (!cuerpo.objetivo) return { ok: false, motivo: 'El ámbito "objetivo" necesita "objetivo".' };
       return { ok: true, args: ["map", "--goal", cuerpo.objetivo, "--json"] };
+    }
+    case "run": {
+      // Puerta del Bloque 6: `run "<texto>" --json` (ver `agente-qa-mcp/src/cli/commands/run.ts`).
+      // Sin `--url` ni el resto de flags opcionales: `run` cae a la URL de `config.json` si falta.
+      if (!cuerpo.texto) return { ok: false, motivo: 'La puerta "run" necesita "texto".' };
+      return { ok: true, args: ["run", cuerpo.texto, "--json"] };
     }
   }
 }

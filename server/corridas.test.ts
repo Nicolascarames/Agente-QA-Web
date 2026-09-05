@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   construirArgsCorrida,
   detenerCorrida,
+  enviarMensaje,
   hayCorridaActiva,
   historialActivo,
   lanzarCorrida,
@@ -145,6 +146,31 @@ describe("lanzarCorrida", () => {
     expect(hayCorridaActiva(proyecto)).toBe(false);
   });
 
+  it("enviarMensaje escribe user.message en el stdin de la corrida activa", async () => {
+    const proyecto = "C:/proyectos/seis";
+    const { proceso, escribirStdin } = crearProcesoFake();
+
+    const p1 = lanzarCorrida(proyecto, ["map", "--goal", "explora", "--json"], {
+      localizarCli: () => Promise.resolve(LOCALIZADO_OK),
+      spawnFn: vi.fn().mockReturnValue(proceso),
+    });
+    await esperarUnTick();
+    proceso.stdout?.emit("data", Buffer.from(lineaEvento({ runId: "run-6", type: "operation.started" })));
+    await p1;
+
+    const resultado = enviarMensaje(proyecto, "deja eso, ve al carrito");
+    expect(resultado.ok).toBe(true);
+    expect(escribirStdin).toHaveBeenCalledWith(`${JSON.stringify({ type: "user.message", text: "deja eso, ve al carrito" })}\n`);
+
+    proceso.stdout?.emit("data", Buffer.from(lineaEvento({ runId: "run-6", type: "operation.completed" })));
+  });
+
+  it("enviarMensaje sin corrida activa devuelve una señal clara, no una excepción", () => {
+    const resultado = enviarMensaje("C:/proyectos/sin-corrida", "hola");
+    expect(resultado.ok).toBe(false);
+    if (!resultado.ok) expect(resultado.motivo).toContain("No hay ninguna corrida activa");
+  });
+
   it("también limpia el estado si el proceso cierra sin un evento de fin explícito", async () => {
     const proyecto = "C:/proyectos/cinco";
     const { proceso } = crearProcesoFake();
@@ -190,6 +216,17 @@ describe("construirArgsCorrida", () => {
     expect(construirArgsCorrida({ puerta: "grabacion-conducida", url: "http://x", objetivo: "login" })).toEqual({
       ok: true,
       args: ["record", "http://x", "--auto", "login", "--json"],
+    });
+  });
+
+  it("run necesita texto y arma la puerta del Bloque 6", () => {
+    const sinTexto = construirArgsCorrida({ puerta: "run" });
+    expect(sinTexto.ok).toBe(false);
+    if (!sinTexto.ok) expect(sinTexto.motivo).toContain("texto");
+
+    expect(construirArgsCorrida({ puerta: "run", texto: "explora el login" })).toEqual({
+      ok: true,
+      args: ["run", "explora el login", "--json"],
     });
   });
 });

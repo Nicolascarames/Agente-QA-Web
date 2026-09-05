@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { obtenerCorridaActiva, obtenerMapa } from "./api";
 import { BarraLanzamiento } from "./BarraLanzamiento";
+import { Chat } from "./Chat";
 import { Panel } from "./Panel";
-import type { EventoNdjson, MapaCompleto } from "../shared/tipos";
+import type { EventoNdjson, MapaCompleto, RespuestaMensaje } from "../shared/tipos";
 
 // Tipos que marcan el ciclo de vida de la operación (catálogo del Bloque 1 de Agente-QA-MCP):
 // al verlos, la barra de lanzamiento vuelve a "Lanzar" y el registro sabe que la corrida acabó.
@@ -28,6 +29,29 @@ export function crearCargaSinCarreras<T>(cargar: () => Promise<T>, aplicar: (val
       if (token === ultimoToken) aplicar(valor);
     });
   };
+}
+
+// Bloque 6: `POST /api/mensaje` devuelve `{enviado: true}` si redirigió una corrida ya en marcha,
+// o `{runId}` si no había ninguna y esto lanzó una nueva (misma puerta "run" que la barra de
+// arriba). Con corrida activa NO se pinta un eco local: el CLI vacía el `user.message` en su
+// siguiente turno y emite su propio `chat.message` (origen "usuario") por el SSE ya abierto, así
+// que pintarlo aquí también lo duplicaría en el registro (ver revisión del Bloque 6). Sin corrida
+// activa no hay ese reflejo del CLI (es el arranque de una corrida nueva), así que ahí sí hace
+// falta el eco local. Función pura para poder testearla sin montar el componente (sin jsdom).
+export function eventosTrasEnviarMensaje(
+  anteriores: EventoNdjson[],
+  texto: string,
+  resultado: RespuestaMensaje
+): EventoNdjson[] {
+  if (!("runId" in resultado)) return anteriores;
+  const eco: EventoNdjson = {
+    runId: resultado.runId,
+    ts: new Date().toISOString(),
+    agent: "web",
+    type: "chat.message",
+    data: { text: texto, origen: "usuario" },
+  };
+  return [...anteriores, eco];
 }
 
 export function Explorar() {
@@ -97,6 +121,15 @@ export function Explorar() {
     setUnidadesSeleccionadas((anteriores) => (anteriores.includes(id) ? anteriores.filter((u) => u !== id) : [...anteriores, id]));
   }, []);
 
+  const alHablar = useCallback((texto: string, resultado: RespuestaMensaje) => {
+    setEventos((anteriores) => eventosTrasEnviarMensaje(anteriores, texto, resultado));
+    if ("runId" in resultado) {
+      // No había corrida activa: esto lanzó una corrida nueva, mismo efecto que "Lanzar".
+      setCorriendo(true);
+      setIntentoConexion((n) => n + 1);
+    }
+  }, []);
+
   const pantalla = useMemo(
     () => (mapa.existe ? mapa.screens.find((s) => s.id === pantallaSeleccionada) : undefined),
     [mapa, pantallaSeleccionada]
@@ -149,6 +182,15 @@ export function Explorar() {
           disposicionPorDefecto={{ x: 828, y: 16, width: 420, height: 460 }}
         >
           <RegistroEnVivo eventos={eventos} />
+        </Panel>
+
+        <Panel
+          tabId="explorar"
+          panelId="chat"
+          titulo="Hablar con el agente"
+          disposicionPorDefecto={{ x: 828, y: 492, width: 420, height: 160 }}
+        >
+          <Chat onEnviado={alHablar} />
         </Panel>
       </div>
     </div>

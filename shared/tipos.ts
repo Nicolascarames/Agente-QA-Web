@@ -142,23 +142,35 @@ export interface CambiosConfigGlobal {
 // --- Explorar (Bloque 5): las cuatro puertas al mapeador-mcp, en vivo -----------------
 
 /** Las cuatro puertas de la tabla de la spec, siempre visibles en `BarraLanzamiento`. */
-export type Puerta = "instantanea" | "grabacion-humana" | "grabacion-conducida" | "bucle-agentico";
+export type Puerta = "instantanea" | "grabacion-humana" | "grabacion-conducida" | "bucle-agentico" | "run";
 
 /** Ámbito de la exploración: solo lo llevan las puertas con objetivo (conducida y bucle agéntico). */
 export type AmbitoExploracion = "todo" | "seleccion" | "objetivo";
 
-/** Cuerpo de `POST /api/explorar`. `unidades` son ids de pantallas ya conocidas (ámbito "seleccion"). */
+/**
+ * Cuerpo de `POST /api/explorar`. `unidades` son ids de pantallas ya conocidas (ámbito "seleccion").
+ * `texto` es propio de la puerta "run" (Bloque 6): lenguaje libre, `POST /api/mensaje` la usa
+ * cuando no hay corrida activa para redirigir a lanzar una nueva.
+ */
 export interface CuerpoExplorar {
   puerta: Puerta;
   ambito?: AmbitoExploracion;
   objetivo?: string;
   url?: string;
   unidades?: string[];
+  texto?: string;
 }
 
 export interface RespuestaExplorar {
   runId: string;
 }
+
+/**
+ * `POST /api/mensaje` (Bloque 6): si había corrida activa, confirma el envío por stdin (`enviado:
+ * true`); si no la había, se comporta como `/api/explorar` con la puerta "run" y devuelve el
+ * `runId` de la corrida nueva.
+ */
+export type RespuestaMensaje = { enviado: true } | { runId: string };
 
 /** Para que el frontend sepa, al cargar la pestaña, si ya hay una corrida en marcha antes de que llegue el primer evento SSE. */
 export interface EstadoCorridaActiva {

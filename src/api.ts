@@ -13,6 +13,7 @@ import type {
   ResultadoCli,
   ResultadoSubproceso,
   RespuestaExplorar,
+  RespuestaMensaje,
 } from "../shared/tipos";
 
 /** true si la respuesta es el 501 documentado de /api/actividad; false si es cualquier otro fallo. */
@@ -169,4 +170,14 @@ export function lanzarExploracion(cuerpo: CuerpoExplorar): Promise<RespuestaExpl
 
 export function detenerExploracion(): Promise<{ ok: true }> {
   return pedirJsonEstricto<{ ok: true }>("/api/detener", { method: "POST" });
+}
+
+// --- Chat (Bloque 6): hablarle al agente mientras trabaja, o lanzar en lenguaje libre ---------
+
+export function enviarMensaje(texto: string): Promise<RespuestaMensaje> {
+  return pedirJsonEstricto<RespuestaMensaje>("/api/mensaje", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ texto }),
+  });
 }

@@ -10,7 +10,17 @@ import { escribirClave, listarClaves, verClave } from "./claves.js";
 import { escribirConfigGlobal, escribirConfigProyecto, leerConfigGlobal, leerConfigProyecto, verCredencialProyecto } from "./config.js";
 import { aResultadoCli, ejecutarCli, localizarCli } from "./cli.js";
 import { esProveedor } from "./entornoMcp.js";
-import { construirArgsCorrida, detenerCorrida, hayCorridaActiva, historialActivo, lanzarCorrida, runIdActivo, suscribirseAEventos } from "./corridas.js";
+import {
+  construirArgsCorrida,
+  detenerCorrida,
+  enviarMensaje,
+  hayCorridaActiva,
+  historialActivo,
+  lanzarCorrida,
+  runIdActivo,
+  suscribirseAEventos,
+  type OpcionesCorridas,
+} from "./corridas.js";
 import type {
   CambiosConfigGlobal,
   CambiosConfigProyecto,
@@ -23,10 +33,13 @@ import type {
   MapaCompleto,
   ResultadoCli,
   RespuestaExplorar,
+  RespuestaMensaje,
 } from "../shared/tipos.js";
 
 export interface AppOptions {
   proyectoInicial: string;
+  /** Seam de test: evita spawnear el CLI real al lanzar una corrida (`/api/explorar`, `/api/mensaje`). */
+  opcionesCorridas?: OpcionesCorridas;
 }
 
 const dirActual = path.dirname(fileURLToPath(import.meta.url));
@@ -58,6 +71,7 @@ function ejecutar(comando: string, args: string[], cwd: string): Promise<Resulta
 export function buildApp(opts: AppOptions): FastifyInstance {
   const app = Fastify({ logger: true });
   let proyectoActivo = opts.proyectoInicial;
+  const opcionesCorridas = opts.opcionesCorridas ?? {};
 
   // El estado no se guarda: se deriva del disco en cada petición.
   app.get("/api/estado", async () => leerEstadoProyecto(proyectoActivo));
@@ -213,7 +227,7 @@ export function buildApp(opts: AppOptions): FastifyInstance {
       await reply.status(400).send({ error: args.motivo });
       return;
     }
-    const resultado = await lanzarCorrida(proyectoActivo, args.args);
+    const resultado = await lanzarCorrida(proyectoActivo, args.args, opcionesCorridas);
     if (!resultado.ok) {
       await reply.status(409).send({ error: resultado.motivo });
       return;
@@ -229,6 +243,44 @@ export function buildApp(opts: AppOptions): FastifyInstance {
       return;
     }
     await reply.send({ ok: true });
+  });
+
+  // POST /api/mensaje (Bloque 6): con corrida activa, redirige el turno en marcha; sin ella, es
+  // una puerta de lanzamiento más ("run" con el texto libre, misma vía que /api/explorar).
+  app.post<{ Body: { texto?: string } }>("/api/mensaje", async (req, reply) => {
+    const texto = req.body?.texto?.trim();
+    if (!texto) {
+      await reply.status(400).send({ error: 'falta "texto"' });
+      return;
+    }
+
+    // La comprobación se hace ANTES de escribir: si había corrida activa en este instante pero
+    // termina justo antes de que `enviarMensaje` llegue a escribir en su stdin (carrera rara pero
+    // posible), es un error a contar, no una señal de "lanza una corrida nueva" — el usuario
+    // quería hablarle a la que ya corría, no abrir otra en su lugar.
+    if (hayCorridaActiva(proyectoActivo)) {
+      const resultado = enviarMensaje(proyectoActivo, texto);
+      if (!resultado.ok) {
+        await reply.status(409).send({ error: `La corrida ya terminó, no se pudo enviar el mensaje: ${resultado.motivo}` });
+        return;
+      }
+      const respuesta: RespuestaMensaje = { enviado: true };
+      await reply.send(respuesta);
+      return;
+    }
+
+    const args = construirArgsCorrida({ puerta: "run", texto });
+    if (!args.ok) {
+      await reply.status(400).send({ error: args.motivo });
+      return;
+    }
+    const resultado = await lanzarCorrida(proyectoActivo, args.args, opcionesCorridas);
+    if (!resultado.ok) {
+      await reply.status(409).send({ error: resultado.motivo });
+      return;
+    }
+    const respuesta: RespuestaMensaje = { runId: resultado.runId };
+    await reply.send(respuesta);
   });
 
   // SSE: reenvía el historial acumulado de la corrida activa y luego sigue en vivo — así
