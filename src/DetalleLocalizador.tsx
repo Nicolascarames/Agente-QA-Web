@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import type { LocatorEntry } from "agente-qa-contract";
+import type { AmbiguousCandidate, LocatorEntry } from "agente-qa-contract";
 import { corregirLocalizador } from "./api";
+import { BadgeElemento } from "./Explorar";
 
 const KIND_OPCIONES: LocatorEntry["kind"][] = ["input", "button", "link", "select", "text", "heading"];
 
@@ -17,11 +18,13 @@ const KIND_OPCIONES: LocatorEntry["kind"][] = ["input", "button", "link", "selec
 export function DetalleLocalizador({
   screenId,
   locators,
+  ambiguous,
   onGuardado,
   deshabilitado = false,
 }: {
   screenId: string;
   locators: LocatorEntry[];
+  ambiguous: AmbiguousCandidate[];
   onGuardado: () => void;
   /** `true` mientras hay una corrida en marcha (Explorar.tsx, estado `corriendo`): el servidor
    * rechaza la corrección en ese caso (hallazgo 2 de la revisión final de rama), así que el botón
@@ -72,110 +75,125 @@ export function DetalleLocalizador({
 
   return (
     <div>
-      <p className="mb-1 text-2xs uppercase tracking-[.04em] text-text-faint">Localizadores ({locators.length})</p>
-      <ul className="flex flex-col gap-0.5">
-        {locators.map((loc) => (
-          <li key={loc.name}>
-            <button
-              type="button"
-              onClick={() => seleccionar(loc)}
-              className={`text-left text-xs ${loc.name === seleccionado ? "text-accent-soft" : "text-text hover:text-accent-soft"}`}
-            >
-              <span className="font-mono">{loc.name}</span> — {loc.kind}
-              {loc.fragile && (
-                <span className="ml-1 text-accent" title={loc.fragile.reason}>
-                  (frágil)
+      <h3 className="mb-1.5 text-md font-semibold text-text-bright">Elementos ({locators.length + ambiguous.length})</h3>
+      {locators.length === 0 && ambiguous.length === 0 ? (
+        <p className="text-xs text-text-dim">Ninguno todavía.</p>
+      ) : (
+        <ul className="flex flex-col text-xs">
+          {locators.map((loc) => (
+            <li key={loc.name} className="border-b border-bg-row py-2 last:border-b-0">
+              <button
+                type="button"
+                onClick={() => (loc.name === seleccionado ? setSeleccionado(null) : seleccionar(loc))}
+                className="flex w-full items-center justify-between gap-2 text-left"
+              >
+                <span className={`truncate font-mono ${loc.name === seleccionado ? "text-accent-soft" : "text-text"}`}>
+                  {loc.name}
                 </span>
-              )}
-              {loc.disambiguatedBy && (
-                <span className="ml-1 text-accent" title={`Desambiguado por: ${loc.disambiguatedBy}`}>
-                  (ambiguo)
+                <span className="flex items-center gap-1.5">
+                  {loc.fragile && (
+                    <span className="text-accent" title={loc.fragile.reason}>
+                      frágil
+                    </span>
+                  )}
+                  {loc.disambiguatedBy && (
+                    <span className="text-accent" title={`Desambiguado por: ${loc.disambiguatedBy}`}>
+                      ambiguo
+                    </span>
+                  )}
+                  <BadgeElemento texto="✅ locator ready" tono="ok" />
                 </span>
+              </button>
+
+              {loc.name === seleccionado && localizador && (
+                <div className="mt-2 flex flex-col gap-2 rounded-8 border border-info bg-bg-sunken p-2.5">
+                  <div className="text-2xs text-info">Editar localizador</div>
+                  <div className="flex flex-col gap-0.5 text-xs text-text-dim">
+                    <p>
+                      <span className="text-text-muted">name</span> <span className="font-mono">{localizador.name}</span>
+                    </p>
+                    {localizador.accessibleName !== undefined && (
+                      <p>
+                        <span className="text-text-muted">accessibleName</span> {localizador.accessibleName}
+                      </p>
+                    )}
+                    <p>
+                      <span className="text-text-muted">count</span> {localizador.count}
+                    </p>
+                    {localizador.attributes !== undefined && (
+                      <p className="break-all">
+                        <span className="text-text-muted">attributes</span> {JSON.stringify(localizador.attributes)}
+                      </p>
+                    )}
+                    {localizador.fragile !== undefined && (
+                      <p>
+                        <span className="text-text-muted">fragile</span> {localizador.fragile.reason}
+                      </p>
+                    )}
+                    <p>
+                      <span className="text-text-muted">producedBy</span> {localizador.producedBy.agent} ({localizador.producedBy.at})
+                    </p>
+                    <p>
+                      <span className="text-text-muted">verifiedAt</span> {localizador.verifiedAt}
+                    </p>
+                  </div>
+
+                  <label className="flex flex-col gap-1 text-xs">
+                    <span className="text-text-muted">kind</span>
+                    <select
+                      className="rounded-7 border border-border-soft bg-bg-sunken px-2 py-1 text-text-bright"
+                      value={kind}
+                      onChange={(e) => setKind(e.target.value as LocatorEntry["kind"])}
+                    >
+                      {KIND_OPCIONES.map((opcion) => (
+                        <option key={opcion} value={opcion}>
+                          {opcion}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="flex flex-col gap-1 text-xs">
+                    <span className="text-text-muted">ts — selector (texto libre)</span>
+                    <input
+                      className="rounded-7 border border-border-soft bg-bg-sunken px-2 py-1 font-mono text-text-bright"
+                      value={ts}
+                      onChange={(e) => setTs(e.target.value)}
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-1 text-xs">
+                    <span className="text-text-muted">disambiguatedBy (opcional)</span>
+                    <input
+                      className="rounded-7 border border-border-soft bg-bg-sunken px-2 py-1 text-text-bright"
+                      value={disambiguatedBy}
+                      onChange={(e) => setDisambiguatedBy(e.target.value)}
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    disabled={guardando || deshabilitado || ts.trim().length === 0}
+                    onClick={guardar}
+                    className="self-start rounded-7 border border-accent bg-accent px-2.5 py-1 text-xs font-bold text-on-accent disabled:opacity-50"
+                  >
+                    {guardando ? "Guardando…" : "💾 Guardar"}
+                  </button>
+                  {deshabilitado && (
+                    <p className="text-xs text-accent">Hay una corrida en marcha: espera a que termine para corregir un localizador.</p>
+                  )}
+                  {mensaje && <p className="text-xs text-text-faint">{mensaje}</p>}
+                </div>
               )}
-            </button>
-          </li>
-        ))}
-      </ul>
-
-      {localizador && (
-        <div className="mt-2 flex flex-col gap-2 rounded-8 border border-info bg-bg-sunken p-2.5">
-          <div className="text-2xs text-info">Editar localizador</div>
-          <div className="flex flex-col gap-0.5 text-xs text-text-dim">
-            <p>
-              <span className="text-text-muted">name</span> <span className="font-mono">{localizador.name}</span>
-            </p>
-            {localizador.accessibleName !== undefined && (
-              <p>
-                <span className="text-text-muted">accessibleName</span> {localizador.accessibleName}
-              </p>
-            )}
-            <p>
-              <span className="text-text-muted">count</span> {localizador.count}
-            </p>
-            {localizador.attributes !== undefined && (
-              <p className="break-all">
-                <span className="text-text-muted">attributes</span> {JSON.stringify(localizador.attributes)}
-              </p>
-            )}
-            {localizador.fragile !== undefined && (
-              <p>
-                <span className="text-text-muted">fragile</span> {localizador.fragile.reason}
-              </p>
-            )}
-            <p>
-              <span className="text-text-muted">producedBy</span> {localizador.producedBy.agent} ({localizador.producedBy.at})
-            </p>
-            <p>
-              <span className="text-text-muted">verifiedAt</span> {localizador.verifiedAt}
-            </p>
-          </div>
-
-          <label className="flex flex-col gap-1 text-xs">
-            <span className="text-text-muted">kind</span>
-            <select
-              className="rounded-7 border border-border-soft bg-bg-sunken px-2 py-1 text-text-bright"
-              value={kind}
-              onChange={(e) => setKind(e.target.value as LocatorEntry["kind"])}
-            >
-              {KIND_OPCIONES.map((opcion) => (
-                <option key={opcion} value={opcion}>
-                  {opcion}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="flex flex-col gap-1 text-xs">
-            <span className="text-text-muted">ts — selector (texto libre)</span>
-            <input
-              className="rounded-7 border border-border-soft bg-bg-sunken px-2 py-1 font-mono text-text-bright"
-              value={ts}
-              onChange={(e) => setTs(e.target.value)}
-            />
-          </label>
-
-          <label className="flex flex-col gap-1 text-xs">
-            <span className="text-text-muted">disambiguatedBy (opcional)</span>
-            <input
-              className="rounded-7 border border-border-soft bg-bg-sunken px-2 py-1 text-text-bright"
-              value={disambiguatedBy}
-              onChange={(e) => setDisambiguatedBy(e.target.value)}
-            />
-          </label>
-
-          <button
-            type="button"
-            disabled={guardando || deshabilitado || ts.trim().length === 0}
-            onClick={guardar}
-            className="self-start rounded-7 border border-accent bg-accent px-2.5 py-1 text-xs font-bold text-on-accent disabled:opacity-50"
-          >
-            {guardando ? "Guardando…" : "💾 Guardar"}
-          </button>
-          {deshabilitado && (
-            <p className="text-xs text-accent">Hay una corrida en marcha: espera a que termine para corregir un localizador.</p>
-          )}
-          {mensaje && <p className="text-xs text-text-faint">{mensaje}</p>}
-        </div>
+            </li>
+          ))}
+          {ambiguous.map((amb) => (
+            <li key={amb.name} className="flex items-center justify-between gap-2 border-b border-bg-row py-2 last:border-b-0">
+              <span className="truncate text-text">{amb.name}</span>
+              <BadgeElemento texto={`⚠️ ${String(amb.count)} matches — ambiguo`} tono="ambiguo" />
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

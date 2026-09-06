@@ -117,7 +117,7 @@ export function Panel({ tabId, panelId, titulo, disposicionPorDefecto, children 
   return (
     <Rnd
       ref={asignarRef}
-      className="flex flex-col overflow-hidden rounded-10 border border-border bg-bg-panel text-text"
+      className="overflow-hidden rounded-10 border border-border bg-bg-panel text-text"
       style={{ zIndex: disposicion.z }}
       size={{ width: (disposicion.w / 100) * ancho, height: (disposicion.h / 100) * alto }}
       position={{ x: (disposicion.x / 100) * ancho, y: (disposicion.y / 100) * alto }}
@@ -149,11 +149,18 @@ export function Panel({ tabId, panelId, titulo, disposicionPorDefecto, children 
         });
       }}
     >
-      <div className="panel-drag-handle flex cursor-move select-none items-center gap-1.5 px-3 py-2.5 text-xs uppercase tracking-[.06em] text-accent-soft">
-        <span>⠿</span>
-        <span>{titulo}</span>
+      {/* react-rnd pone `display: inline-block` inline en la raíz (pisa cualquier
+          clase `flex` que le pongamos ahí, un estilo inline siempre gana a una
+          clase). Por eso el flex real vive en este div interior, no en <Rnd>:
+          sin él, el cuerpo de abajo no tiene una altura acotada, `overflow-auto`
+          nunca se activa y el sobrante se recorta en silencio sin scroll. */}
+      <div className="flex h-full flex-col overflow-hidden">
+        <div className="panel-drag-handle flex cursor-move select-none items-center gap-1.5 px-3 py-2.5 text-xs uppercase tracking-[.06em] text-accent-soft">
+          <span>⠿</span>
+          <span>{titulo}</span>
+        </div>
+        <div className="flex-1 overflow-auto p-3 text-sm">{children}</div>
       </div>
-      <div className="flex-1 overflow-auto p-3 text-sm">{children}</div>
     </Rnd>
   );
 }

@@ -333,7 +333,7 @@ function ArbolMapa({
 
 // Badge por elemento de la tabla "Elementos": localizador ya resuelto (✅, --ok) o candidato
 // ambiguo sin resolver todavía (⚠️, --accent) — igual que pide el Bloque 3.
-function BadgeElemento({ texto, tono }: { texto: string; tono: "ok" | "ambiguo" }) {
+export function BadgeElemento({ texto, tono }: { texto: string; tono: "ok" | "ambiguo" }) {
   return (
     <span
       className={`whitespace-nowrap rounded-6 px-2 py-0.5 text-xs ${
@@ -367,29 +367,13 @@ function DetalleSeleccion({
         producedBy: {pantalla.producedBy.agent} · {pantalla.stale ? "stale" : "no stale"}
       </p>
 
-      <div>
-        <h3 className="mb-1.5 text-md font-semibold text-text-bright">Elementos</h3>
-        {pantalla.locators.length === 0 && pantalla.ambiguous.length === 0 ? (
-          <p className="text-xs text-text-dim">Ninguno todavía.</p>
-        ) : (
-          <ul className="flex flex-col text-xs">
-            {pantalla.locators.map((loc) => (
-              <li key={loc.name} className="flex items-center justify-between gap-2 border-b border-bg-row py-2">
-                <span className="truncate text-text">{loc.name}</span>
-                <BadgeElemento texto="✅ locator ready" tono="ok" />
-              </li>
-            ))}
-            {pantalla.ambiguous.map((amb) => (
-              <li key={amb.name} className="flex items-center justify-between gap-2 border-b border-bg-row py-2 last:border-b-0">
-                <span className="truncate text-text">{amb.name}</span>
-                <BadgeElemento texto={`⚠️ ${String(amb.count)} matches — ambiguo`} tono="ambiguo" />
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <DetalleLocalizador screenId={pantalla.id} locators={pantalla.locators} onGuardado={onCorregido} deshabilitado={corriendo} />
+      <DetalleLocalizador
+        screenId={pantalla.id}
+        locators={pantalla.locators}
+        ambiguous={pantalla.ambiguous}
+        onGuardado={onCorregido}
+        deshabilitado={corriendo}
+      />
 
       <div>
         <h3 className="mb-1 text-md font-semibold text-text-bright">Transiciones ({pantalla.transitions.length})</h3>
