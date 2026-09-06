@@ -47,6 +47,10 @@ const ETIQUETA_AMBITO: Record<AmbitoExploracion, string> = {
   objetivo: "lo necesario para este objetivo",
 };
 
+// Los tres ámbitos posibles, para pintar el segmentado "🎯 Ámbito" del Bloque 3
+// (cuáles están habilitados para la puerta activa lo decide `opcionesAmbito` más abajo).
+const AMBITOS: AmbitoExploracion[] = ["todo", "seleccion", "objetivo"];
+
 export interface BarraLanzamientoProps {
   corriendo: boolean;
   /** Ids de pantallas ya conocidas marcadas en el árbol, para el ámbito "esta selección". */
@@ -104,30 +108,66 @@ export function BarraLanzamiento({ corriendo, unidadesSeleccionadas, onLanzado, 
   };
 
   return (
-    <div className="flex flex-wrap items-end gap-4 border-b border-accent/30 bg-panel px-4 py-3 text-sm">
-      <fieldset className="flex flex-col gap-1">
-        <legend className="px-1 text-xs text-text/60">Puerta</legend>
+    <div className="flex flex-wrap items-center gap-5 rounded-10 border border-border bg-bg-panel px-3.5 py-2.5">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="text-2xs uppercase tracking-[.04em] text-text-faint">🎯 Ámbito</span>
+        <div className="flex overflow-hidden rounded-6 border border-border-soft">
+          {AMBITOS.map((a) => {
+            const disponible = info.llevaAmbito && opcionesAmbito.includes(a);
+            const activo = disponible && ambito === a;
+            return (
+              <button
+                key={a}
+                type="button"
+                disabled={!disponible || corriendo}
+                onClick={() => setAmbito(a)}
+                className={`px-2.5 py-1 text-xs ${activo ? "bg-bg-elev text-accent-soft" : "bg-bg-sunken text-text-muted"} disabled:opacity-40`}
+              >
+                {a === "seleccion" ? `${ETIQUETA_AMBITO[a]} (${String(unidadesSeleccionadas.length)})` : ETIQUETA_AMBITO[a]}
+              </button>
+            );
+          })}
+        </div>
+        {info.llevaObjetivo && (
+          <input
+            className="w-48 rounded-6 border border-border-soft bg-bg-sunken px-2 py-1 text-xs text-text-bright"
+            value={objetivo}
+            disabled={corriendo}
+            placeholder="objetivo a explorar"
+            onChange={(e) => setObjetivo(e.target.value)}
+          />
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="text-2xs uppercase tracking-[.04em] text-text-faint">🤖 Agente</span>
         {PUERTAS.map((p) => (
-          <label key={p.id} className="flex items-center gap-2">
+          <label
+            key={p.id}
+            title={p.coste}
+            className={`flex cursor-pointer items-center gap-1.5 rounded-6 border px-2 py-1 text-xs ${
+              puerta === p.id ? "border-accent bg-bg-elev text-accent-soft" : "border-border-soft bg-bg-sunken text-text-muted"
+            } ${corriendo ? "cursor-not-allowed opacity-40" : ""}`}
+          >
             <input
               type="radio"
               name="puerta"
+              className="sr-only"
               value={p.id}
               checked={puerta === p.id}
               disabled={corriendo}
               onChange={() => setPuerta(p.id)}
             />
-            <span>{p.etiqueta}</span>
-            <span className="text-xs text-text/50">({p.coste})</span>
+            {p.etiqueta}
           </label>
         ))}
-      </fieldset>
+      </div>
 
       {info.llevaUrl && (
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-text/60">URL</span>
+          <span className="text-2xs uppercase tracking-[.04em] text-text-faint">URL</span>
           <input
-            className="w-56 rounded-md border border-accent/30 bg-bg px-2 py-1"
+            className="w-52 rounded-6 border border-border-soft bg-bg-sunken px-2 py-1 text-xs text-text-bright"
             value={url}
             disabled={corriendo}
             placeholder="https://..."
@@ -136,52 +176,27 @@ export function BarraLanzamiento({ corriendo, unidadesSeleccionadas, onLanzado, 
         </label>
       )}
 
-      <label className="flex flex-col gap-1">
-        <span className={`text-xs ${info.llevaAmbito ? "text-text/60" : "text-text/30"}`}>Ámbito</span>
-        <select
-          className="rounded-md border border-accent/30 bg-bg px-2 py-1"
-          value={ambito}
-          disabled={!info.llevaAmbito || corriendo || opcionesAmbito.length === 1}
-          onChange={(e) => setAmbito(e.target.value as AmbitoExploracion)}
-        >
-          {opcionesAmbito.map((a) => (
-            <option key={a} value={a}>
-              {a === "seleccion" ? `${ETIQUETA_AMBITO[a]} (${unidadesSeleccionadas.length} pantallas)` : ETIQUETA_AMBITO[a]}
-            </option>
-          ))}
-        </select>
-      </label>
+      {error && <p className="max-w-xs text-xs text-accent">{error}</p>}
 
-      {info.llevaObjetivo && (
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-text/60">Objetivo</span>
-          <input
-            className="w-64 rounded-md border border-accent/30 bg-bg px-2 py-1"
-            value={objetivo}
-            disabled={corriendo}
-            placeholder="qué debe explorar"
-            onChange={(e) => setObjetivo(e.target.value)}
-          />
-        </label>
-      )}
-
-      {error && <p className="max-w-md text-xs text-warning">{error}</p>}
+      {/* Coste declarado: el texto real de la puerta elegida (Bloque 5 de la spec), no un
+          importe en $ inventado — no hay dato de coste real antes de lanzar la corrida. */}
+      <span className="ml-auto whitespace-nowrap text-xs text-accent-soft">💰 {info.coste}</span>
 
       {!corriendo ? (
         <button
           type="button"
           disabled={enCurso || faltaAlgo}
           onClick={lanzar}
-          className="rounded-md border border-accent/60 px-4 py-1.5 text-accent disabled:opacity-50"
+          className="rounded-7 border border-accent bg-accent px-3.5 py-1.5 text-xs font-bold text-on-accent disabled:opacity-50"
         >
-          {enCurso ? "lanzando…" : "Lanzar"}
+          {enCurso ? "Explorando…" : "▶️ Explorar"}
         </button>
       ) : (
         <button
           type="button"
           disabled={enCurso}
           onClick={detener}
-          className="rounded-md border border-warning/60 px-4 py-1.5 text-warning disabled:opacity-50"
+          className="rounded-7 border border-accent px-3.5 py-1.5 text-xs font-bold text-accent disabled:opacity-50"
         >
           {enCurso ? "deteniendo…" : "■ Detener"}
         </button>

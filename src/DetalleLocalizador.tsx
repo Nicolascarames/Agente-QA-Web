@@ -72,19 +72,23 @@ export function DetalleLocalizador({
 
   return (
     <div>
-      <p className="mb-1 text-text/60">Localizadores ({locators.length})</p>
+      <p className="mb-1 text-2xs uppercase tracking-[.04em] text-text-faint">Localizadores ({locators.length})</p>
       <ul className="flex flex-col gap-0.5">
         {locators.map((loc) => (
           <li key={loc.name}>
             <button
               type="button"
               onClick={() => seleccionar(loc)}
-              className={`text-left ${loc.name === seleccionado ? "text-accent" : "text-text hover:text-accent"}`}
+              className={`text-left text-xs ${loc.name === seleccionado ? "text-accent-soft" : "text-text hover:text-accent-soft"}`}
             >
               <span className="font-mono">{loc.name}</span> — {loc.kind}
-              {loc.fragile && <span className="ml-1 text-warning" title={loc.fragile.reason}>(frágil)</span>}
+              {loc.fragile && (
+                <span className="ml-1 text-accent" title={loc.fragile.reason}>
+                  (frágil)
+                </span>
+              )}
               {loc.disambiguatedBy && (
-                <span className="ml-1 text-warning" title={`Desambiguado por: ${loc.disambiguatedBy}`}>
+                <span className="ml-1 text-accent" title={`Desambiguado por: ${loc.disambiguatedBy}`}>
                   (ambiguo)
                 </span>
               )}
@@ -94,41 +98,42 @@ export function DetalleLocalizador({
       </ul>
 
       {localizador && (
-        <div className="mt-2 flex flex-col gap-2 rounded-md border border-accent/20 p-2">
-          <div className="text-text/50">
+        <div className="mt-2 flex flex-col gap-2 rounded-8 border border-info bg-bg-sunken p-2.5">
+          <div className="text-2xs text-info">Editar localizador (mismo widget se reutiliza dentro de Generar)</div>
+          <div className="flex flex-col gap-0.5 text-xs text-text-dim">
             <p>
-              <span className="text-text/70">name</span> <span className="font-mono">{localizador.name}</span>
+              <span className="text-text-muted">name</span> <span className="font-mono">{localizador.name}</span>
             </p>
             {localizador.accessibleName !== undefined && (
               <p>
-                <span className="text-text/70">accessibleName</span> {localizador.accessibleName}
+                <span className="text-text-muted">accessibleName</span> {localizador.accessibleName}
               </p>
             )}
             <p>
-              <span className="text-text/70">count</span> {localizador.count}
+              <span className="text-text-muted">count</span> {localizador.count}
             </p>
             {localizador.attributes !== undefined && (
               <p className="break-all">
-                <span className="text-text/70">attributes</span> {JSON.stringify(localizador.attributes)}
+                <span className="text-text-muted">attributes</span> {JSON.stringify(localizador.attributes)}
               </p>
             )}
             {localizador.fragile !== undefined && (
               <p>
-                <span className="text-text/70">fragile</span> {localizador.fragile.reason}
+                <span className="text-text-muted">fragile</span> {localizador.fragile.reason}
               </p>
             )}
             <p>
-              <span className="text-text/70">producedBy</span> {localizador.producedBy.agent} ({localizador.producedBy.at})
+              <span className="text-text-muted">producedBy</span> {localizador.producedBy.agent} ({localizador.producedBy.at})
             </p>
             <p>
-              <span className="text-text/70">verifiedAt</span> {localizador.verifiedAt}
+              <span className="text-text-muted">verifiedAt</span> {localizador.verifiedAt}
             </p>
           </div>
 
-          <label className="flex flex-col gap-1">
-            <span className="text-text/60">kind</span>
+          <label className="flex flex-col gap-1 text-xs">
+            <span className="text-text-muted">kind</span>
             <select
-              className="rounded-md border border-accent/30 bg-bg px-2 py-1"
+              className="rounded-7 border border-border-soft bg-bg-sunken px-2 py-1 text-text-bright"
               value={kind}
               onChange={(e) => setKind(e.target.value as LocatorEntry["kind"])}
             >
@@ -140,19 +145,19 @@ export function DetalleLocalizador({
             </select>
           </label>
 
-          <label className="flex flex-col gap-1">
-            <span className="text-text/60">ts — selector (texto libre)</span>
+          <label className="flex flex-col gap-1 text-xs">
+            <span className="text-text-muted">ts — selector (texto libre)</span>
             <input
-              className="rounded-md border border-accent/30 bg-bg px-2 py-1 font-mono"
+              className="rounded-7 border border-border-soft bg-bg-sunken px-2 py-1 font-mono text-text-bright"
               value={ts}
               onChange={(e) => setTs(e.target.value)}
             />
           </label>
 
-          <label className="flex flex-col gap-1">
-            <span className="text-text/60">disambiguatedBy (opcional)</span>
+          <label className="flex flex-col gap-1 text-xs">
+            <span className="text-text-muted">disambiguatedBy (opcional)</span>
             <input
-              className="rounded-md border border-accent/30 bg-bg px-2 py-1"
+              className="rounded-7 border border-border-soft bg-bg-sunken px-2 py-1 text-text-bright"
               value={disambiguatedBy}
               onChange={(e) => setDisambiguatedBy(e.target.value)}
             />
@@ -162,12 +167,14 @@ export function DetalleLocalizador({
             type="button"
             disabled={guardando || deshabilitado || ts.trim().length === 0}
             onClick={guardar}
-            className="self-start rounded-md border border-accent/30 px-2 py-1 text-accent disabled:opacity-50"
+            className="self-start rounded-7 border border-accent bg-accent px-2.5 py-1 text-xs font-bold text-on-accent disabled:opacity-50"
           >
-            {guardando ? "Guardando…" : "Guardar corrección"}
+            {guardando ? "Guardando…" : "💾 Guardar"}
           </button>
-          {deshabilitado && <p className="text-warning">Hay una corrida en marcha: espera a que termine para corregir un localizador.</p>}
-          {mensaje && <p className="text-text/60">{mensaje}</p>}
+          {deshabilitado && (
+            <p className="text-xs text-accent">Hay una corrida en marcha: espera a que termine para corregir un localizador.</p>
+          )}
+          {mensaje && <p className="text-xs text-text-faint">{mensaje}</p>}
         </div>
       )}
     </div>

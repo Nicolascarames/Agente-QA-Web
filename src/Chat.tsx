@@ -30,17 +30,17 @@ export function Chat({ onEnviado }: ChatProps) {
   };
 
   return (
-    <div className="flex h-full flex-col gap-2 text-sm">
-      <p className="text-xs text-text/60">
+    <div className="flex flex-col gap-1.5">
+      <p className="text-2xs text-text-faint">
         Con una corrida en marcha, redirige al agente a mitad de turno. Sin ninguna, lo que escribas aquí lanza una nueva.
       </p>
-      {error && <p className="text-xs text-warning">{error}</p>}
-      <div className="mt-auto flex gap-2">
+      {error && <p className="text-xs text-accent">{error}</p>}
+      <div className="flex gap-1.5">
         <input
-          className="flex-1 rounded-md border border-accent/30 bg-bg px-2 py-1"
+          className="flex-1 rounded-7 border border-border-soft bg-bg-sunken px-2 py-2 text-text-bright"
           value={texto}
           disabled={enCurso}
-          placeholder="habla con el agente…"
+          placeholder="Habla con el agente activo…"
           onChange={(e) => setTexto(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") enviar();
@@ -50,9 +50,9 @@ export function Chat({ onEnviado }: ChatProps) {
           type="button"
           disabled={enCurso || !texto.trim()}
           onClick={enviar}
-          className="rounded-md border border-accent/60 px-3 py-1 text-accent disabled:opacity-50"
+          className="rounded-7 border border-accent bg-accent px-3 py-2 font-bold text-on-accent disabled:opacity-50"
         >
-          {enCurso ? "…" : "Enviar"}
+          {enCurso ? "…" : "📤"}
         </button>
       </div>
     </div>
