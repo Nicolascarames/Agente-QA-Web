@@ -35,6 +35,7 @@ const config: Config = {
       "on-accent": "var(--on-accent)",
       ok: "var(--ok)",
       "ok-bg": "var(--ok-bg)",
+      danger: "var(--danger)",
       agent: "var(--agent)",
       info: "var(--info)",
       "info-bg": "var(--info-bg)",

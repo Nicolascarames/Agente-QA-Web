@@ -143,6 +143,11 @@
      (mockup usa rgba(82,209,124,.14), la variación de verde que ya se resuelve como
      --ok desde el Bloque 2 en Dashboard.tsx). Mismo papel que --accent-bg pero en verde. */
   --ok-bg: rgba(111, 225, 155, 0.14);
+  /* Bloque 6 (Reparar): rojo de fallo/retirado — el mockup usa tres variaciones muy cercanas de
+     este mismo papel (#ff8790 en "FALLÓ", #ff9aa2 en el botón "Detener", #ff8b93 en la línea "-"
+     de la propuesta de diff); se resuelven en un único token con el valor de la línea de diff,
+     que es el uso real de este bloque. Pareja de --ok para la línea "+" del mismo diff. */
+  --danger: #ff8b93;
   /* Telón de fondo de la barra lateral en móvil y su sombra al desplegarse:
      mismo valor literal que `backdropStyle`/`sidebarStyle` del mockup. */
   --backdrop: rgba(0, 0, 0, 0.5);
