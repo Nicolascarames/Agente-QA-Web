@@ -151,12 +151,19 @@ export function Explorar() {
           // para no decir "parado" antes de que el CLI haya terminado de escribir map.json.
         }}
       />
-      <div className="relative flex-1">
+      {/*
+        data-canvas + geometría en %: contrato de Panel.tsx desde el Bloque 2
+        (docs/superpowers/specs/2026-09-06-interfaz-web-fiel-al-standalone.md).
+        Esta pantalla se rediseña con la geometría real de `panels.explorar`
+        en el Bloque 3 — estas cuatro cajas son un acomodo mínimo para seguir
+        compilando y funcionando mientras tanto, no el diseño final.
+      */}
+      <div className="relative flex-1" data-canvas="true">
         <Panel
           tabId="explorar"
           panelId="arbol"
           titulo="Árbol del mapa"
-          disposicionPorDefecto={{ x: 16, y: 16, width: 380, height: 460 }}
+          disposicionPorDefecto={{ x: 0, y: 0, w: 24, h: 60, z: 1 }}
         >
           <ArbolMapa
             mapa={mapa}
@@ -171,7 +178,7 @@ export function Explorar() {
           tabId="explorar"
           panelId="detalle"
           titulo="Detalle de la selección"
-          disposicionPorDefecto={{ x: 412, y: 16, width: 400, height: 460 }}
+          disposicionPorDefecto={{ x: 25, y: 0, w: 24, h: 60, z: 1 }}
         >
           <DetalleSeleccion pantalla={pantalla} onCorregido={recargarMapa} corriendo={corriendo} />
         </Panel>
@@ -180,7 +187,7 @@ export function Explorar() {
           tabId="explorar"
           panelId="registro"
           titulo="Registro en vivo"
-          disposicionPorDefecto={{ x: 828, y: 16, width: 420, height: 460 }}
+          disposicionPorDefecto={{ x: 50, y: 0, w: 24, h: 60, z: 1 }}
         >
           <RegistroEnVivo eventos={eventos} />
         </Panel>
@@ -189,7 +196,7 @@ export function Explorar() {
           tabId="explorar"
           panelId="chat"
           titulo="Hablar con el agente"
-          disposicionPorDefecto={{ x: 828, y: 492, width: 420, height: 160 }}
+          disposicionPorDefecto={{ x: 75, y: 0, w: 24, h: 60, z: 1 }}
         >
           <Chat onEnviado={alHablar} />
         </Panel>

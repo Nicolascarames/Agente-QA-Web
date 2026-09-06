@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ejecutarInit, obtenerActividad, obtenerEstado, type ActividadDisponible, type ActividadNoDisponible } from "./api";
-import { Panel } from "./Panel";
+import { Panel, type DisposicionPanel } from "./Panel";
 import type { EstadoProyecto } from "../shared/tipos";
 
 type CargaEstado = { estado: "cargando" } | { estado: "error"; mensaje: string } | { estado: "listo"; datos: EstadoProyecto };
@@ -8,6 +8,20 @@ type CargaEstado = { estado: "cargando" } | { estado: "error"; mensaje: string }
 type CargaActividad =
   | { estado: "cargando" }
   | { estado: "listo"; datos: ActividadDisponible | ActividadNoDisponible };
+
+// Geometría EXACTA de `panels.dashboard` en design/mockup-design.js: seis
+// cajas de estadística en fila (s0..s5) y dos paneles grandes debajo (cur/act),
+// todo en % del contenedor `[data-canvas]`.
+const GEOMETRIA_STATS: DisposicionPanel[] = [0, 16.8, 33.6, 50.4, 67.2, 84].map((x) => ({ x, y: 0, w: 15.3, h: 15, z: 1 }));
+const GEOMETRIA_CUR: DisposicionPanel = { x: 0, y: 20, w: 48, h: 78, z: 1 };
+const GEOMETRIA_ACT: DisposicionPanel = { x: 51, y: 20, w: 49, h: 78, z: 1 };
+
+// Etiquetas de las seis cajas, en el mismo orden que GEOMETRIA_STATS (s0..s5).
+// El mockup usa "Tests" y "Pass rate" para s4/s5 — datos que solo llenaría un
+// Ejecutor que no existe (fuera de alcance de esta spec). En su lugar se
+// muestran los seis campos reales que ya lee `/api/estado` hoy: nada de
+// atrezo, nada inventado.
+const ETIQUETAS = ["Pantallas", "Locators", "Candidatos", "Features", "e2e", "Informe"];
 
 export function Dashboard() {
   const [estado, setEstado] = useState<CargaEstado>({ estado: "cargando" });
@@ -43,89 +57,103 @@ export function Dashboard() {
       .finally(() => setEjecutandoInit(false));
   }, [recargarEstado]);
 
-  return (
-    <div className="relative h-full w-full">
-      <Panel
-        tabId="dashboard"
-        panelId="estado"
-        titulo="Estado del proyecto"
-        disposicionPorDefecto={{ x: 16, y: 16, width: 440, height: 300 }}
-      >
-        {estado.estado === "cargando" && <p>Cargando…</p>}
-        {estado.estado === "error" && <p className="text-warning">Error: {estado.mensaje}</p>}
-        {estado.estado === "listo" && (
-          <EstadoProyectoResumen datos={estado.datos} onEjecutarInit={lanzarInit} ejecutandoInit={ejecutandoInit} />
-        )}
-      </Panel>
+  // statBoxes[i] corresponde a ETIQUETAS[i]/GEOMETRIA_STATS[i]. Vacío mientras
+  // carga o si /api/estado falló: las cajas igual se pintan (con el hueco
+  // "Cargando…"), solo cambia lo que enseñan dentro.
+  const statBoxes =
+    estado.estado === "listo"
+      ? [
+          { valor: estado.datos.mapa.pantallas },
+          { valor: estado.datos.mapa.localizadores },
+          { valor: estado.datos.mapa.candidatosEscenario },
+          { valor: estado.datos.features.ficheros, subtitulo: estado.datos.features.estado, destacado: estado.datos.features.estado === "listo" },
+          { valor: estado.datos.e2e.ficheros, subtitulo: estado.datos.e2e.estado, destacado: estado.datos.e2e.estado === "listo" },
+          { valor: estado.datos.reporte.estado, destacado: estado.datos.reporte.estado === "listo" },
+        ]
+      : [];
 
-      <Panel
-        tabId="dashboard"
-        panelId="actividad"
-        titulo="Actividad reciente"
-        disposicionPorDefecto={{ x: 480, y: 16, width: 420, height: 260 }}
-      >
-        {actividad.estado === "cargando" && <p>Cargando…</p>}
-        {actividad.estado === "listo" && !actividad.datos.disponible && (
-          <p className="text-warning">{actividad.datos.motivo}</p>
-        )}
-        {actividad.estado === "listo" && actividad.datos.disponible && <p>{actividad.datos.eventos.length} eventos.</p>}
-      </Panel>
+  return (
+    <div className="relative h-full w-full overflow-auto p-4" data-canvas="true">
+      {estado.estado === "error" ? (
+        <p className="text-accent">Error: {estado.mensaje}</p>
+      ) : (
+        <>
+          {GEOMETRIA_STATS.map((geometria, i) => (
+            <CajaEstadistica
+              key={`s${String(i)}`}
+              panelId={`s${String(i)}`}
+              disposicion={geometria}
+              etiqueta={ETIQUETAS[i]}
+              cargando={estado.estado === "cargando"}
+              valor={statBoxes[i]?.valor}
+              subtitulo={statBoxes[i]?.subtitulo}
+              destacado={statBoxes[i]?.destacado}
+            />
+          ))}
+
+          <Panel tabId="dashboard" panelId="cur" titulo="En curso ahora" disposicionPorDefecto={GEOMETRIA_CUR}>
+            {estado.estado === "cargando" && <p className="text-text-dim">Cargando…</p>}
+            {estado.estado === "listo" && !estado.datos.agenteQaInicializado && (
+              <div className="flex items-center justify-between gap-3 rounded-8 border border-border-strong bg-accent-bg px-3 py-2">
+                <span className="text-accent-soft">No hay .agente-qa/ en este proyecto.</span>
+                <button
+                  type="button"
+                  onClick={lanzarInit}
+                  disabled={ejecutandoInit}
+                  className="rounded-6 border border-border-strong bg-bg-sunken px-3 py-1 text-accent-soft disabled:opacity-50"
+                >
+                  {ejecutandoInit ? "ejecutando init…" : "ejecutar init"}
+                </button>
+              </div>
+            )}
+            {estado.estado === "listo" && estado.datos.agenteQaInicializado && (
+              <p className="text-text-dim">Sin corrida en curso — el indicador llega con Explorar (Bloque 3).</p>
+            )}
+          </Panel>
+
+          <Panel tabId="dashboard" panelId="act" titulo="Actividad reciente" disposicionPorDefecto={GEOMETRIA_ACT}>
+            {actividad.estado === "cargando" && <p className="text-text-dim">Cargando…</p>}
+            {actividad.estado === "listo" && !actividad.datos.disponible && <p className="text-accent">{actividad.datos.motivo}</p>}
+            {actividad.estado === "listo" && actividad.datos.disponible && <p className="text-text">{actividad.datos.eventos.length} eventos.</p>}
+          </Panel>
+        </>
+      )}
     </div>
   );
 }
 
-function EstadoProyectoResumen({
-  datos,
-  onEjecutarInit,
-  ejecutandoInit,
+function CajaEstadistica({
+  panelId,
+  disposicion,
+  etiqueta,
+  cargando,
+  valor,
+  subtitulo,
+  destacado,
 }: {
-  datos: EstadoProyecto;
-  onEjecutarInit: () => void;
-  ejecutandoInit: boolean;
+  panelId: string;
+  disposicion: DisposicionPanel;
+  etiqueta: string;
+  cargando: boolean;
+  valor: number | string | undefined;
+  subtitulo?: string;
+  destacado?: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-3">
-      {!datos.agenteQaInicializado && (
-        <div className="flex items-center justify-between gap-3 rounded-md border border-warning/50 bg-warning/10 px-3 py-2">
-          <span className="text-warning">No hay .agente-qa/ en este proyecto.</span>
-          <button
-            type="button"
-            onClick={onEjecutarInit}
-            disabled={ejecutandoInit}
-            className="rounded-md border border-accent/60 px-3 py-1 text-accent disabled:opacity-50"
-          >
-            {ejecutandoInit ? "ejecutando init…" : "ejecutar init"}
-          </button>
-        </div>
-      )}
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
-        <dt className="text-text/60">Proyecto</dt>
-        <dd className="truncate" title={datos.proyecto}>
-          {datos.proyecto}
-        </dd>
-
-        <dt className="text-text/60">Pantallas</dt>
-        <dd>{datos.mapa.pantallas}</dd>
-
-        <dt className="text-text/60">Localizadores</dt>
-        <dd>{datos.mapa.localizadores}</dd>
-
-        <dt className="text-text/60">Candidatos de escenario</dt>
-        <dd>{datos.mapa.candidatosEscenario}</dd>
-
-        <dt className="text-text/60">Features</dt>
-        <dd>
-          {datos.features.estado} ({datos.features.ficheros})
-        </dd>
-
-        <dt className="text-text/60">e2e</dt>
-        <dd>
-          {datos.e2e.estado} ({datos.e2e.ficheros})
-        </dd>
-
-        <dt className="text-text/60">Informe</dt>
-        <dd>{datos.reporte.estado}</dd>
-      </dl>
-    </div>
+    <Panel tabId="dashboard" panelId={panelId} titulo={etiqueta} disposicionPorDefecto={disposicion}>
+      <div className="flex h-full items-center">
+        {cargando ? (
+          <div
+            className="h-[22px] w-[70%] animate-shimmer rounded-6 bg-[length:400px_100%]"
+            style={{ backgroundImage: "linear-gradient(90deg, var(--bg-elev) 25%, var(--border) 37%, var(--bg-elev) 63%)" }}
+          />
+        ) : (
+          <div>
+            <div className={`animate-fade-in text-3xl font-extrabold ${destacado ? "text-ok" : "text-text-bright"}`}>{valor}</div>
+            {subtitulo && <div className="mt-0.5 text-2xs text-text-faint">{subtitulo}</div>}
+          </div>
+        )}
+      </div>
+    </Panel>
   );
 }

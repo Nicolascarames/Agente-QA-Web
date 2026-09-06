@@ -52,19 +52,24 @@ function motivoNoEditable(capa: CapaConfig | null): string | undefined {
 
 export function Configuracion() {
   return (
-    <div className="relative h-full w-full overflow-auto">
-      <Panel tabId="configuracion" panelId="proyecto" titulo="Este proyecto" disposicionPorDefecto={{ x: 16, y: 16, width: 520, height: 460 }}>
+    // data-canvas + geometría en %: contrato de Panel.tsx desde el Bloque 2
+    // (docs/superpowers/specs/2026-09-06-interfaz-web-fiel-al-standalone.md).
+    // Esta pantalla se rediseña con la geometría real de `panels.config` en
+    // el Bloque 4 — estas tres cajas son un acomodo mínimo para seguir
+    // compilando y funcionando mientras tanto, no el diseño final.
+    <div className="relative h-full w-full overflow-auto" data-canvas="true">
+      <Panel tabId="configuracion" panelId="proyecto" titulo="Este proyecto" disposicionPorDefecto={{ x: 0, y: 0, w: 48, h: 60, z: 1 }}>
         <SeccionProyecto />
       </Panel>
       <Panel
         tabId="configuracion"
         panelId="global"
         titulo="Global — todos tus proyectos"
-        disposicionPorDefecto={{ x: 560, y: 16, width: 520, height: 460 }}
+        disposicionPorDefecto={{ x: 51, y: 0, w: 49, h: 60, z: 1 }}
       >
         <SeccionGlobal />
       </Panel>
-      <Panel tabId="configuracion" panelId="diagnostico" titulo="Diagnóstico" disposicionPorDefecto={{ x: 16, y: 500, width: 1064, height: 260 }}>
+      <Panel tabId="configuracion" panelId="diagnostico" titulo="Diagnóstico" disposicionPorDefecto={{ x: 0, y: 61, w: 100, h: 38, z: 1 }}>
         <SeccionDiagnostico />
       </Panel>
     </div>
