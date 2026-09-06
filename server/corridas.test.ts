@@ -277,3 +277,23 @@ describe("construirArgsCorrida", () => {
     });
   });
 });
+
+describe("lanzarCorrida — stdout que no es NDJSON", () => {
+  it("reenvía una línea de stdout que no parsea como JSON como un evento raw.stdout", async () => {
+    const proyecto = "C:/proyectos/raw-stdout";
+    const { proceso } = crearProcesoFake();
+
+    void lanzarCorrida(proyecto, ["doctor"], {
+      localizarCli: () => Promise.resolve(LOCALIZADO_OK),
+      spawnFn: vi.fn().mockReturnValue(proceso),
+    });
+    await esperarUnTick();
+
+    proceso.stdout?.emit("data", Buffer.from("Node OK\n"));
+    await esperarUnTick();
+
+    const historial = historialActivo(proyecto);
+    expect(historial).toHaveLength(1);
+    expect(historial[0]).toMatchObject({ type: "raw.stdout", agent: "web", data: { linea: "Node OK" } });
+  });
+});
