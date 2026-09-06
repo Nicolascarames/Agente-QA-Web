@@ -23,6 +23,7 @@ import {
   TIPOS_FIN_CORRIDA,
   type OpcionesCorridas,
 } from "./corridas.js";
+import { construirArgsComandoLibre } from "./comandoLibre.js";
 import type {
   CambiosConfigGlobal,
   CambiosConfigProyecto,
@@ -35,6 +36,7 @@ import type {
   EstadoProyectoActivo,
   MapaCompleto,
   ResultadoCli,
+  RespuestaComando,
   RespuestaCorreccionLocalizador,
   RespuestaExplorar,
   RespuestaMensaje,
@@ -306,6 +308,31 @@ export function buildApp(opts: AppOptions): FastifyInstance {
       return;
     }
     const respuesta: RespuestaMensaje = { runId: resultado.runId };
+    await reply.send(respuesta);
+  });
+
+  // POST /api/comando: consola global — texto libre tipo `record --headed <url>`, tokenizado y
+  // validado contra la whitelist de `comandoLibre.ts` antes de llegar a lanzarCorrida.
+  app.post<{ Body: { texto?: string } }>("/api/comando", async (req, reply) => {
+    const texto = req.body?.texto?.trim();
+    if (!texto) {
+      await reply.status(400).send({ error: 'falta "texto"' });
+      return;
+    }
+
+    const args = construirArgsComandoLibre(texto);
+    if (!args.ok) {
+      await reply.status(400).send({ error: args.motivo });
+      return;
+    }
+
+    const resultado = await lanzarCorrida(proyectoActivo, args.args, opcionesCorridas);
+    if (!resultado.ok) {
+      await reply.status(409).send({ error: resultado.motivo });
+      return;
+    }
+
+    const respuesta: RespuestaComando = { runId: resultado.runId };
     await reply.send(respuesta);
   });
 

@@ -13,6 +13,7 @@ import type {
   Proveedor,
   ResultadoCli,
   ResultadoSubproceso,
+  RespuestaComando,
   RespuestaCorreccionLocalizador,
   RespuestaExplorar,
   RespuestaMensaje,
@@ -187,6 +188,14 @@ export function detenerExploracion(): Promise<{ ok: true }> {
 
 export function enviarMensaje(texto: string): Promise<RespuestaMensaje> {
   return pedirJsonEstricto<RespuestaMensaje>("/api/mensaje", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ texto }),
+  });
+}
+
+export function enviarComando(texto: string): Promise<RespuestaComando> {
+  return pedirJsonEstricto<RespuestaComando>("/api/comando", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ texto }),
