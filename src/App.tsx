@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { cambiarProyecto, obtenerProyecto } from "./api";
+import { cambiarProyecto, obtenerConfigProyecto, obtenerProyecto } from "./api";
 import { Dashboard } from "./Dashboard";
 import { Configuracion } from "./Configuracion";
 import { Explorar } from "./Explorar";
@@ -11,14 +11,14 @@ import { Reports } from "./Reports";
 
 type Pestana = "Dashboard" | "Configuración" | "Explorar" | "Redactar" | "Generar" | "Ejecutar" | "Reparar" | "Reports";
 
-function contenidoPestana(pestana: Pestana) {
+function contenidoPestana(pestana: Pestana, onCorridaActivaCambiada: (descripcion: string | null) => void) {
   switch (pestana) {
     case "Dashboard":
       return <Dashboard />;
     case "Configuración":
       return <Configuracion />;
     case "Explorar":
-      return <Explorar />;
+      return <Explorar onCorridaActivaCambiada={onCorridaActivaCambiada} />;
     case "Redactar":
       return <Redactar />;
     case "Generar":
@@ -54,11 +54,17 @@ export default function App() {
   const [recientes, setRecientes] = useState<string[]>([]);
   const [rutaCampo, setRutaCampo] = useState("");
   const [sidebarAbierta, setSidebarAbierta] = useState(false);
+  const [appUrl, setAppUrl] = useState<string | null>(null);
 
-  // El indicador "● en curso" del mockup se alimenta de datos reales en el
-  // Bloque 3: hoy Explorar guarda su estado de ejecución en local, sin
-  // exponerlo al shell. Se deja el hueco listo, sin inventar una corrida.
-  const corridaActiva: string | null = null;
+  // El indicador "● en curso" lo enciende Explorar (única pestaña con corridas hoy) subiendo
+  // su estado real por esta callback — nunca se inventa una corrida aquí arriba.
+  const [corridaActiva, setCorridaActiva] = useState<string | null>(null);
+
+  const cargarAppUrl = useCallback(() => {
+    void obtenerConfigProyecto().then((datos) => {
+      setAppUrl(datos.inicializado ? datos.config.appUrl.valor : null);
+    });
+  }, []);
 
   useEffect(() => {
     void obtenerProyecto().then((datos) => {
@@ -66,15 +72,20 @@ export default function App() {
       setRutaCampo(datos.actual);
       setRecientes(datos.recientes);
     });
-  }, []);
+    cargarAppUrl();
+  }, [cargarAppUrl]);
 
-  const cambiarA = useCallback((ruta: string) => {
-    void cambiarProyecto(ruta).then((datos) => {
-      setProyectoActual(datos.actual);
-      setRutaCampo(datos.actual);
-      setRecientes(datos.recientes);
-    });
-  }, []);
+  const cambiarA = useCallback(
+    (ruta: string) => {
+      void cambiarProyecto(ruta).then((datos) => {
+        setProyectoActual(datos.actual);
+        setRutaCampo(datos.actual);
+        setRecientes(datos.recientes);
+      });
+      cargarAppUrl();
+    },
+    [cargarAppUrl]
+  );
 
   const ir = useCallback((p: Pestana) => {
     setPestana(p);
@@ -98,7 +109,7 @@ export default function App() {
       )}
 
       <aside
-        className={`flex w-[230px] flex-shrink-0 flex-col border-r border-bg-row bg-bg-elev max-[899px]:fixed max-[899px]:inset-y-0 max-[899px]:left-0 max-[899px]:z-[60] max-[899px]:shadow-[var(--sidebar-shadow)] max-[899px]:transition-transform max-[899px]:duration-200 ${
+        className={`sidebar-mobile-shadow flex w-[230px] flex-shrink-0 flex-col border-r border-bg-row bg-bg-elev max-[899px]:fixed max-[899px]:inset-y-0 max-[899px]:left-0 max-[899px]:z-[60] max-[899px]:transition-transform max-[899px]:duration-200 ${
           sidebarAbierta ? "max-[899px]:translate-x-0" : "max-[899px]:-translate-x-full"
         }`}
       >
@@ -149,7 +160,7 @@ export default function App() {
           <p className="mt-1.5 truncate text-2xs text-text-faint" title={proyectoActual}>
             {proyectoActual || "sin proyecto"}
           </p>
-          <p className="mt-1 text-2xs text-text-ghost">URL objetivo: pendiente — llega con Configuración (Bloque 4).</p>
+          <p className="mt-1 text-2xs text-text-ghost">URL objetivo: {appUrl && appUrl.trim() ? appUrl : "sin configurar"}</p>
         </div>
 
         <div className="px-3 pb-1.5 pt-1.5 text-2xs uppercase tracking-[.05em] text-text-faint">Operaciones</div>
@@ -211,7 +222,7 @@ export default function App() {
         </header>
 
         <div key={pestana} className="relative flex-1 animate-page-fade overflow-hidden">
-          {contenidoPestana(pestana)}
+          {contenidoPestana(pestana, setCorridaActiva)}
         </div>
       </main>
     </div>

@@ -24,36 +24,38 @@ const GEOMETRIA_HIST = { x: 51, y: 57, w: 49, h: 41, z: 1 };
 
 export function Reports() {
   return (
-    <div className="relative h-full p-4" data-canvas="true">
-      {GEOMETRIA_STATS.map((geometria, i) => (
-        <Panel key={`s${String(i)}`} tabId="reports" panelId={`s${String(i)}`} titulo={ETIQUETAS_STATS[i]} disposicionPorDefecto={geometria}>
+    <div className="flex h-full flex-col p-4">
+      <div className="relative flex-1" data-canvas="true">
+        {GEOMETRIA_STATS.map((geometria, i) => (
+          <Panel key={`s${String(i)}`} tabId="reports" panelId={`s${String(i)}`} titulo={ETIQUETAS_STATS[i]} disposicionPorDefecto={geometria}>
+            <AccionDeshabilitada motivo={MOTIVO_REPORTS} />
+          </Panel>
+        ))}
+
+        <Panel tabId="reports" panelId="filt" titulo="🔎 Filtros" disposicionPorDefecto={GEOMETRIA_FILT}>
           <AccionDeshabilitada motivo={MOTIVO_REPORTS} />
         </Panel>
-      ))}
 
-      <Panel tabId="reports" panelId="filt" titulo="🔎 Filtros" disposicionPorDefecto={GEOMETRIA_FILT}>
-        <AccionDeshabilitada motivo={MOTIVO_REPORTS} />
-      </Panel>
+        <Panel tabId="reports" panelId="causes" titulo="Fallos agrupados por causa" disposicionPorDefecto={GEOMETRIA_CAUSES}>
+          <AccionDeshabilitada motivo={MOTIVO_REPORTS} />
+        </Panel>
 
-      <Panel tabId="reports" panelId="causes" titulo="Fallos agrupados por causa" disposicionPorDefecto={GEOMETRIA_CAUSES}>
-        <AccionDeshabilitada motivo={MOTIVO_REPORTS} />
-      </Panel>
-
-      <Panel tabId="reports" panelId="hist" titulo="Historial de ejecuciones" disposicionPorDefecto={GEOMETRIA_HIST}>
-        <div className="flex h-full flex-col gap-2">
-          <button
-            type="button"
-            disabled
-            title={MOTIVO_REPORTS}
-            className="cursor-not-allowed self-end rounded-6 border border-border-soft bg-bg-sunken px-2.5 py-1.5 text-2xs text-text-ghost"
-          >
-            ⬇️ Exportar
-          </button>
-          <div className="flex-1">
-            <AccionDeshabilitada motivo={MOTIVO_REPORTS} />
+        <Panel tabId="reports" panelId="hist" titulo="Historial de ejecuciones" disposicionPorDefecto={GEOMETRIA_HIST}>
+          <div className="flex h-full flex-col gap-2">
+            <button
+              type="button"
+              disabled
+              title={MOTIVO_REPORTS}
+              className="cursor-not-allowed self-end rounded-6 border border-border-soft bg-bg-sunken px-2.5 py-1.5 text-2xs text-text-ghost"
+            >
+              ⬇️ Exportar
+            </button>
+            <div className="flex-1">
+              <AccionDeshabilitada motivo={MOTIVO_REPORTS} />
+            </div>
           </div>
-        </div>
-      </Panel>
+        </Panel>
+      </div>
     </div>
   );
 }

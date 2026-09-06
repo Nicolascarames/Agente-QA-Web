@@ -7,8 +7,9 @@ import { Panel } from "./Panel";
 // Agente-QA-MCP). Diferencia real frente a Redactar/Generar/Explorar (regla de fidelidad 4): el
 // mockup no le pone fila "🤖 Agente" a la barra de esta pestaña porque, cuando exista, correrá
 // tests Playwright deterministas — no hay puerta que elegir ni LLM que pagar — así que
-// `sinAgente` la oculta y `coste` fija `$0,00 · sin llamadas LLM`: es un hecho estructural, no un
-// dato inventado.
+// `sinAgente` la oculta y `coste` fija `coste: $0,00 — sin llamadas LLM` (mismo criterio textual
+// "coste: <valor> — <motivo>" que usa BarraLanzamiento.tsx en Explorar): es un hecho estructural,
+// no un dato inventado.
 const MOTIVO_EJECUTOR =
   "El agente ejecutor no existe todavía: no hay ningún proceso que corra los tests Playwright generados ni guarde su evidencia.";
 
@@ -48,7 +49,7 @@ export function Ejecutar() {
         motivo={MOTIVO_EJECUTOR}
         etiquetaBoton="▶️ Ejecutar"
         sinAgente
-        coste="$0,00 · sin llamadas LLM"
+        coste="coste: $0,00 — sin llamadas LLM"
       />
     </div>
   );

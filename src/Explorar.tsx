@@ -55,12 +55,20 @@ export function eventosTrasEnviarMensaje(
   return [...anteriores, eco];
 }
 
-export function Explorar() {
+export interface ExplorarProps {
+  /** Sube a la cáscara si hay una corrida en marcha y qué la describe, para el indicador "● en curso" del header. */
+  onCorridaActivaCambiada?: (descripcion: string | null) => void;
+}
+
+export function Explorar({ onCorridaActivaCambiada }: ExplorarProps = {}) {
   const [mapa, setMapa] = useState<MapaCompleto>(MAPA_VACIO);
   const [pantallaSeleccionada, setPantallaSeleccionada] = useState<string | null>(null);
   const [unidadesSeleccionadas, setUnidadesSeleccionadas] = useState<string[]>([]);
   const [eventos, setEventos] = useState<EventoNdjson[]>([]);
   const [corriendo, setCorriendo] = useState(false);
+  // Descripción de la corrida activa (puerta + ámbito), null si no hay ninguna o si se desconoce
+  // (p.ej. una corrida ya en marcha al cargar la pestaña, o lanzada desde el chat).
+  const [descripcionCorrida, setDescripcionCorrida] = useState<string | null>(null);
   // Cada lanzamiento incrementa esto: fuerza a reabrir el SSE aunque ya hubiera uno cerrado.
   const [intentoConexion, setIntentoConexion] = useState(0);
   const fuenteRef = useRef<EventSource | null>(null);
@@ -85,8 +93,17 @@ export function Explorar() {
   // Al cargar la pestaña (o recargar el navegador), se pregunta si ya hay una corrida en marcha
   // para este proyecto antes de que llegue ningún evento por SSE — así el botón nace correcto.
   useEffect(() => {
-    void obtenerCorridaActiva().then((estado) => setCorriendo(estado.activa));
+    void obtenerCorridaActiva().then((estado) => {
+      setCorriendo(estado.activa);
+      if (!estado.activa) setDescripcionCorrida(null);
+    });
   }, []);
+
+  // Sube a la cáscara el estado derivado (corriendo + descripción), con el mismo fallback
+  // genérico que usa el indicador cuando no se conoce puerta/ámbito de la corrida en marcha.
+  useEffect(() => {
+    onCorridaActivaCambiada?.(corriendo ? (descripcionCorrida ?? "Explorar") : null);
+  }, [corriendo, descripcionCorrida, onCorridaActivaCambiada]);
 
   // El SSE reenvía primero el historial acumulado de la corrida activa y luego sigue en vivo: por
   // eso recargar el navegador a mitad de una corrida no pierde lo anterior. Sin corrida activa, el
@@ -107,7 +124,9 @@ export function Explorar() {
         return;
       }
       setEventos((anteriores) => [...anteriores, evento]);
-      setCorriendo(!TIPOS_FIN_CORRIDA.has(evento.type));
+      const finDeCorrida = TIPOS_FIN_CORRIDA.has(evento.type);
+      setCorriendo(!finDeCorrida);
+      if (finDeCorrida) setDescripcionCorrida(null);
       // El árbol se refresca leyendo `map.json` de nuevo en vez de intentar fusionar a mano el
       // `data` (sin forma cerrada) de cada evento — es la única fuente que ya valida el contrato.
       // También se refresca al cerrar la corrida (completed/stopped/error): así queda consistente
@@ -188,9 +207,10 @@ export function Explorar() {
       <BarraLanzamiento
         corriendo={corriendo}
         unidadesSeleccionadas={unidadesSeleccionadas}
-        onLanzado={() => {
+        onLanzado={(descripcion) => {
           setEventos([]);
           setCorriendo(true);
+          setDescripcionCorrida(descripcion);
           setIntentoConexion((n) => n + 1);
         }}
         onDetenido={() => {

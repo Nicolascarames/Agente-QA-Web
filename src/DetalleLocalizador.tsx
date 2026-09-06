@@ -99,7 +99,7 @@ export function DetalleLocalizador({
 
       {localizador && (
         <div className="mt-2 flex flex-col gap-2 rounded-8 border border-info bg-bg-sunken p-2.5">
-          <div className="text-2xs text-info">Editar localizador (mismo widget se reutiliza dentro de Generar)</div>
+          <div className="text-2xs text-info">Editar localizador</div>
           <div className="flex flex-col gap-0.5 text-xs text-text-dim">
             <p>
               <span className="text-text-muted">name</span> <span className="font-mono">{localizador.name}</span>

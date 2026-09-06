@@ -73,11 +73,11 @@ export function Dashboard() {
       : [];
 
   return (
-    <div className="relative h-full w-full overflow-auto p-4" data-canvas="true">
+    <div className="flex h-full w-full flex-col overflow-auto p-4">
       {estado.estado === "error" ? (
         <p className="text-accent">Error: {estado.mensaje}</p>
       ) : (
-        <>
+        <div className="relative flex-1" data-canvas="true">
           {GEOMETRIA_STATS.map((geometria, i) => (
             <CajaEstadistica
               key={`s${String(i)}`}
@@ -116,7 +116,7 @@ export function Dashboard() {
             {actividad.estado === "listo" && !actividad.datos.disponible && <p className="text-accent">{actividad.datos.motivo}</p>}
             {actividad.estado === "listo" && actividad.datos.disponible && <p className="text-text">{actividad.datos.eventos.length} eventos.</p>}
           </Panel>
-        </>
+        </div>
       )}
     </div>
   );

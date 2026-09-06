@@ -190,6 +190,16 @@ a:hover {
   color: var(--accent-hover);
 }
 
+/* Sombra del cajón lateral en móvil: `shadow-[var(--sidebar-shadow)]` de Tailwind no sirve
+   porque interpreta un var() suelto dentro de shadow-[...] como COLOR de sombra, no como
+   box-shadow completo, y --sidebar-shadow guarda una sombra entera (offset+blur+color). Regla
+   CSS aparte con el mismo punto de corte que el resto de clases `max-[899px]:` del sidebar. */
+@media (max-width: 899px) {
+  .sidebar-mobile-shadow {
+    box-shadow: var(--sidebar-shadow);
+  }
+}
+
 /* ── Animaciones del mockup, portadas tal cual ── */
 @keyframes pageFade {
   from {

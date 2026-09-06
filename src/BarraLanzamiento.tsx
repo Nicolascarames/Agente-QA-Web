@@ -55,7 +55,8 @@ export interface BarraLanzamientoProps {
   corriendo: boolean;
   /** Ids de pantallas ya conocidas marcadas en el árbol, para el ámbito "esta selección". */
   unidadesSeleccionadas: string[];
-  onLanzado: () => void;
+  /** Recibe una descripción legible de la corrida lanzada (puerta + ámbito), para que la cáscara la enseñe en "● en curso". */
+  onLanzado: (descripcion: string) => void;
   onDetenido: () => void;
 }
 
@@ -93,7 +94,7 @@ export function BarraLanzamiento({ corriendo, unidadesSeleccionadas, onLanzado, 
       ...(info.llevaObjetivo ? { objetivo: objetivo.trim() } : {}),
       ...(info.llevaAmbito && ambito === "seleccion" ? { unidades: unidadesSeleccionadas } : {}),
     })
-      .then(() => onLanzado())
+      .then(() => onLanzado(`${info.etiqueta} · ${ETIQUETA_AMBITO[ambito]}`))
       .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)))
       .finally(() => setEnCurso(false));
   };

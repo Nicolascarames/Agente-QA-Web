@@ -29,7 +29,8 @@ export interface BarraLanzamientoDeshabilitadaProps {
    * trae fila "🤖 Agente" — la oculta en vez de rellenarla con un "—" que no corresponde a ningún
    * control real. */
   sinAgente?: boolean;
-  /** Coste real conocido de antemano (Ejecutar: `"$0,00 · sin llamadas LLM"`, estructural porque
+  /** Coste real conocido de antemano (Ejecutar: `"coste: $0,00 — sin llamadas LLM"`, mismo criterio
+   * textual "coste: <valor> — <motivo>" que BarraLanzamiento.tsx en Explorar, estructural porque
    * el ejecutor nunca llama a un LLM), en vez del marcador neutro "—" que usan Redactar/Generar/
    * Reparar mientras su agente no exista y su coste sea un dato desconocido. */
   coste?: string;

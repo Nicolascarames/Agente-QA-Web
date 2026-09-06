@@ -63,13 +63,15 @@ export function Configuracion() {
     // mk(51,0,49,100), los dos a 100% de alto — el mockup no tiene una tercera fila aquí,
     // así que "Diagnóstico" (antes un tercer panel, parche del Bloque 2) se funde dentro del
     // panel Global como su bloque "🩺 Estado del entorno" (ver SeccionDiagnostico más abajo).
-    <div className="relative h-full w-full overflow-auto p-4" data-canvas="true">
-      <Panel tabId="configuracion" panelId="proyecto" titulo="📁 Este proyecto" disposicionPorDefecto={{ x: 0, y: 0, w: 48, h: 100, z: 1 }}>
-        <SeccionProyecto />
-      </Panel>
-      <Panel tabId="configuracion" panelId="global" titulo="🌍 Global" disposicionPorDefecto={{ x: 51, y: 0, w: 49, h: 100, z: 1 }}>
-        <SeccionGlobal />
-      </Panel>
+    <div className="flex h-full w-full flex-col overflow-auto p-4">
+      <div className="relative flex-1" data-canvas="true">
+        <Panel tabId="configuracion" panelId="proyecto" titulo="📁 Este proyecto" disposicionPorDefecto={{ x: 0, y: 0, w: 48, h: 100, z: 1 }}>
+          <SeccionProyecto />
+        </Panel>
+        <Panel tabId="configuracion" panelId="global" titulo="🌍 Global" disposicionPorDefecto={{ x: 51, y: 0, w: 49, h: 100, z: 1 }}>
+          <SeccionGlobal />
+        </Panel>
+      </div>
     </div>
   );
 }
