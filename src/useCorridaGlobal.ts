@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { obtenerMapa } from "./api";
+import { obtenerCorridaActiva, obtenerMapa } from "./api";
 import { diffMapa, type DiffMapa } from "./diffMapa";
 import type { EventoNdjson, MapaCompleto } from "../shared/tipos";
 
@@ -46,12 +46,24 @@ export function useCorridaGlobal(): EstadoCorridaGlobal {
   const [resumenFinal, setResumenFinal] = useState<ResumenFinalCorrida | null>(null);
   const mapaAntesRef = useRef<MapaCompleto | null>(null);
 
+  // Al montar (o recargar el navegador), se pregunta si ya hay una corrida en marcha antes de
+  // que llegue ningún evento por SSE — mismo patrón que `Explorar.tsx` (líneas ~95-100), pero
+  // como "resumir" pasivo: solo actualiza `corridaActiva` (lo que abre el SSE vía el efecto de
+  // abajo) sin tocar `eventos`/`resumenFinal`/`mapaAntesRef`, que sí se reinician en un lanzamiento
+  // genuino (`marcarCorridaActiva`).
+  useEffect(() => {
+    void obtenerCorridaActiva().then((estadoActivo) => {
+      if (estadoActivo.activa) setCorridaActiva(estadoActivo.runId ?? "activa");
+    });
+  }, []);
+
   useEffect(() => {
     if (corridaActiva === null) return;
     const fuente = new EventSource("/api/eventos");
 
     fuente.addEventListener("sin-corrida", () => {
       fuente.close();
+      setCorridaActiva(null);
     });
 
     fuente.onmessage = (mensaje: MessageEvent<string>) => {
@@ -63,6 +75,7 @@ export function useCorridaGlobal(): EstadoCorridaGlobal {
       }
       setEstado((actual) => reducirEventoConsola(actual, evento));
       if (TIPOS_FIN_CORRIDA.has(evento.type)) {
+        setCorridaActiva(null);
         void obtenerMapa().then((mapaDespues) => {
           setResumenFinal({ evento, diff: diffMapa(mapaAntesRef.current, mapaDespues) });
         });
@@ -75,15 +88,17 @@ export function useCorridaGlobal(): EstadoCorridaGlobal {
   }, [intentoConexion, corridaActiva]);
 
   const marcarCorridaActiva = useCallback((etiqueta: string | null) => {
-    setCorridaActiva(etiqueta);
-    if (etiqueta !== null) {
-      setEstado(ESTADO_CONSOLA_INICIAL);
-      setResumenFinal(null);
-      setIntentoConexion((n) => n + 1);
-      void obtenerMapa().then((mapa) => {
-        mapaAntesRef.current = mapa;
-      });
-    }
+    setCorridaActiva((actual) => {
+      if (etiqueta !== null && actual === null) {
+        setEstado(ESTADO_CONSOLA_INICIAL);
+        setResumenFinal(null);
+        setIntentoConexion((n) => n + 1);
+        void obtenerMapa().then((mapa) => {
+          mapaAntesRef.current = mapa;
+        });
+      }
+      return etiqueta;
+    });
   }, []);
 
   return { corridaActiva, eventos: estado.eventos, resumenFinal, marcarCorridaActiva };

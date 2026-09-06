@@ -202,7 +202,7 @@ export default function App() {
         </div>
       </aside>
 
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden" data-canvas="true">
         <header className="flex min-h-[48px] items-center justify-between gap-2.5 border-b border-bg-row bg-bg-elev px-4">
           <div className="flex min-w-0 items-center gap-2.5">
             <button
@@ -224,7 +224,7 @@ export default function App() {
               onClick={() => setConsolaAbierta((v) => !v)}
               className="whitespace-nowrap rounded-6 border border-border-strong bg-bg-panel px-2.5 py-1 text-sm font-semibold text-text-strong"
             >
-              🖳 Consola
+              🖥️ Consola
             </button>
             {corridaActiva && (
               <div className="whitespace-nowrap rounded-6 bg-info-bg px-2.5 py-1 text-sm font-semibold text-info">

@@ -9,6 +9,11 @@ function serializarDatos(data: unknown): string {
 }
 
 function LineaEvento({ evento }: { evento: EventoNdjson }) {
+  if (evento.type === "raw.stdout") {
+    const datos = evento.data as { linea?: unknown };
+    const linea = typeof datos?.linea === "string" ? datos.linea : serializarDatos(evento.data);
+    return <li className="text-xs text-text-dim">{linea}</li>;
+  }
   return (
     <li className="border-b border-border pb-1.5 text-xs text-text-faint">
       <span className="text-text-ghost">{evento.ts}</span> <span className="text-accent-soft">{evento.type}</span>{" "}
