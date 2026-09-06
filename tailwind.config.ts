@@ -39,13 +39,6 @@ const config: Config = {
       agent: "var(--agent)",
       info: "var(--info)",
       "info-bg": "var(--info-bg)",
-      // Alias heredados del intento anterior: Explorar.tsx y Configuracion.tsx
-      // (fuera del alcance de este bloque, ver Bloques 3 y 4) siguen usando
-      // `bg-panel`/`text-warning`/`border-warning` — se mantienen apuntando al
-      // token real más cercano en vez de dejarlos sin estilo hasta que se
-      // toquen esos ficheros.
-      panel: "var(--bg-panel)",
-      warning: "var(--accent)",
     },
     fontSize: {
       "2xs": "8px",
