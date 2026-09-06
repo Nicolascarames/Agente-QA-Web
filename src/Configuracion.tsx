@@ -40,10 +40,17 @@ const ROLES: { id: Rol; etiqueta: string }[] = [
   { id: "diagnosis", etiqueta: "Diagnóstico (futuro Reparar)" },
 ];
 
+const CLASE_CAMPO = "rounded-7 border border-border-soft bg-bg-sunken px-2 py-1.5 text-sm text-text-strong disabled:opacity-40";
+const CLASE_FILA = "flex items-center justify-between gap-2 border-b border-bg-row py-2 last:border-b-0";
+const CLASE_BOTON_SECUNDARIO =
+  "w-fit rounded-7 border border-border-strong bg-bg-elev px-2.5 py-1.5 text-sm text-text-strong disabled:opacity-40";
+const CLASE_BOTON_PRIMARIO =
+  "w-fit rounded-7 border border-accent bg-accent px-3.5 py-1.5 text-sm font-bold text-on-accent disabled:opacity-50";
+
 function EtiquetaCapa({ capa }: { capa: CapaConfig | null }) {
-  if (!capa) return <span className="text-xs text-text/40">sin configurar</span>;
+  if (!capa) return <span className="text-xs text-text-ghost">sin configurar</span>;
   const texto = capa === "entorno" ? "variable de entorno" : capa === "proyecto" ? "este proyecto" : "global";
-  return <span className="text-xs text-text/50">({texto})</span>;
+  return <span className="text-xs text-text-faint">({texto})</span>;
 }
 
 function motivoNoEditable(capa: CapaConfig | null): string | undefined {
@@ -52,25 +59,16 @@ function motivoNoEditable(capa: CapaConfig | null): string | undefined {
 
 export function Configuracion() {
   return (
-    // data-canvas + geometría en %: contrato de Panel.tsx desde el Bloque 2
-    // (docs/superpowers/specs/2026-09-06-interfaz-web-fiel-al-standalone.md).
-    // Esta pantalla se rediseña con la geometría real de `panels.config` en
-    // el Bloque 4 — estas tres cajas son un acomodo mínimo para seguir
-    // compilando y funcionando mientras tanto, no el diseño final.
-    <div className="relative h-full w-full overflow-auto" data-canvas="true">
-      <Panel tabId="configuracion" panelId="proyecto" titulo="Este proyecto" disposicionPorDefecto={{ x: 0, y: 0, w: 48, h: 60, z: 1 }}>
+    // Geometría EXACTA de `panels.config` en design/mockup-design.js: mk(0,0,48,100) y
+    // mk(51,0,49,100), los dos a 100% de alto — el mockup no tiene una tercera fila aquí,
+    // así que "Diagnóstico" (antes un tercer panel, parche del Bloque 2) se funde dentro del
+    // panel Global como su bloque "🩺 Estado del entorno" (ver SeccionDiagnostico más abajo).
+    <div className="relative h-full w-full overflow-auto p-4" data-canvas="true">
+      <Panel tabId="configuracion" panelId="proyecto" titulo="📁 Este proyecto" disposicionPorDefecto={{ x: 0, y: 0, w: 48, h: 100, z: 1 }}>
         <SeccionProyecto />
       </Panel>
-      <Panel
-        tabId="configuracion"
-        panelId="global"
-        titulo="Global — todos tus proyectos"
-        disposicionPorDefecto={{ x: 51, y: 0, w: 49, h: 60, z: 1 }}
-      >
+      <Panel tabId="configuracion" panelId="global" titulo="🌍 Global" disposicionPorDefecto={{ x: 51, y: 0, w: 49, h: 100, z: 1 }}>
         <SeccionGlobal />
-      </Panel>
-      <Panel tabId="configuracion" panelId="diagnostico" titulo="Diagnóstico" disposicionPorDefecto={{ x: 0, y: 61, w: 100, h: 38, z: 1 }}>
-        <SeccionDiagnostico />
       </Panel>
     </div>
   );
@@ -153,19 +151,34 @@ function SeccionProyecto() {
       .finally(() => setGuardando(false));
   }, [appUrl, environment, maxIterations, maxScreens, maxCostUsd, nuevoUsuario, nuevoPassword, memoriaTexto, recargar]);
 
-  if (carga.estado === "cargando") return <p>Cargando…</p>;
-  if (carga.estado === "error") return <p className="text-warning">Error: {carga.mensaje}</p>;
+  // "🧠 Memoria del proyecto" del mockup pinta filas de reglas ya escritas más "➕ Añadir
+  // regla" — memory.json no tiene un esquema fijo en el contrato (`memoria: unknown`), así
+  // que esa vista de lista solo se activa cuando el JSON real ya es un array (el caso que
+  // documenta el plan maestro: frases sueltas). Si no lo es, se mantiene el editor JSON de
+  // siempre — ninguna dato se inventa ni se fuerza a una forma que no tiene.
+  let memoriaComoReglas: unknown[] | null = null;
+  try {
+    const parseado: unknown = JSON.parse(memoriaTexto);
+    if (Array.isArray(parseado)) memoriaComoReglas = parseado;
+  } catch {
+    memoriaComoReglas = null;
+  }
+
+  if (carga.estado === "cargando") return <p className="text-text-dim">Cargando…</p>;
+  if (carga.estado === "error") return <p className="text-accent">Error: {carga.mensaje}</p>;
   if (!carga.datos.inicializado) {
-    return <p className="text-warning">Este proyecto no tiene .agente-qa/ todavía: ejecuta init desde el Dashboard.</p>;
+    return <p className="text-accent">Este proyecto no tiene .agente-qa/ todavía: ejecuta init desde el Dashboard.</p>;
   }
   const { config } = carga.datos;
 
   return (
-    <div className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1">
-        <span className="text-text/60">URL de la app <EtiquetaCapa capa={config.appUrl.capa} /></span>
+    <div className="flex flex-col gap-1">
+      <label className={CLASE_FILA}>
+        <span className="text-text-muted">
+          URL objetivo <EtiquetaCapa capa={config.appUrl.capa} />
+        </span>
         <input
-          className="rounded-md border border-accent/30 bg-bg px-2 py-1"
+          className={`w-44 ${CLASE_CAMPO}`}
           value={appUrl}
           disabled={!config.appUrl.editable}
           title={motivoNoEditable(config.appUrl.capa)}
@@ -173,98 +186,135 @@ function SeccionProyecto() {
         />
       </label>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-text/60">Entorno <EtiquetaCapa capa={config.environment.capa} /></span>
-        <select
-          className="rounded-md border border-accent/30 bg-bg px-2 py-1"
-          value={environment}
-          disabled={!config.environment.editable}
-          onChange={(e) => setEnvironment(e.target.value as EnvironmentApp)}
-        >
-          {ENTORNOS.map((valor) => (
-            <option key={valor} value={valor}>
-              {valor}
-            </option>
-          ))}
-        </select>
+      <div className={CLASE_FILA}>
+        <span className="text-text-muted">
+          Entorno <EtiquetaCapa capa={config.environment.capa} />
+        </span>
+        {/*
+          El mockup solo enseña dos opciones (staging/producción) en este segmentado; la
+          funcionalidad real admite las cuatro de EnvironmentApp — manda la real (regla de
+          fidelidad 4/6), se anota en el informe del bloque.
+        */}
+        <div className="flex overflow-hidden rounded-6 border border-border-soft">
+          {ENTORNOS.map((valor) => {
+            const activo = environment === valor;
+            return (
+              <button
+                key={valor}
+                type="button"
+                disabled={!config.environment.editable}
+                onClick={() => setEnvironment(valor)}
+                className={`px-2.5 py-1 text-sm ${activo ? "bg-bg-elev text-accent-soft" : "bg-bg-sunken text-text-muted"} disabled:opacity-40`}
+              >
+                {valor}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Límites de la corrida: no están en el mockup (su pantalla de Configuración no los
+          enseña), pero son funcionalidad real ya en uso — se conservan (regla de fidelidad 4/6). */}
+      <p className="mb-0.5 mt-3 text-xs uppercase tracking-[.04em] text-text-faint">Límites</p>
+      <label className={CLASE_FILA}>
+        <span className="text-text-muted">
+          Iteraciones máximas <EtiquetaCapa capa={config.limits.maxIterations.capa} />
+        </span>
+        <input
+          type="number"
+          className={`w-24 ${CLASE_CAMPO}`}
+          value={maxIterations}
+          onChange={(e) => setMaxIterations(Number(e.target.value))}
+        />
+      </label>
+      <label className={CLASE_FILA}>
+        <span className="text-text-muted">
+          Pantallas máximas <EtiquetaCapa capa={config.limits.maxScreens.capa} />
+        </span>
+        <input
+          type="number"
+          className={`w-24 ${CLASE_CAMPO}`}
+          value={maxScreens}
+          onChange={(e) => setMaxScreens(Number(e.target.value))}
+        />
+      </label>
+      <label className={CLASE_FILA}>
+        <span className="text-text-muted">
+          Coste máximo (USD) <EtiquetaCapa capa={config.limits.maxCostUsd.capa} />
+        </span>
+        <input
+          type="number"
+          step="0.1"
+          className={`w-24 ${CLASE_CAMPO}`}
+          value={maxCostUsd}
+          onChange={(e) => setMaxCostUsd(Number(e.target.value))}
+        />
       </label>
 
-      <fieldset className="flex flex-col gap-2 rounded-md border border-accent/20 p-2">
-        <legend className="px-1 text-text/60">Límites</legend>
-        <label className="flex items-center justify-between gap-2">
-          <span>Iteraciones máximas <EtiquetaCapa capa={config.limits.maxIterations.capa} /></span>
-          <input
-            type="number"
-            className="w-24 rounded-md border border-accent/30 bg-bg px-2 py-1"
-            value={maxIterations}
-            onChange={(e) => setMaxIterations(Number(e.target.value))}
-          />
-        </label>
-        <label className="flex items-center justify-between gap-2">
-          <span>Pantallas máximas <EtiquetaCapa capa={config.limits.maxScreens.capa} /></span>
-          <input
-            type="number"
-            className="w-24 rounded-md border border-accent/30 bg-bg px-2 py-1"
-            value={maxScreens}
-            onChange={(e) => setMaxScreens(Number(e.target.value))}
-          />
-        </label>
-        <label className="flex items-center justify-between gap-2">
-          <span>Coste máximo (USD) <EtiquetaCapa capa={config.limits.maxCostUsd.capa} /></span>
-          <input
-            type="number"
-            step="0.1"
-            className="w-24 rounded-md border border-accent/30 bg-bg px-2 py-1"
-            value={maxCostUsd}
-            onChange={(e) => setMaxCostUsd(Number(e.target.value))}
-          />
-        </label>
-      </fieldset>
+      <p className="mb-0.5 mt-3 text-md font-bold text-text-bright">🔑 Credenciales de test</p>
+      <CampoSecretoProyecto
+        etiqueta="Usuario"
+        campo={config.credenciales.usuario}
+        nuevoValor={nuevoUsuario}
+        onCambiar={setNuevoUsuario}
+        visto={usuarioVisto}
+        onVer={() => {
+          void verCredencialProyecto("usuario")
+            .then((r) => setUsuarioVisto(r.valor))
+            .catch((err: unknown) => setMensaje(err instanceof Error ? err.message : String(err)));
+        }}
+      />
+      <CampoSecretoProyecto
+        etiqueta="Contraseña"
+        campo={config.credenciales.password}
+        nuevoValor={nuevoPassword}
+        onCambiar={setNuevoPassword}
+        visto={passwordVisto}
+        onVer={() => {
+          void verCredencialProyecto("password")
+            .then((r) => setPasswordVisto(r.valor))
+            .catch((err: unknown) => setMensaje(err instanceof Error ? err.message : String(err)));
+        }}
+      />
 
-      <fieldset className="flex flex-col gap-2 rounded-md border border-accent/20 p-2">
-        <legend className="px-1 text-text/60">Credenciales de la app bajo test</legend>
-        <CampoSecretoProyecto
-          etiqueta="Usuario"
-          campo={config.credenciales.usuario}
-          nuevoValor={nuevoUsuario}
-          onCambiar={setNuevoUsuario}
-          visto={usuarioVisto}
-          onVer={() => {
-            void verCredencialProyecto("usuario")
-              .then((r) => setUsuarioVisto(r.valor))
-              .catch((err: unknown) => setMensaje(err instanceof Error ? err.message : String(err)));
-          }}
-        />
-        <CampoSecretoProyecto
-          etiqueta="Contraseña"
-          campo={config.credenciales.password}
-          nuevoValor={nuevoPassword}
-          onCambiar={setNuevoPassword}
-          visto={passwordVisto}
-          onVer={() => {
-            void verCredencialProyecto("password")
-              .then((r) => setPasswordVisto(r.valor))
-              .catch((err: unknown) => setMensaje(err instanceof Error ? err.message : String(err)));
-          }}
-        />
-      </fieldset>
-
-      <label className="flex flex-col gap-1">
-        <span className="text-text/60">Memoria del proyecto (memory.json)</span>
+      <h2 className="mb-0.5 mt-3 text-md font-bold text-text-bright">🧠 Memoria del proyecto</h2>
+      <p className="mb-1.5 text-xs text-text-faint">.agente-qa/memory.json — editable, no caja negra</p>
+      {memoriaComoReglas ? (
+        <ul className="flex flex-col text-sm text-text">
+          {memoriaComoReglas.length === 0 && <li className="py-1.5 text-text-dim">Ninguna todavía.</li>}
+          {memoriaComoReglas.map((regla, indice) => (
+            <li key={indice} className={CLASE_FILA}>
+              <input
+                className={`flex-1 ${CLASE_CAMPO}`}
+                value={typeof regla === "string" ? regla : JSON.stringify(regla)}
+                onChange={(e) => {
+                  const siguiente = [...memoriaComoReglas];
+                  siguiente[indice] = e.target.value;
+                  setMemoriaTexto(JSON.stringify(siguiente, null, 2));
+                }}
+              />
+            </li>
+          ))}
+        </ul>
+      ) : (
         <textarea
-          className="h-24 rounded-md border border-accent/30 bg-bg px-2 py-1 font-mono text-xs"
+          className={`h-24 font-mono ${CLASE_CAMPO}`}
           value={memoriaTexto}
           onChange={(e) => setMemoriaTexto(e.target.value)}
         />
-      </label>
-
-      {mensaje && <p className="text-sm text-accent">{mensaje}</p>}
+      )}
       <button
         type="button"
-        disabled={guardando}
-        onClick={guardar}
-        className="w-fit rounded-md border border-accent/60 px-3 py-1 text-accent disabled:opacity-50"
+        disabled={!memoriaComoReglas}
+        title={memoriaComoReglas ? undefined : "La memoria de este proyecto no es una lista de reglas: edítala como JSON arriba."}
+        onClick={() => setMemoriaTexto(JSON.stringify([...(memoriaComoReglas ?? []), ""], null, 2))}
+        className={`mt-2 ${CLASE_BOTON_SECUNDARIO}`}
       >
+        ➕ Añadir regla
+      </button>
+
+      {mensaje && <p className="mt-3 text-sm text-accent">{mensaje}</p>}
+      <button type="button" disabled={guardando} onClick={guardar} className={`mt-2 ${CLASE_BOTON_PRIMARIO}`}>
         {guardando ? "guardando…" : "Guardar cambios de este proyecto"}
       </button>
     </div>
@@ -287,33 +337,26 @@ function CampoSecretoProyecto({
   onVer: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between gap-2">
-        <span>
-          {etiqueta} <EtiquetaCapa capa={campo.capa} />
-        </span>
-        <span className="font-mono text-xs">
-          {visto ?? (campo.hayValor ? `****${campo.ultimos4 ?? ""}` : "sin configurar")}
-          {campo.hayValor && !visto && (
-            <button type="button" onClick={onVer} className="ml-2 text-accent hover:underline">
-              ver
-            </button>
-          )}
-          {visto && (
-            <button type="button" onClick={() => onVer()} className="ml-2 text-accent hover:underline">
-              ocultar
-            </button>
-          )}
-        </span>
+    <div className={CLASE_FILA}>
+      <span className="text-text-muted">
+        {etiqueta} <EtiquetaCapa capa={campo.capa} />
+      </span>
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-xs text-text-strong">{visto ?? (campo.hayValor ? `****${campo.ultimos4 ?? ""}` : "sin configurar")}</span>
+        {campo.hayValor && (
+          <button type="button" onClick={onVer} className="text-xs text-accent-soft hover:text-accent-hover">
+            {visto ? "ocultar" : "ver"}
+          </button>
+        )}
+        <input
+          className={`w-44 ${CLASE_CAMPO} text-xs`}
+          placeholder={`Nuevo valor (vacío = sin cambios)`}
+          value={nuevoValor}
+          disabled={!campo.editable}
+          title={motivoNoEditable(campo.capa)}
+          onChange={(e) => onCambiar(e.target.value)}
+        />
       </div>
-      <input
-        className="rounded-md border border-accent/30 bg-bg px-2 py-1"
-        placeholder={`Nuevo valor de ${etiqueta.toLowerCase()} (vacío = sin cambios)`}
-        value={nuevoValor}
-        disabled={!campo.editable}
-        title={motivoNoEditable(campo.capa)}
-        onChange={(e) => onCambiar(e.target.value)}
-      />
     </div>
   );
 }
@@ -462,22 +505,33 @@ function SeccionGlobal() {
       .catch((err: unknown) => setMensaje(err instanceof Error ? err.message : String(err)));
   }, [clavesVistas]);
 
-  if (carga.estado === "cargando") return <p>Cargando…</p>;
-  if (carga.estado === "error") return <p className="text-warning">Error: {carga.mensaje}</p>;
+  if (carga.estado === "cargando") return <p className="text-text-dim">Cargando…</p>;
+  if (carga.estado === "error") return <p className="text-accent">Error: {carga.mensaje}</p>;
   const datos = carga.datos;
 
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-xs text-text/50">
-        Modalidad LLM: clave de API (única implementada hoy; la modalidad de suscripción no existe en agente-qa-mcp).
-      </p>
+    <div className="flex flex-col gap-1">
+      <p className="mb-1.5 text-xs text-text-faint">%APPDATA%/agente-qa-mcp/</p>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-text/60">
+      {/* El mockup enseña "Modalidad LLM" como un desplegable con dos opciones (API key /
+          claude-cli); hoy agente-qa-mcp solo implementa la de clave de API — la real manda
+          (regla de fidelidad 4/6), sin un selector que ofrecería una opción que no existe. */}
+      <div className={CLASE_FILA}>
+        <span className="text-text-muted">Modalidad LLM</span>
+        <span
+          className="text-xs text-text-dim"
+          title="La modalidad de suscripción no existe en agente-qa-mcp: hoy la única implementada es clave de API."
+        >
+          clave de API (única disponible)
+        </span>
+      </div>
+
+      <label className={CLASE_FILA}>
+        <span className="text-text-muted">
           Modo de coste <EtiquetaCapa capa={datos.modoCoste.capa} />
         </span>
         <select
-          className="rounded-md border border-accent/30 bg-bg px-2 py-1"
+          className={CLASE_CAMPO}
           value={modoCoste}
           disabled={!datos.modoCoste.editable}
           onChange={(e) => setModoCoste(e.target.value as ModoCoste)}
@@ -490,13 +544,13 @@ function SeccionGlobal() {
         </select>
       </label>
 
-      <fieldset className="flex flex-col gap-3 rounded-md border border-accent/20 p-2">
-        <legend className="px-1 text-text/60">Perfiles</legend>
-        {PERFILES.map((perfil) => (
-          <div key={perfil} className="flex items-center gap-2">
-            <span className="w-16">{perfil}</span>
+      <h2 className="mb-1 mt-3 text-md font-bold text-text-bright">Perfiles</h2>
+      {PERFILES.map((perfil) => (
+        <div key={perfil} className={CLASE_FILA}>
+          <span className="w-16 text-text-muted">{perfil}</span>
+          <div className="flex flex-1 items-center justify-end gap-2">
             <select
-              className="rounded-md border border-accent/30 bg-bg px-2 py-1"
+              className={CLASE_CAMPO}
               value={perfiles[perfil].provider ?? ""}
               disabled={!datos.perfiles[perfil].provider.editable}
               onChange={(e) =>
@@ -515,7 +569,7 @@ function SeccionGlobal() {
             </select>
             <EtiquetaCapa capa={datos.perfiles[perfil].provider.capa} />
             <input
-              className="flex-1 rounded-md border border-accent/30 bg-bg px-2 py-1"
+              className={`w-40 ${CLASE_CAMPO}`}
               placeholder="modelo"
               value={perfiles[perfil].model}
               disabled={!datos.perfiles[perfil].model.editable}
@@ -523,77 +577,74 @@ function SeccionGlobal() {
             />
             <EtiquetaCapa capa={datos.perfiles[perfil].model.capa} />
           </div>
-        ))}
-      </fieldset>
+        </div>
+      ))}
 
-      <fieldset className="flex flex-col gap-2 rounded-md border border-accent/20 p-2">
-        <legend className="px-1 text-text/60">Claves de API</legend>
-        {claves.estado === "cargando" && <p>Cargando…</p>}
-        {claves.estado === "error" && <p className="text-warning">{claves.mensaje}</p>}
-        {claves.estado === "listo" &&
-          claves.datos.map((info) => (
-            <div key={info.proveedor} className="flex items-center gap-2">
-              <span className="w-20">{info.proveedor}</span>
-              <span className="w-40 font-mono text-xs">
+      <h2 className="mb-1 mt-3 text-md font-bold text-text-bright">Claves de API</h2>
+      {claves.estado === "cargando" && <p className="text-text-dim">Cargando…</p>}
+      {claves.estado === "error" && <p className="text-accent">{claves.mensaje}</p>}
+      {claves.estado === "listo" &&
+        claves.datos.map((info) => (
+          <div key={info.proveedor} className={CLASE_FILA}>
+            <span className="w-20 text-text-muted">{info.proveedor}</span>
+            <div className="flex flex-1 items-center justify-end gap-2">
+              <span className="font-mono text-xs text-text-strong">
                 {clavesVistas[info.proveedor] ?? (info.hayClave ? `****${info.ultimos4 ?? ""}` : "sin configurar")}
-                <EtiquetaCapa capa={info.capa} />
               </span>
+              <EtiquetaCapa capa={info.capa} />
               {info.hayClave && (
-                <button type="button" onClick={() => verClave(info.proveedor)} className="text-xs text-accent hover:underline">
+                <button type="button" onClick={() => verClave(info.proveedor)} className="text-xs text-accent-soft hover:text-accent-hover">
                   {clavesVistas[info.proveedor] !== undefined ? "ocultar" : "ver"}
                 </button>
               )}
               <input
-                className="flex-1 rounded-md border border-accent/30 bg-bg px-2 py-1 text-xs"
+                className={`w-40 ${CLASE_CAMPO} text-xs`}
                 placeholder="pegar clave nueva"
                 value={clavesNuevas[info.proveedor]}
                 onChange={(e) => setClavesNuevas((a) => ({ ...a, [info.proveedor]: e.target.value }))}
               />
-              <button type="button" onClick={() => guardarClaveDe(info.proveedor)} className="text-xs text-accent hover:underline">
+              <button type="button" onClick={() => guardarClaveDe(info.proveedor)} className="text-xs text-accent-soft hover:text-accent-hover">
                 guardar
               </button>
             </div>
-          ))}
-      </fieldset>
-
-      <fieldset className="flex flex-col gap-2 rounded-md border border-accent/20 p-2">
-        <legend className="px-1 text-text/60">Rol → perfil</legend>
-        {ROLES.map((rol) => (
-          <div key={rol.id} className="flex items-center justify-between gap-2">
-            <span>{rol.etiqueta}</span>
-            <div className="flex items-center gap-1">
-              <select
-                className="rounded-md border border-accent/30 bg-bg px-2 py-1"
-                value={roles[rol.id]}
-                disabled={!datos.roles[rol.id].editable}
-                onChange={(e) => setRoles((a) => ({ ...a, [rol.id]: e.target.value as Perfil }))}
-              >
-                {PERFILES.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
-              <EtiquetaCapa capa={datos.roles[rol.id].capa} />
-            </div>
           </div>
         ))}
-      </fieldset>
 
-      {mensaje && <p className="text-sm text-accent">{mensaje}</p>}
-      <button
-        type="button"
-        disabled={guardando}
-        onClick={guardar}
-        className="w-fit rounded-md border border-accent/60 px-3 py-1 text-accent disabled:opacity-50"
-      >
+      <h2 className="mb-1 mt-3 text-md font-bold text-text-bright">Rol → perfil</h2>
+      {ROLES.map((rol) => (
+        <div key={rol.id} className={CLASE_FILA}>
+          <span className="text-text-muted">{rol.etiqueta}</span>
+          <div className="flex items-center gap-2">
+            <select
+              className={CLASE_CAMPO}
+              value={roles[rol.id]}
+              disabled={!datos.roles[rol.id].editable}
+              onChange={(e) => setRoles((a) => ({ ...a, [rol.id]: e.target.value as Perfil }))}
+            >
+              {PERFILES.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+            <EtiquetaCapa capa={datos.roles[rol.id].capa} />
+          </div>
+        </div>
+      ))}
+
+      {mensaje && <p className="mt-3 text-sm text-accent">{mensaje}</p>}
+      <button type="button" disabled={guardando} onClick={guardar} className={`mt-2 ${CLASE_BOTON_PRIMARIO}`}>
         {guardando ? "guardando…" : "Guardar cambios globales"}
       </button>
+
+      <SeccionDiagnostico />
     </div>
   );
 }
 
 // --- Diagnóstico: CLI localizado, doctor, prueba de proveedor -------------------------------
+// Antes un tercer panel aparte (parche del Bloque 2); en la geometría real de
+// `panels.config` es el bloque "🩺 Estado del entorno" dentro del panel Global.
 
 function SeccionDiagnostico() {
   const [cli, setCli] = useState<ResultadoCli | null>(null);
@@ -620,54 +671,52 @@ function SeccionDiagnostico() {
   }, [perfilPrueba]);
 
   return (
-    <div className="flex h-full flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <span className="text-text/60">CLI:</span>
-        {cli === null && <span>buscando…</span>}
+    <div className="flex flex-col gap-2">
+      <h2 className="mb-1 mt-3 flex items-center justify-between text-md font-bold text-text-bright">
+        <span>🩺 Estado del entorno</span>
+        <button
+          type="button"
+          disabled={ejecutando !== null}
+          onClick={lanzarDoctor}
+          className={`${CLASE_BOTON_SECUNDARIO} text-9.5`}
+        >
+          {ejecutando === "doctor" ? "ejecutando…" : "Ejecutar doctor"}
+        </button>
+      </h2>
+
+      <div className="flex items-center gap-2 text-sm">
+        <span className="text-text-muted">CLI:</span>
+        {cli === null && <span className="text-text-dim">buscando…</span>}
         {cli && cli.encontrado && (
-          <span>
-            encontrado por <strong>{cli.origen}</strong> ({cli.ruta})
+          <span className="text-text">
+            encontrado por <strong className="text-text-strong">{cli.origen}</strong> ({cli.ruta})
           </span>
         )}
         {cli && !cli.encontrado && (
-          <span className="text-warning" title={cli.diagnostico.join("\n")}>
+          <span className="text-accent" title={cli.diagnostico.join("\n")}>
             no encontrado — {cli.diagnostico[0]}
           </span>
         )}
       </div>
 
+      {/* "Probar proveedor" no está en el mockup (su "Estado del entorno" solo trae el botón
+          doctor); se conserva porque ya funcionaba antes de este bloque — la real manda
+          (regla de fidelidad 4/6), y quitarla habría sido perder funcionalidad sin motivo. */}
       <div className="flex items-center gap-2">
-        <select
-          className="rounded-md border border-accent/30 bg-bg px-2 py-1"
-          value={perfilPrueba}
-          onChange={(e) => setPerfilPrueba(e.target.value as Perfil)}
-        >
+        <select className={CLASE_CAMPO} value={perfilPrueba} onChange={(e) => setPerfilPrueba(e.target.value as Perfil)}>
           {PERFILES.map((p) => (
             <option key={p} value={p}>
               {p}
             </option>
           ))}
         </select>
-        <button
-          type="button"
-          disabled={ejecutando !== null}
-          onClick={lanzarPing}
-          className="rounded-md border border-accent/60 px-3 py-1 text-accent disabled:opacity-50"
-        >
+        <button type="button" disabled={ejecutando !== null} onClick={lanzarPing} className={CLASE_BOTON_SECUNDARIO}>
           {ejecutando === "ping" ? "probando…" : "Probar proveedor"}
-        </button>
-        <button
-          type="button"
-          disabled={ejecutando !== null}
-          onClick={lanzarDoctor}
-          className="rounded-md border border-accent/60 px-3 py-1 text-accent disabled:opacity-50"
-        >
-          {ejecutando === "doctor" ? "ejecutando…" : "Ejecutar doctor"}
         </button>
       </div>
 
       {resultado && (
-        <pre className="flex-1 overflow-auto rounded-md border border-accent/20 bg-bg p-2 text-xs">
+        <pre className="max-h-40 overflow-auto rounded-7 border border-border-soft bg-bg-sunken p-2 text-xs text-text">
           {`código: ${String(resultado.codigo)}\n\n${resultado.stdout}${resultado.stderr ? `\n--- stderr ---\n${resultado.stderr}` : ""}`}
         </pre>
       )}
