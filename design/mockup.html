@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="79229b25-bd9e-46e9-8621-fd383eb9086c"></script>
+
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<style>/* cyrillic-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: italic;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("a3c1822a-4cd0-4ca8-b3fb-a409bcbd742a") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: italic;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("3c96941b-4b8b-4618-a6de-151247d265a9") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: italic;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("6555ff6e-4776-408f-a5c8-9500fdbe7d0c") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: italic;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("fa8fb321-46d2-4f7a-aa58-9495f6fc6db4") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: italic;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("83b9661a-8db3-45b7-b6d2-e8c7f911ab8c") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: italic;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("a237cc55-5225-465d-abc8-d4229845bde6") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* cyrillic-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("b11b679f-1a84-436e-874c-1e073c03de5e") format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* cyrillic */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("ba90fc6b-17b0-456e-b95a-cd59a5db3d64") format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* greek */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("0b62e08e-2870-4f90-8c0b-4706dcc36396") format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("acd67c18-5cad-45e9-98aa-60c7f4597ff3") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("ae49aa27-a9a7-493c-a047-8b65732b2a56") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("bc40f58a-9a73-4531-8eac-697ac771874a") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+</style>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;background:#0a0e13;color:#e8edf5;font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;overflow:hidden}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#232b35;border-radius:5px}
+::-webkit-scrollbar-thumb:hover{background:#2f3948}
+a{color:#f5c877;text-decoration:none}
+a:hover{color:#ffd08a}
+@keyframes pageFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes shimmer{0%{background-position:-200px 0}100%{background-position:200px 0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes bounceDot{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+</style>
+</helmet>
+
+<div style="{{ appGridStyle }}">
+
+<div style="{{ backdropStyle }}" sc-camel-on-click="{{ closeSidebar }}"></div>
+
+<aside style="{{ sidebarStyle }}">
+  <div style="padding:14px 12px 10px">
+    <div style="font-weight:800;font-size:16px;display:flex;align-items:center;gap:6px">🤖 QA <span style="color:#f5c877">AGENT</span></div>
+    <div style="font-size:9px;color:#5f6b7a;margin-top:3px">mockup funcional · tema oscuro</div>
+  </div>
+  <div style="background:#12171f;border:1px solid #232c37;border-radius:9px;padding:10px;margin:6px 12px 14px">
+    <div style="font-size:9px;color:#5f6b7a;text-transform:uppercase;letter-spacing:.05em">📁 Proyecto</div>
+    <div style="font-size:12px;font-weight:700;margin-top:4px">MyApp E2E</div>
+    <div style="font-size:9px;color:#5f6b7a;margin-top:3px">localhost:5173</div>
+  </div>
+
+  <div style="font-size:9px;color:#5f6b7a;text-transform:uppercase;letter-spacing:.05em;padding:6px 12px 6px">Operaciones</div>
+  <div style="padding:0 8px;display:flex;flex-direction:column;gap:2px">
+    <sc-for list="{{ navTop }}" as="n" hint-placeholder-count="6">
+      <button sc-camel-on-click="{{ n.onClick }}" style="{{ n.style }}">
+        <span>{{ n.icon }}</span><span>{{ n.label }}</span>
+      </button>
+    </sc-for>
+  </div>
+
+  <div style="font-size:9px;color:#5f6b7a;text-transform:uppercase;letter-spacing:.05em;padding:14px 12px 6px">Proyecto</div>
+  <div style="padding:0 8px">
+    <button sc-camel-on-click="{{ reportsNavItem.onClick }}" style="{{ reportsNavItem.style }}"><span>{{ reportsNavItem.icon }}</span><span>{{ reportsNavItem.label }}</span></button>
+  </div>
+
+  <div style="margin-top:auto;border-top:1px solid #1c2229;padding:10px 8px 12px">
+    <button sc-camel-on-click="{{ configNavItem.onClick }}" style="{{ configNavItem.style }}"><span>{{ configNavItem.icon }}</span><span>{{ configNavItem.label }}</span></button>
+  </div>
+</aside>
+
+<main style="display:flex;flex-direction:column;min-width:0;height:100vh;overflow:hidden">
+  <header style="min-height:48px;border-bottom:1px solid #1c2229;background:#0d1117;display:flex;align-items:center;justify-content:space-between;padding:0 16px;gap:10px">
+    <div style="display:flex;align-items:center;gap:10px;min-width:0">
+      <sc-if value="{{ isMobile }}">
+        <button sc-camel-on-click="{{ toggleSidebar }}" style="border:1px solid #232c37;background:#12171f;color:#dbe4ed;border-radius:7px;padding:6px 9px;font-size:13px;cursor:pointer">☰</button>
+      </sc-if>
+      <div style="font-size:12px;color:#748193;white-space:nowrap">QA Agent / <b style="color:#e8edf5">{{ crumbLabel }}</b></div>
+    </div>
+    <div style="background:rgba(114,171,255,.14);color:#7fb1ff;padding:4px 10px;border-radius:6px;font-size:10px;font-weight:600;white-space:nowrap">● en curso: Ejecutar</div>
+  </header>
+  <div style="background:#101722;border-bottom:1px solid #1c2c46;color:#8fb4ef;font-size:10px;padding:7px 16px">ℹ️ Mockup del <b>modelo ya cerrado</b> — refleja comportamiento y estructura, no el diseño visual final.</div>
+
+  <div id="qa-agent-content-scroll" style="padding:16px;overflow:auto;flex:1;display:flex;flex-direction:column;min-height:0">
+
+  <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+  <section style="display:flex;flex-direction:column;flex:1;min-height:0;animation:pageFade .35s ease">
+    <h1 style="font-size:20px;margin:0 0 4px;font-weight:800">📊 QA Control Center</h1>
+    <div style="font-size:11px;color:#8891a0;margin-bottom:14px">Vista agregada, de solo lectura. Nada se lanza desde aquí — cada elemento te lleva a su pestaña. Las cajas se pueden arrastrar y redimensionar 🖱️.</div>
+      <div style="{{ canvasStyle.dashboard }}" data-canvas="true">
+        <sc-for list="{{ statDefs }}" as="s" hint-placeholder-count="6">
+          <div style="{{ s.panelStyle }}">
+            <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+              <div sc-camel-on-mouse-down="{{ s.dragHandler }}" style="cursor:move;user-select:none;padding:10px 12px 2px;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#5f6b7a;display:flex;align-items:center;gap:6px">⠿ {{ s.label }}</div>
+              <div style="padding:2px 12px 12px;flex:1;display:flex;align-items:center">
+                <sc-if value="{{ booting }}" hint-placeholder-val="{{ true }}">
+                  <div style="height:22px;width:70%;border-radius:5px;background:linear-gradient(90deg,#161b23 25%,#1f2530 37%,#161b23 63%);background-size:400px 100%;animation:shimmer 1.3s infinite"></div>
+                </sc-if>
+                <sc-if value="{{ notBooting }}">
+                  <div style="font-size:24px;font-weight:800;animation:fadeIn .4s ease;color:{{ s.color }}">{{ s.value }}</div>
+                </sc-if>
+              </div>
+              <sc-if value="{{ notMobile }}">
+                <div sc-camel-on-mouse-down="{{ s.resizeHandler }}" style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;color:#3a4552;font-size:10px;display:flex;align-items:flex-end;justify-content:flex-end;padding:2px">◢</div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-for>
+
+        <div style="{{ panelStyle.dashboard.cur }}">
+          <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+            <div sc-camel-on-mouse-down="{{ handlers.dashboard.cur.onDragStart }}" style="cursor:move;user-select:none;padding:11px 13px;border-bottom:1px solid #1f2530;display:flex;justify-content:space-between;align-items:center">
+              <h2 style="font-size:13px;margin:0">⠿ En curso ahora</h2>
+            </div>
+            <div style="padding:12px;overflow:auto;flex:1">
+              <div style="font-size:11px;line-height:1.6">
+                <b>▶️ Ejecutar</b> — create-user.feature (2/10)
+                <div style="display:flex;gap:4px;margin-top:8px">
+                  <span style="background:rgba(82,209,124,.14);color:#6fe19b;width:26px;height:16px;border-radius:4px;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:700">Exp</span>
+                  <span style="background:rgba(82,209,124,.14);color:#6fe19b;width:26px;height:16px;border-radius:4px;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:700">Red</span>
+                  <span style="background:rgba(82,209,124,.14);color:#6fe19b;width:26px;height:16px;border-radius:4px;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:700">Gen</span>
+                  <span style="background:rgba(114,171,255,.16);color:#7fb1ff;width:26px;height:16px;border-radius:4px;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:700">Eje</span>
+                  <span style="background:#1c232c;color:#7e8a99;width:26px;height:16px;border-radius:4px;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:700">Rep</span>
+                </div>
+                <button sc-camel-on-click="{{ goEjecutar }}" style="margin-top:10px;border:1px solid #2a333f;background:#161b23;color:#dbe4ed;border-radius:7px;padding:6px 10px;font-size:10px;font-family:inherit;cursor:pointer">Ver →</button>
+              </div>
+            </div>
+            <sc-if value="{{ notMobile }}">
+              <div sc-camel-on-mouse-down="{{ handlers.dashboard.cur.onResizeStart }}" style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;color:#3a4552;font-size:10px;display:flex;align-items:flex-end;justify-content:flex-end;padding:2px">◢</div>
+            </sc-if>
+          </div>
+        </div>
+
+        <div style="{{ panelStyle.dashboard.act }}">
+          <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+            <div sc-camel-on-mouse-down="{{ handlers.dashboard.act.onDragStart }}" style="cursor:move;user-select:none;padding:11px 13px;border-bottom:1px solid #1f2530;display:flex;justify-content:space-between;align-items:center">
+              <h2 style="font-size:13px;margin:0">⠿ Actividad reciente</h2><span style="font-size:9px;color:#5f6b7a">de run_events</span>
+            </div>
+            <div style="padding:12px;overflow:auto;flex:1;font-size:11px;line-height:1.6">
+              <div style="padding:8px 0;border-bottom:1px solid #1c2229">18:07 <b>generador</b> escribió create-user.spec.ts</div>
+              <div style="padding:8px 0;border-bottom:1px solid #1c2229">18:06 <b>redactor</b> aprobó "Duplicate email"</div>
+              <div style="padding:8px 0">18:03 <b>Ejecutor</b>: 2 de 10 fallan <button sc-camel-on-click="{{ goReparar }}" style="margin-left:6px;border:1px solid #2a333f;background:#161b23;color:#dbe4ed;border-radius:6px;padding:4px 8px;font-size:9px;font-family:inherit;cursor:pointer">🔧 Ir a Reparar</button></div>
+            </div>
+            <sc-if value="{{ notMobile }}">
+              <div sc-camel-on-mouse-down="{{ handlers.dashboard.act.onResizeStart }}" style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;color:#3a4552;font-size:10px;display:flex;align-items:flex-end;justify-content:flex-end;padding:2px">◢</div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ isExplorar }}">
+  <section style="display:flex;flex-direction:column;flex:1;min-height:0;gap:10px;animation:pageFade .35s ease">
+    <h1 style="font-size:20px;margin:0 0 4px;font-weight:800">🗺️ Explorar</h1>
+    <div style="font-size:11px;color:#8891a0;margin-bottom:2px">Visor y selector del mapa. Los dos agentes que lo pueblan viven aquí.</div>
+    <div style="{{ canvasStyle.explorar }}" data-canvas="true">
+
+      <div style="{{ panelStyle.explorar.left }}">
+        <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+          <div sc-camel-on-mouse-down="{{ handlers.explorar.left.onDragStart }}" style="cursor:move;user-select:none;padding:10px 12px;border-bottom:1px solid #1f2530"><h2 style="font-size:12px;margin:0">⠿ 🌐 Application Map</h2></div>
+          <div style="padding:9px;overflow:auto;flex:1;font-size:10.5px">
+            <button style="display:block;width:100%;text-align:left;background:#1b2733;color:#fff;border:0;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:10.5px;cursor:pointer">▾ 🏠 MyApp</button>
+            <button style="display:block;width:100%;text-align:left;background:none;color:#aab5c1;border:0;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:10.5px;cursor:pointer">　▾ /login</button>
+            <button style="display:block;width:100%;text-align:left;background:none;color:#aab5c1;border:0;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:10.5px;cursor:pointer">　　 Login Screen</button>
+            <button style="display:block;width:100%;text-align:left;background:none;color:#aab5c1;border:0;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:10.5px;cursor:pointer">　▾ /users</button>
+            <button style="display:block;width:100%;text-align:left;background:none;color:#aab5c1;border:0;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:10.5px;cursor:pointer">　　 Users List</button>
+            <button style="display:block;width:100%;text-align:left;background:none;color:#aab5c1;border:0;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:10.5px;cursor:pointer">　　 Create User Modal</button>
+            <button style="display:block;width:100%;text-align:left;background:none;color:#aab5c1;border:0;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:10.5px;cursor:pointer">　　 Edit User Modal</button>
+            <div style="color:#5f6b7a;font-size:9px;text-transform:uppercase;padding:10px 8px 4px">Candidatos de escenario (4)</div>
+            <button style="display:block;width:100%;text-align:left;background:none;color:#aab5c1;border:0;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:10.5px;cursor:pointer">　"Registro con datos válidos"</button>
+            <button style="display:block;width:100%;text-align:left;background:none;color:#aab5c1;border:0;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:10.5px;cursor:pointer">　"Registro — email duplicado"</button>
+          </div>
+          <sc-if value="{{ notMobile }}"><div sc-camel-on-mouse-down="{{ handlers.explorar.left.onResizeStart }}" style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;color:#3a4552;font-size:10px;display:flex;align-items:flex-end;justify-content:flex-end;padding:2px">◢</div></sc-if>
+        </div>
+      </div>
+
+      <div style="{{ panelStyle.explorar.mid }}">
+        <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+          <div sc-camel-on-mouse-down="{{ handlers.explorar.mid.onDragStart }}" style="cursor:move;user-select:none;padding:10px 12px;border-bottom:1px solid #1f2530;display:flex;justify-content:space-between;align-items:center;gap:6px">
+            <h2 style="font-size:12px;margin:0">⠿ Users / Create User Modal</h2>
+            <span style="background:rgba(82,209,124,.14);color:#6fe19b;padding:3px 8px;border-radius:6px;font-size:9px;font-weight:600;white-space:nowrap">✅ MAPPED</span>
+          </div>
+          <div style="padding:11px;overflow:auto;flex:1;font-size:10.5px">
+            <div style="color:#5f6b7a;font-size:9px">producedBy: mapeador-mcp · no stale</div>
+            <h2 style="font-size:12px;margin:12px 0 6px">Elementos</h2>
+            <div style="padding:8px 0;border-bottom:1px solid #1c2229;display:flex;justify-content:space-between;align-items:center">username <span style="background:rgba(82,209,124,.14);color:#6fe19b;padding:3px 8px;border-radius:6px;font-size:9px">✅ locator ready</span></div>
+            <div style="padding:8px 0;border-bottom:1px solid #1c2229;display:flex;justify-content:space-between;align-items:center">email <span style="background:rgba(82,209,124,.14);color:#6fe19b;padding:3px 8px;border-radius:6px;font-size:9px">✅ locator ready</span></div>
+            <div style="padding:8px 0">
+              <div style="display:flex;justify-content:space-between;align-items:center">Create <span style="background:rgba(245,166,35,.16);color:#f5c877;padding:3px 8px;border-radius:6px;font-size:9px">⚠️ 2 matches — ambiguo</span></div>
+              <div style="background:#0e1620;border:1px solid #2a4160;border-radius:8px;padding:10px;margin-top:8px">
+                <div style="font-size:9px;color:#8fb4ef">Editar localizador (mismo widget se reutiliza dentro de Generar)</div>
+                <input value="page.getByText('Create')" style="width:100%;margin-top:7px;background:#0b0f14;border:1px solid #262f3a;color:#dfe6ee;border-radius:7px;padding:7px 9px;font-size:10.5px;font-family:inherit">
+                <div style="display:flex;gap:6px;margin-top:7px">
+                  <button style="border:1px solid #F5A623;background:#F5A623;color:#14110a;border-radius:7px;padding:6px 10px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer">💾 Guardar</button>
+                  <button style="border:1px solid #2a333f;background:#161b23;color:#dbe4ed;border-radius:7px;padding:6px 10px;font-size:10px;font-family:inherit;cursor:pointer">💬 Pedírselo al chat →</button>
+                </div>
+              </div>
+            </div>
+            <h2 style="font-size:12px;margin:12px 0 4px">Transiciones</h2>
+            <div style="color:#5f6b7a;font-size:9.5px">← Users List · → Success: Users List · → Error: Modal (mismo ScreenState)</div>
+          </div>
+          <sc-if value="{{ notMobile }}"><div sc-camel-on-mouse-down="{{ handlers.explorar.mid.onResizeStart }}" style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;color:#3a4552;font-size:10px;display:flex;align-items:flex-end;justify-content:flex-end;padding:2px">◢</div></sc-if>
+        </div>
+      </div>
+
+      <div style="{{ panelStyle.explorar.right }}">
+        <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+          <div sc-camel-on-mouse-down="{{ handlers.explorar.right.onDragStart }}" style="cursor:move;user-select:none;padding:8px 8px 0;display:flex;gap:4px">
+            <sc-for list="{{ agentTabsExplorar }}" as="t" hint-placeholder-count="2">
+              <button sc-camel-on-click="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button>
+            </sc-for>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+            <div style="flex:1;overflow:auto;padding:10px">
+              <sc-for list="{{ chatViews.explorar.messages }}" as="m" hint-placeholder-count="3">
+                <div style="font-size:10.5px;line-height:1.55;margin-bottom:10px">
+                  <sc-if value="{{ m.ai }}" hint-placeholder-val="{{ true }}">
+                    <div style="font-size:8px;text-transform:uppercase;color:#6f7c89;margin-bottom:3px">🤖 {{ m.who }}</div>
+                    <div style="background:#171d26;border:1px solid #253040;border-radius:8px;padding:9px">{{ m.text }}</div>
+                  </sc-if>
+                  <sc-if value="{{ m.notAi }}">
+                    <div style="font-size:8px;text-transform:uppercase;color:#6f7c89;margin-bottom:3px">🧑 {{ m.who }}</div>
+                    <div style="padding-left:14px;color:#d7e0e9">{{ m.text }}</div>
+                  </sc-if>
+                </div>
+              </sc-for>
+              <sc-if value="{{ chatViews.explorar.loading }}">
+                <div style="display:flex;gap:4px;padding:9px;background:#171d26;border:1px solid #253040;border-radius:8px;width:fit-content">
+                  <span style="width:6px;height:6px;border-radius:50%;background:#f5c877;animation:bounceDot 1s infinite"></span>
+                  <span style="width:6px;height:6px;border-radius:50%;background:#f5c877;animation:bounceDot 1s .15s infinite"></span>
+                  <span style="width:6px;height:6px;border-radius:50%;background:#f5c877;animation:bounceDot 1s .3s infinite"></span>
+                </div>
+              </sc-if>
+            </div>
+            <div style="padding:8px;border-top:1px solid #1f2530;display:flex;gap:6px">
+              <input value="{{ chatViews.explorar.input }}" sc-camel-on-change="{{ chatViews.explorar.onInput }}" sc-camel-on-key-down="{{ chatViews.explorar.onKeyDown }}" placeholder="Habla con el agente activo…" style="flex:1;background:#0b0f14;border:1px solid #262f3a;color:#fff;border-radius:7px;padding:8px;font-size:10.5px;font-family:inherit">
+              <button sc-camel-on-click="{{ chatViews.explorar.onSend }}" style="border:1px solid #F5A623;background:#F5A623;color:#14110a;border-radius:7px;padding:8px 12px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">📤</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:#11151c;border:1px solid #1f2530;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;font-size:10.5px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="color:#5f6b7a;text-transform:uppercase;font-size:9px">🎯 Ámbito</span>
+        <label style="display:flex;align-items:center;gap:4px;color:#c3ccd6"><input type="radio" name="e-scope"> todo</label>
+        <label style="display:flex;align-items:center;gap:4px;color:#c3ccd6"><input type="radio" name="e-scope" sc-camel-default-checked="{{ true }}"> esta selección</label>
+        <label style="display:flex;align-items:center;gap:4px;color:#c3ccd6"><input type="radio" name="e-scope"> lo necesario para <input placeholder="objetivo" style="width:110px;background:#0b0f14;border:1px solid #262f3a;color:#dfe6ee;border-radius:7px;padding:5px 8px;font-size:10px;font-family:inherit"></label>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px"><span style="color:#5f6b7a;text-transform:uppercase;font-size:9px">🤖 Agente</span>
+        <label style="display:flex;align-items:center;gap:4px;color:#c3ccd6"><input type="radio" name="e-agent"> crawler — barato, a ciegas</label>
+        <label style="display:flex;align-items:center;gap:4px;color:#c3ccd6"><input type="radio" name="e-agent" sc-camel-default-checked="{{ true }}"> mapeador-mcp — con objetivo</label>
+      </div>
+      <span style="margin-left:auto;color:#e5c668;font-size:10.5px">💰 $0,18 · 6 llamadas</span>
+      <button sc-camel-on-click="{{ ops.explorar.onRun }}" disabled="{{ ops.explorar.loading }}" style="border:1px solid #F5A623;background:#F5A623;color:#14110a;border-radius:7px;padding:8px 14px;font-size:10.5px;font-weight:700;font-family:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+        <sc-if value="{{ ops.explorar.loading }}"><span style="width:11px;height:11px;border:2px solid rgba(20,17,10,.35);border-top-color:#14110a;border-radius:50%;display:inline-block;animation:spin .7s linear infinite"></span>Explorando…</sc-if>
+        <sc-if value="{{ ops.explorar.done }}">✅ Hecho</sc-if>
+        <sc-if value="{{ ops.explorar.idle }}">▶️ Explorar</sc-if>
+      </button>
+    </div>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ isRedactar }}">
+  <section style="display:flex;flex-direction:column;flex:1;min-height:0;gap:10px;animation:pageFade .35s ease">
+    <h1 style="font-size:20px;margin:0 0 4px;font-weight:800">✍️ Redactar</h1>
+    <div style="font-size:11px;color:#8891a0;margin-bottom:2px">De candidato a Gherkin aprobado. Solo lectura + "abrir en VSCode" — nunca editor.</div>
+    <div style="{{ canvasStyle.redactar }}" data-canvas="true">
+
+      <div style="{{ panelStyle.redactar.left }}">
+        <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+          <div sc-camel-on-mouse-down="{{ handlers.redactar.left.onDragStart }}" style="cursor:move;user-select:none;padding:10px 12px;border-bottom:1px solid #1f2530"><h2 style="font-size:12px;margin:0">⠿ Features y escenarios</h2></div>
+          <div style="padding:9px;overflow:auto;flex:1;font-size:10.5px">
+            <div style="color:#5f6b7a;font-size:9px;text-transform:uppercase;padding:4px 8px">Candidatos sin feature (4)</div>
+            <button style="display:block;width:100%;text-align:left;background:none;color:#aab5c1;border:0;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:10.5px;cursor:pointer">Registro con datos válidos</button>
+            <div style="color:#5f6b7a;font-size:9px;text-transform:uppercase;padding:8px 8px 4px">create-user.feature</div>
+            <button style="display:block;width:100%;text-align:left;background:#1b2733;color:#fff;border:0;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:10.5px;cursor:pointer">✅ Create user successfully
+              <div style="display:flex;gap:4px;margin-top:5px"><span style="background:rgba(82,209,124,.14);color:#6fe19b;width:24px;height:14px;border-radius:3px;font-size:8px;display:flex;align-items:center;justify-content:center">Exp</span><span style="background:rgba(82,209,124,.14);color:#6fe19b;width:24px;height:14px;border-radius:3px;font-size:8px;display:flex;align-items:center;justify-content:center">Red</span><span style="background:#1c232c;color:#7e8a99;width:24px;height:14px;border-radius:3px;font-size:8px;display:flex;align-items:center;justify-content:center">Gen</span><span style="background:#1c232c;color:#7e8a99;width:24px;height:14px;border-radius:3px;font-size:8px;display:flex;align-items:center;justify-content:center">Eje</span><span style="background:#1c232c;color:#7e8a99;width:24px;height:14px;border-radius:3px;font-size:8px;display:flex;align-items:center;justify-content:center">Rep</span></div>
+            </button>
+            <button style="display:block;width:100%;text-align:left;background:none;color:#aab5c1;border:0;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:10.5px;cursor:pointer">● Duplicate email
+              <div style="display:flex;gap:4px;margin-top:5px"><span style="background:rgba(82,209,124,.14);color:#6fe19b;width:24px;height:14px;border-radius:3px;font-size:8px;display:flex;align-items:center;justify-content:center">Exp</span><span style="background:rgba(82,209,124,.14);color:#6fe19b;width:24px;height:14px;border-radius:3px;font-size:8px;display:flex;align-items:center;justify-content:center">Red</span><span style="background:#1c232c;color:#7e8a99;width:24px;height:14px;border-radius:3px;font-size:8px;display:flex;align-items:center;justify-content:center">Gen</span><span style="background:#1c232c;color:#7e8a99;width:24px;height:14px;border-radius:3px;font-size:8px;display:flex;align-items:center;justify-content:center">Eje</span><span style="background:#1c232c;color:#7e8a99;width:24px;height:14px;border-radius:3px;font-size:8px;display:flex;align-items:center;justify-content:center">Rep</span></div>
+            </button>
+            <div style="color:#5f6b7a;font-size:9px;text-transform:uppercase;padding:8px 8px 4px">password-reset.feature</div>
+            <button style="display:block;width:100%;text-align:left;background:none;color:#aab5c1;border:0;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:10.5px;cursor:pointer">○ Change password
+              <div style="display:flex;gap:4px;margin-top:5px"><span style="background:rgba(82,209,124,.14);color:#6fe19b;width:24px;height:14px;border-radius:3px;font-size:8px;display:flex;align-items:center;justify-content:center">Exp</span><span style="background:rgba(114,171,255,.16);color:#7fb1ff;width:24px;height:14px;border-radius:3px;font-size:8px;display:flex;align-items:center;justify-content:center">Red</span><span style="background:#1c232c;color:#7e8a99;width:24px;height:14px;border-radius:3px;font-size:8px;display:flex;align-items:center;justify-content:center">Gen</span><span style="background:#1c232c;color:#7e8a99;width:24px;height:14px;border-radius:3px;font-size:8px;display:flex;align-items:center;justify-content:center">Eje</span><span style="background:#1c232c;color:#7e8a99;width:24px;height:14px;border-radius:3px;font-size:8px;display:flex;align-items:center;justify-content:center">Rep</span></div>
+            </button>
+          </div>
+          <sc-if value="{{ notMobile }}"><div sc-camel-on-mouse-down="{{ handlers.redactar.left.onResizeStart }}" style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;color:#3a4552;font-size:10px;display:flex;align-items:flex-end;justify-content:flex-end;padding:2px">◢</div></sc-if>
+        </div>
+      </div>
+
+      <div style="{{ panelStyle.redactar.mid }}">
+        <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+          <div sc-camel-on-mouse-down="{{ handlers.redactar.mid.onDragStart }}" style="cursor:move;user-select:none;padding:10px 12px;border-bottom:1px solid #1f2530;display:flex;justify-content:space-between;align-items:center">
+            <h2 style="font-size:12px;margin:0">⠿ Create user successfully</h2>
+            <span style="background:rgba(82,209,124,.14);color:#6fe19b;padding:3px 8px;border-radius:6px;font-size:9px;font-weight:600">✅ APROBADO</span>
+          </div>
+          <div style="padding:11px;overflow:auto;flex:1;font-size:10.5px">
+            <div style="color:#5f6b7a;font-size:9px">@screen:create-user-modal · @smoke @regression · producedBy: redactor</div>
+            <div style="background:#080b0f;border:1px solid #1c232c;border-radius:8px;padding:12px;margin-top:8px;font-size:11px;line-height:1.7;white-space:pre;overflow:auto;color:#c7d0db"><span style="color:#627080"># agente-qa:pattern=signup</span>
+<span style="color:#c18aff">Scenario:</span> Create user successfully
+  <span style="color:#c18aff">Given</span> I am on the Users screen
+  <span style="color:#c18aff">When</span> I create a user with valid data
+  <span style="color:#c18aff">Then</span> the user appears in the list</div>
+            <button style="margin-top:10px;border:1px solid #2a333f;background:#161b23;color:#dbe4ed;border-radius:7px;padding:7px 11px;font-size:10.5px;font-family:inherit;cursor:pointer">📂 Abrir en VSCode</button>
+          </div>
+          <sc-if value="{{ notMobile }}"><div sc-camel-on-mouse-down="{{ handlers.redactar.mid.onResizeStart }}" style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;color:#3a4552;font-size:10px;display:flex;align-items:flex-end;justify-content:flex-end;padding:2px">◢</div></sc-if>
+        </div>
+      </div>
+
+      <div style="{{ panelStyle.redactar.right }}">
+        <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+          <div sc-camel-on-mouse-down="{{ handlers.redactar.right.onDragStart }}" style="cursor:move;user-select:none;padding:8px 8px 0;display:flex;gap:4px">
+            <sc-for list="{{ agentTabsRedactar }}" as="t" hint-placeholder-count="2">
+              <button sc-camel-on-click="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button>
+            </sc-for>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+            <div style="flex:1;overflow:auto;padding:10px">
+              <sc-for list="{{ chatViews.redactar.messages }}" as="m" hint-placeholder-count="2">
+                <div style="font-size:10.5px;line-height:1.55;margin-bottom:10px">
+                  <sc-if value="{{ m.ai }}" hint-placeholder-val="{{ true }}">
+                    <div style="font-size:8px;text-transform:uppercase;color:#6f7c89;margin-bottom:3px">🤖 {{ m.who }}</div>
+                    <div style="background:#171d26;border:1px solid #253040;border-radius:8px;padding:9px">{{ m.text }}</div>
+                  </sc-if>
+                  <sc-if value="{{ m.notAi }}">
+                    <div style="font-size:8px;text-transform:uppercase;color:#6f7c89;margin-bottom:3px">🧑 {{ m.who }}</div>
+                    <div style="padding-left:14px;color:#d7e0e9">{{ m.text }}</div>
+                  </sc-if>
+                </div>
+              </sc-for>
+              <sc-if value="{{ chatViews.redactar.loading }}">
+                <div style="display:flex;gap:4px;padding:9px;background:#171d26;border:1px solid #253040;border-radius:8px;width:fit-content">
+                  <span style="width:6px;height:6px;border-radius:50%;background:#f5c877;animation:bounceDot 1s infinite"></span>
+                  <span style="width:6px;height:6px;border-radius:50%;background:#f5c877;animation:bounceDot 1s .15s infinite"></span>
+                  <span style="width:6px;height:6px;border-radius:50%;background:#f5c877;animation:bounceDot 1s .3s infinite"></span>
+                </div>
+              </sc-if>
+            </div>
+            <div style="padding:8px;border-top:1px solid #1f2530;display:flex;gap:6px">
+              <input value="{{ chatViews.redactar.input }}" sc-camel-on-change="{{ chatViews.redactar.onInput }}" sc-camel-on-key-down="{{ chatViews.redactar.onKeyDown }}" placeholder="Escribe tu petición…" style="flex:1;background:#0b0f14;border:1px solid #262f3a;color:#fff;border-radius:7px;padding:8px;font-size:10.5px;font-family:inherit">
+              <button sc-camel-on-click="{{ chatViews.redactar.onSend }}" style="border:1px solid #F5A623;background:#F5A623;color:#14110a;border-radius:7px;padding:8px 12px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">📤</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:#11151c;border:1px solid #1f2530;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;font-size:10.5px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="color:#5f6b7a;text-transform:uppercase;font-size:9px">🎯 Ámbito</span>
+        <label style="display:flex;align-items:center;gap:4px;color:#c3ccd6"><input type="radio" name="r-scope"> todos los candidatos</label>
+        <label style="display:flex;align-items:center;gap:4px;color:#c3ccd6"><input type="radio" name="r-scope" sc-camel-default-checked="{{ true }}"> esta selección</label>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px"><span style="color:#5f6b7a;text-transform:uppercase;font-size:9px">🤖 Agente</span>
+        <label style="display:flex;align-items:center;gap:4px;color:#c3ccd6"><input type="radio" name="r-agent" sc-camel-default-checked="{{ true }}"> redactor — pregunta y apruebas</label>
+        <label style="display:flex;align-items:center;gap:4px;color:#c3ccd6"><input type="radio" name="r-agent"> redactor-mcp — no pregunta</label>
+      </div>
+      <span style="margin-left:auto;color:#e5c668;font-size:10.5px">💰 $0,09 · 2 llamadas</span>
+      <button sc-camel-on-click="{{ ops.redactar.onRun }}" disabled="{{ ops.redactar.loading }}" style="border:1px solid #F5A623;background:#F5A623;color:#14110a;border-radius:7px;padding:8px 14px;font-size:10.5px;font-weight:700;font-family:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+        <sc-if value="{{ ops.redactar.loading }}"><span style="width:11px;height:11px;border:2px solid rgba(20,17,10,.35);border-top-color:#14110a;border-radius:50%;display:inline-block;animation:spin .7s linear infinite"></span>Redactando…</sc-if>
+        <sc-if value="{{ ops.redactar.done }}">✅ Hecho</sc-if>
+        <sc-if value="{{ ops.redactar.idle }}">▶️ Redactar</sc-if>
+      </button>
+    </div>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ isGenerar }}">
+  <section style="display:flex;flex-direction:column;flex:1;min-height:0;gap:10px;animation:pageFade .35s ease">
+    <h1 style="font-size:20px;margin:0 0 4px;font-weight:800">🧪 Generar</h1>
+    <div style="font-size:11px;color:#8891a0;margin-bottom:2px">Page Object + spec, siempre a la vez. Compila con tsc antes de presentarse.</div>
+    <div style="{{ canvasStyle.generar }}" data-canvas="true">
+
+      <div style="{{ panelStyle.generar.left }}">
+        <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+          <div sc-camel-on-mouse-down="{{ handlers.generar.left.onDragStart }}" style="cursor:move;user-select:none;padding:10px 12px;border-bottom:1px solid #1f2530"><h2 style="font-size:12px;margin:0">⠿ Escenarios listos</h2></div>
+          <div style="padding:9px;overflow:auto;flex:1;font-size:10.5px">
+            <div style="color:#5f6b7a;font-size:9px;text-transform:uppercase;padding:4px 8px">create-user.feature</div>
+            <button style="display:block;width:100%;text-align:left;background:#1b2733;color:#fff;border:0;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:10.5px;cursor:pointer">✅ Create user successfully</button>
+            <button style="display:block;width:100%;text-align:left;background:none;color:#aab5c1;border:0;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:10.5px;cursor:pointer">❌ Duplicate email</button>
+            <div style="color:#5f6b7a;font-size:9px;text-transform:uppercase;padding:8px 8px 4px">password-reset.feature</div>
+            <button style="display:block;width:100%;text-align:left;background:none;color:#aab5c1;border:0;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:10.5px;cursor:pointer">○ Change password <span style="color:#5f6b7a;font-size:9.5px">(bloqueado)</span></button>
+          </div>
+          <sc-if value="{{ notMobile }}"><div sc-camel-on-mouse-down="{{ handlers.generar.left.onResizeStart }}" style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;color:#3a4552;font-size:10px;display:flex;align-items:flex-end;justify-content:flex-end;padding:2px">◢</div></sc-if>
+        </div>
+      </div>
+
+      <div style="{{ panelStyle.generar.mid }}">
+        <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+          <div sc-camel-on-mouse-down="{{ handlers.generar.mid.onDragStart }}" style="cursor:move;user-select:none;padding:10px 12px;border-bottom:1px solid #1f2530;display:flex;justify-content:space-between;align-items:center">
+            <h2 style="font-size:12px;margin:0">⠿ Create user successfully</h2>
+            <span style="background:rgba(82,209,124,.14);color:#6fe19b;padding:3px 8px;border-radius:6px;font-size:9px;font-weight:600">✅ compila</span>
+          </div>
+          <div style="padding:11px;overflow:auto;flex:1;font-size:10.5px">
+            <div style="display:flex;gap:6px;margin-bottom:8px">
+              <sc-for list="{{ subtabsGenerar }}" as="t" hint-placeholder-count="2">
+                <button sc-camel-on-click="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ subtabs.generarPO }}" hint-placeholder-val="{{ true }}">
+              <div style="color:#5f6b7a;font-size:9px">Users.page.ts · <b style="color:#dbe4ed">REUTILIZADO</b> (ya existía)</div>
+              <div style="background:#080b0f;border:1px solid #1c232c;border-radius:8px;padding:12px;margin-top:6px;font-size:11px;line-height:1.7;white-space:pre;overflow:auto;color:#c7d0db"><span style="color:#c18aff">export class</span> <span style="color:#76adff">UsersPage</span> {
+  <span style="color:#c18aff">get</span> createBtn() {
+    <span style="color:#c18aff">return</span> this.page
+      .getByRole(<span style="color:#91d58d">'dialog'</span>)
+      .getByRole(<span style="color:#91d58d">'button'</span>, {name: <span style="color:#91d58d">'Create'</span>})
+  }
+}</div>
+              <span style="display:inline-block;margin-top:8px;background:rgba(82,209,124,.14);color:#6fe19b;padding:3px 8px;border-radius:6px;font-size:9px;font-weight:600">✅ localizadores verificados (4/4)</span>
+            </sc-if>
+            <sc-if value="{{ subtabs.generarSpec }}">
+              <div style="color:#5f6b7a;font-size:9px">create-user.spec.ts · <b style="color:#dbe4ed">NUEVO</b></div>
+              <div style="background:#080b0f;border:1px solid #1c232c;border-radius:8px;padding:12px;margin-top:6px;font-size:11px;line-height:1.7;white-space:pre;overflow:auto;color:#c7d0db"><span style="color:#c18aff">test</span>(<span style="color:#91d58d">'create user successfully'</span>, <span style="color:#c18aff">async</span> ({page}) =&gt; {
+  <span style="color:#c18aff">const</span> users = <span style="color:#c18aff">new</span> <span style="color:#76adff">UsersPage</span>(page)
+  <span style="color:#c18aff">await</span> users.createBtn.click()
+  <span style="color:#627080">// ...</span>
+})</div>
+            </sc-if>
+            <button style="margin-top:10px;border:1px solid #2a333f;background:#161b23;color:#dbe4ed;border-radius:7px;padding:7px 11px;font-size:10.5px;font-family:inherit;cursor:pointer">📂 Abrir en VSCode</button>
+          </div>
+          <sc-if value="{{ notMobile }}"><div sc-camel-on-mouse-down="{{ handlers.generar.mid.onResizeStart }}" style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;color:#3a4552;font-size:10px;display:flex;align-items:flex-end;justify-content:flex-end;padding:2px">◢</div></sc-if>
+        </div>
+      </div>
+
+      <div style="{{ panelStyle.generar.right }}">
+        <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+          <div sc-camel-on-mouse-down="{{ handlers.generar.right.onDragStart }}" style="cursor:move;user-select:none;padding:8px 8px 0;display:flex;gap:4px">
+            <sc-for list="{{ agentTabsGenerar }}" as="t" hint-placeholder-count="2">
+              <button sc-camel-on-click="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</button>
+            </sc-for>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+            <div style="flex:1;overflow:auto;padding:10px">
+              <sc-for list="{{ chatViews.generar.messages }}" as="m" hint-placeholder-count="1">
+                <div style="font-size:10.5px;line-height:1.55;margin-bottom:10px">
+                  <div style="font-size:8px;text-transform:uppercase;color:#6f7c89;margin-bottom:3px">🤖 {{ m.who }}</div>
+                  <div style="background:#171d26;border:1px solid #253040;border-radius:8px;padding:9px">{{ m.text }}</div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ chatViews.generar.loading }}">
+                <div style="display:flex;gap:4px;padding:9px;background:#171d26;border:1px solid #253040;border-radius:8px;width:fit-content">
+                  <span style="width:6px;height:6px;border-radius:50%;background:#f5c877;animation:bounceDot 1s infinite"></span>
+                  <span style="width:6px;height:6px;border-radius:50%;background:#f5c877;animation:bounceDot 1s .15s infinite"></span>
+                  <span style="width:6px;height:6px;border-radius:50%;background:#f5c877;animation:bounceDot 1s .3s infinite"></span>
+                </div>
+              </sc-if>
+            </div>
+            <div style="padding:8px;border-top:1px solid #1f2530;display:flex;gap:6px">
+              <input value="{{ chatViews.generar.input }}" sc-camel-on-change="{{ chatViews.generar.onInput }}" sc-camel-on-key-down="{{ chatViews.generar.onKeyDown }}" placeholder="Habla con el agente activo…" style="flex:1;background:#0b0f14;border:1px solid #262f3a;color:#fff;border-radius:7px;padding:8px;font-size:10.5px;font-family:inherit">
+              <button sc-camel-on-click="{{ chatViews.generar.onSend }}" style="border:1px solid #F5A623;background:#F5A623;color:#14110a;border-radius:7px;padding:8px 12px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">📤</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:#11151c;border:1px solid #1f2530;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;font-size:10.5px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="color:#5f6b7a;text-transform:uppercase;font-size:9px">🎯 Ámbito</span>
+        <label style="display:flex;align-items:center;gap:4px;color:#c3ccd6"><input type="radio" name="g-scope"> todos los listos</label>
+        <label style="display:flex;align-items:center;gap:4px;color:#c3ccd6"><input type="radio" name="g-scope" sc-camel-default-checked="{{ true }}"> esta selección</label>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px"><span style="color:#5f6b7a;text-transform:uppercase;font-size:9px">🤖 Agente</span>
+        <label style="display:flex;align-items:center;gap:4px;color:#c3ccd6"><input type="radio" name="g-agent" sc-camel-default-checked="{{ true }}"> generador — plantilla + reescritura</label>
+        <label style="display:flex;align-items:center;gap:4px;color:#c3ccd6"><input type="radio" name="g-agent"> generador-mcp — libre</label>
+      </div>
+      <span style="margin-left:auto;color:#e5c668;font-size:10.5px">💰 $0,14 · 3 llamadas</span>
+      <button sc-camel-on-click="{{ ops.generar.onRun }}" disabled="{{ ops.generar.loading }}" style="border:1px solid #F5A623;background:#F5A623;color:#14110a;border-radius:7px;padding:8px 14px;font-size:10.5px;font-weight:700;font-family:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+        <sc-if value="{{ ops.generar.loading }}"><span style="width:11px;height:11px;border:2px solid rgba(20,17,10,.35);border-top-color:#14110a;border-radius:50%;display:inline-block;animation:spin .7s linear infinite"></span>Generando…</sc-if>
+        <sc-if value="{{ ops.generar.done }}">✅ Hecho</sc-if>
+        <sc-if value="{{ ops.generar.idle }}">▶️ Generar</sc-if>
+      </button>
+    </div>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ isEjecutar }}">
+  <section style="display:flex;flex-direction:column;flex:1;min-height:0;gap:10px;animation:pageFade .35s ease">
+    <h1 style="font-size:20px;margin:0 0 4px;font-weight:800">▶️ Ejecutar</h1>
+    <div style="font-size:11px;color:#8891a0;margin-bottom:2px">Ejecutor no tiene pareja: sin selector de agente. Sin LLM: sin coste.</div>
+    <div style="{{ canvasStyle.ejecutar }}" data-canvas="true">
+
+      <div style="{{ panelStyle.ejecutar.left }}">
+        <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+          <div sc-camel-on-mouse-down="{{ handlers.ejecutar.left.onDragStart }}" style="cursor:move;user-select:none;padding:10px 12px;border-bottom:1px solid #1f2530"><h2 style="font-size:12px;margin:0">⠿ Tests con spec compilada</h2></div>
+          <div style="padding:9px;overflow:auto;flex:1;font-size:10.5px">
+            <div style="color:#5f6b7a;font-size:9px;text-transform:uppercase;padding:4px 8px">create-user.feature</div>
+            <button style="display:block;width:100%;text-align:left;background:#1b2733;color:#fff;border:0;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:10.5px;cursor:pointer">✅ Create user successfully<div style="font-size:9px;color:#7fb1ff;margin-top:3px">▶️ ejecutando</div></button>
+            <button style="display:block;width:100%;text-align:left;background:none;color:#aab5c1;border:0;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:10.5px;cursor:pointer">❌ Duplicate email<div style="font-size:9px;color:#ff8790;margin-top:3px">FALLÓ · 18:03</div></button>
+          </div>
+          <sc-if value="{{ notMobile }}"><div sc-camel-on-mouse-down="{{ handlers.ejecutar.left.onResizeStart }}" style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;color:#3a4552;font-size:10px;display:flex;align-items:flex-end;justify-content:flex-end;padding:2px">◢</div></sc-if>
+        </div>
+      </div>
+
+      <div style="{{ panelStyle.ejecutar.mid }}">
+        <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+          <div sc-camel-on-mouse-down="{{ handlers.ejecutar.mid.onDragStart }}" style="cursor:move;user-select:none;padding:10px 12px;border-bottom:1px solid #1f2530;display:flex;justify-content:space-between;align-items:center">
+            <h2 style="font-size:12px;margin:0">⠿ Create user successfully</h2>
+            <span style="background:rgba(114,171,255,.16);color:#7fb1ff;padding:3px 8px;border-radius:6px;font-size:9px;font-weight:600">▶️ EJECUTANDO</span>
+          </div>
+          <div style="padding:11px;overflow:auto;flex:1;font-size:10.5px">
+            <div style="color:#5f6b7a;font-size:9px">Pasos de este test (en vivo)</div>
+            <div style="padding:6px 0">✅ Login</div><div style="padding:6px 0">✅ Open Users</div><div style="padding:6px 0">✅ Open Create User</div>
+            <div style="padding:6px 0;color:#7fb1ff">▶️ Submit</div><div style="padding:6px 0;color:#5f6b7a">○ Verify success</div>
+            <h2 style="font-size:12px;margin:12px 0 4px">Evidencia</h2>
+            <div style="color:#5f6b7a;font-size:9.5px">📷 screenshot · 🎥 vídeo · 🧵 trace · 🖥️ console</div>
+          </div>
+          <sc-if value="{{ notMobile }}"><div sc-camel-on-mouse-down="{{ handlers.ejecutar.mid.onResizeStart }}" style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;color:#3a4552;font-size:10px;display:flex;align-items:flex-end;justify-content:flex-end;padding:2px">◢</div></sc-if>
+        </div>
+      </div>
+
+      <div style="{{ panelStyle.ejecutar.right }}">
+        <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+          <div sc-camel-on-mouse-down="{{ handlers.ejecutar.right.onDragStart }}" style="cursor:move;user-select:none;padding:10px 12px;border-bottom:1px solid #1f2530"><h2 style="font-size:12px;margin:0">⠿ 🤖 Informador</h2></div>
+          <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+            <div style="flex:1;overflow:auto;padding:10px">
+              <sc-for list="{{ chatViews.ejecutar.messages }}" as="m" hint-placeholder-count="2">
+                <div style="font-size:10.5px;line-height:1.55;margin-bottom:10px">
+                  <sc-if value="{{ m.ai }}" hint-placeholder-val="{{ true }}">
+                    <div style="font-size:8px;text-transform:uppercase;color:#6f7c89;margin-bottom:3px">🤖 {{ m.who }}</div>
+                    <div style="background:#171d26;border:1px solid #253040;border-radius:8px;padding:9px">{{ m.text }}</div>
+                  </sc-if>
+                  <sc-if value="{{ m.notAi }}">
+                    <div style="font-size:8px;text-transform:uppercase;color:#6f7c89;margin-bottom:3px">🧑 {{ m.who }}</div>
+                    <div style="padding-left:14px;color:#d7e0e9">{{ m.text }}</div>
+                  </sc-if>
+                </div>
+              </sc-for>
+              <sc-if value="{{ chatViews.ejecutar.loading }}">
+                <div style="display:flex;gap:4px;padding:9px;background:#171d26;border:1px solid #253040;border-radius:8px;width:fit-content">
+                  <span style="width:6px;height:6px;border-radius:50%;background:#f5c877;animation:bounceDot 1s infinite"></span>
+                  <span style="width:6px;height:6px;border-radius:50%;background:#f5c877;animation:bounceDot 1s .15s infinite"></span>
+                  <span style="width:6px;height:6px;border-radius:50%;background:#f5c877;animation:bounceDot 1s .3s infinite"></span>
+                </div>
+              </sc-if>
+            </div>
+            <div style="padding:8px;border-top:1px solid #1f2530;display:flex;gap:6px">
+              <input value="{{ chatViews.ejecutar.input }}" sc-camel-on-change="{{ chatViews.ejecutar.onInput }}" sc-camel-on-key-down="{{ chatViews.ejecutar.onKeyDown }}" placeholder="Pregunta sobre el informe…" style="flex:1;background:#0b0f14;border:1px solid #262f3a;color:#fff;border-radius:7px;padding:8px;font-size:10.5px;font-family:inherit">
+              <button sc-camel-on-click="{{ chatViews.ejecutar.onSend }}" style="border:1px solid #F5A623;background:#F5A623;color:#14110a;border-radius:7px;padding:8px 12px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">📤</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:#11151c;border:1px solid #1f2530;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;font-size:10.5px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="color:#5f6b7a;text-transform:uppercase;font-size:9px">🎯 Ámbito</span>
+        <label style="display:flex;align-items:center;gap:4px;color:#c3ccd6"><input type="radio" name="x-scope"> todo</label>
+        <label style="display:flex;align-items:center;gap:4px;color:#c3ccd6"><input type="radio" name="x-scope" sc-camel-default-checked="{{ true }}"> esta selección</label>
+        <label style="display:flex;align-items:center;gap:4px;color:#c3ccd6"><input type="radio" name="x-scope"> solo los fallidos</label>
+      </div>
+      <span style="margin-left:auto;color:#e5c668;font-size:10.5px">💰 $0,00 · sin llamadas LLM</span>
+      <button disabled="{{ true }}" style="border:1px solid #2a333f;background:#161b23;color:#dbe4ed;opacity:.4;border-radius:7px;padding:8px 14px;font-size:10.5px;font-family:inherit;cursor:not-allowed">▶️ Ejecutar</button>
+      <button style="border:1px solid #6b2c36;background:#3a1c22;color:#ff9aa2;border-radius:7px;padding:8px 14px;font-size:10.5px;font-family:inherit;cursor:pointer">⏹️ Detener</button>
+    </div>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ isReparar }}">
+  <section style="display:flex;flex-direction:column;flex:1;min-height:0;gap:10px;animation:pageFade .35s ease">
+    <h1 style="font-size:20px;margin:0 0 4px;font-weight:800">🔧 Reparar</h1>
+    <div style="font-size:11px;color:#8891a0;margin-bottom:2px">Reparador no tiene pareja. Solo propone diff si el fallo es del test — nunca toca un fallo de la aplicación.</div>
+    <div style="{{ canvasStyle.reparar }}" data-canvas="true">
+
+      <div style="{{ panelStyle.reparar.left }}">
+        <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+          <div sc-camel-on-mouse-down="{{ handlers.reparar.left.onDragStart }}" style="cursor:move;user-select:none;padding:10px 12px;border-bottom:1px solid #1f2530"><h2 style="font-size:12px;margin:0">⠿ Tests en rojo</h2></div>
+          <div style="padding:9px;overflow:auto;flex:1;font-size:10.5px">
+            <button style="display:block;width:100%;text-align:left;background:#1b2733;color:#fff;border:0;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:10.5px;cursor:pointer">❌ Duplicate email<div style="color:#5f6b7a;font-size:9.5px;margin-top:3px">fallo del <b style="color:#dbe4ed">TEST</b> · locator ambiguo</div></button>
+            <button style="display:block;width:100%;text-align:left;background:none;color:#aab5c1;border:0;border-radius:6px;padding:6px 8px;font-family:inherit;font-size:10.5px;cursor:pointer">❌ Payment declined<div style="color:#5f6b7a;font-size:9.5px;margin-top:3px">fallo de la <b style="color:#dbe4ed">APLICACIÓN</b> · sin tocar</div></button>
+          </div>
+          <sc-if value="{{ notMobile }}"><div sc-camel-on-mouse-down="{{ handlers.reparar.left.onResizeStart }}" style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;color:#3a4552;font-size:10px;display:flex;align-items:flex-end;justify-content:flex-end;padding:2px">◢</div></sc-if>
+        </div>
+      </div>
+
+      <div style="{{ panelStyle.reparar.mid }}">
+        <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+          <div sc-camel-on-mouse-down="{{ handlers.reparar.mid.onDragStart }}" style="cursor:move;user-select:none;padding:10px 12px;border-bottom:1px solid #1f2530;display:flex;justify-content:space-between;align-items:center">
+            <h2 style="font-size:12px;margin:0">⠿ Duplicate email</h2>
+            <span style="background:rgba(114,171,255,.16);color:#7fb1ff;padding:3px 8px;border-radius:6px;font-size:9px;font-weight:600">ciclo 1 de 3</span>
+          </div>
+          <div style="padding:11px;overflow:auto;flex:1;font-size:10.5px">
+            <h2 style="font-size:12px;margin:0 0 6px">Diagnóstico</h2>
+            <div style="background:#080b0f;border:1px solid #1c232c;border-radius:8px;padding:12px;font-size:11px;line-height:1.7;color:#c7d0db">TimeoutError · get_by_text("Create")
+Expected: 1 elemento · Received: 2</div>
+            <h2 style="font-size:12px;margin:12px 0 6px">Propuesta</h2>
+            <div style="background:#080b0f;border:1px solid #1c232c;border-radius:8px;padding:12px;font-size:11px;line-height:1.7;color:#c7d0db"><span style="color:#ff8b93">- getByText("Create")</span>
+<span style="color:#8fe0a3">+ getByRole("dialog")
++     .getByRole("button", {name:"Create"})</span></div>
+            <div style="display:flex;gap:6px;margin-top:10px">
+              <button style="border:1px solid #F5A623;background:#F5A623;color:#14110a;border-radius:7px;padding:7px 11px;font-size:10.5px;font-weight:700;font-family:inherit;cursor:pointer">✅ Aplicar y reejecutar</button>
+              <button style="border:1px solid #2a333f;background:#161b23;color:#dbe4ed;border-radius:7px;padding:7px 11px;font-size:10.5px;font-family:inherit;cursor:pointer">✖️ Rechazar</button>
+            </div>
+          </div>
+          <sc-if value="{{ notMobile }}"><div sc-camel-on-mouse-down="{{ handlers.reparar.mid.onResizeStart }}" style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;color:#3a4552;font-size:10px;display:flex;align-items:flex-end;justify-content:flex-end;padding:2px">◢</div></sc-if>
+        </div>
+      </div>
+
+      <div style="{{ panelStyle.reparar.right }}">
+        <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+          <div sc-camel-on-mouse-down="{{ handlers.reparar.right.onDragStart }}" style="cursor:move;user-select:none;padding:10px 12px;border-bottom:1px solid #1f2530"><h2 style="font-size:12px;margin:0">⠿ 🤖 Reparador</h2></div>
+          <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+            <div style="flex:1;overflow:auto;padding:10px">
+              <sc-for list="{{ chatViews.reparar.messages }}" as="m" hint-placeholder-count="3">
+                <div style="font-size:10.5px;line-height:1.55;margin-bottom:10px">
+                  <sc-if value="{{ m.ai }}" hint-placeholder-val="{{ true }}">
+                    <div style="font-size:8px;text-transform:uppercase;color:#6f7c89;margin-bottom:3px">🤖 {{ m.who }}</div>
+                    <div style="background:#171d26;border:1px solid #253040;border-radius:8px;padding:9px">{{ m.text }}</div>
+                  </sc-if>
+                  <sc-if value="{{ m.notAi }}">
+                    <div style="font-size:8px;text-transform:uppercase;color:#6f7c89;margin-bottom:3px">🧑 {{ m.who }}</div>
+                    <div style="padding-left:14px;color:#d7e0e9">{{ m.text }}</div>
+                  </sc-if>
+                </div>
+              </sc-for>
+              <sc-if value="{{ chatViews.reparar.loading }}">
+                <div style="display:flex;gap:4px;padding:9px;background:#171d26;border:1px solid #253040;border-radius:8px;width:fit-content">
+                  <span style="width:6px;height:6px;border-radius:50%;background:#f5c877;animation:bounceDot 1s infinite"></span>
+                  <span style="width:6px;height:6px;border-radius:50%;background:#f5c877;animation:bounceDot 1s .15s infinite"></span>
+                  <span style="width:6px;height:6px;border-radius:50%;background:#f5c877;animation:bounceDot 1s .3s infinite"></span>
+                </div>
+              </sc-if>
+            </div>
+            <div style="padding:8px;border-top:1px solid #1f2530;display:flex;gap:6px">
+              <input value="{{ chatViews.reparar.input }}" sc-camel-on-change="{{ chatViews.reparar.onInput }}" sc-camel-on-key-down="{{ chatViews.reparar.onKeyDown }}" placeholder="Pregunta sobre este fallo…" style="flex:1;background:#0b0f14;border:1px solid #262f3a;color:#fff;border-radius:7px;padding:8px;font-size:10.5px;font-family:inherit">
+              <button sc-camel-on-click="{{ chatViews.reparar.onSend }}" style="border:1px solid #F5A623;background:#F5A623;color:#14110a;border-radius:7px;padding:8px 12px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer">📤</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:#11151c;border:1px solid #1f2530;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;font-size:10.5px">
+      <div style="display:flex;align-items:center;gap:10px"><span style="color:#5f6b7a;text-transform:uppercase;font-size:9px">🎯 Ámbito</span>
+        <label style="display:flex;align-items:center;gap:4px;color:#c3ccd6"><input type="radio" name="p-scope"> todos los fallos</label>
+        <label style="display:flex;align-items:center;gap:4px;color:#c3ccd6"><input type="radio" name="p-scope" sc-camel-default-checked="{{ true }}"> esta selección</label>
+      </div>
+      <span style="margin-left:auto;color:#e5c668;font-size:10.5px">💰 $0,06 · 1 llamada</span>
+      <button sc-camel-on-click="{{ ops.reparar.onRun }}" disabled="{{ ops.reparar.loading }}" style="border:1px solid #F5A623;background:#F5A623;color:#14110a;border-radius:7px;padding:8px 14px;font-size:10.5px;font-weight:700;font-family:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+        <sc-if value="{{ ops.reparar.loading }}"><span style="width:11px;height:11px;border:2px solid rgba(20,17,10,.35);border-top-color:#14110a;border-radius:50%;display:inline-block;animation:spin .7s linear infinite"></span>Reparando…</sc-if>
+        <sc-if value="{{ ops.reparar.done }}">✅ Hecho</sc-if>
+        <sc-if value="{{ ops.reparar.idle }}">▶️ Reparar</sc-if>
+      </button>
+    </div>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ isReports }}">
+  <section style="display:flex;flex-direction:column;flex:1;min-height:0;animation:pageFade .35s ease">
+    <h1 style="font-size:20px;margin:0 0 4px;font-weight:800">📈 Reports</h1>
+    <div style="font-size:11px;color:#8891a0;margin-bottom:14px">Consulta sobre el historial (runs / test_results). Sin chat, sin agente — no es una operación.</div>
+    <div style="{{ canvasStyle.reports }}" data-canvas="true">
+      <sc-for list="{{ reportStatDefs }}" as="s" hint-placeholder-count="3">
+        <div style="{{ s.panelStyle }}">
+          <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+            <div sc-camel-on-mouse-down="{{ s.dragHandler }}" style="cursor:move;user-select:none;padding:10px 12px 2px;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#5f6b7a">⠿ {{ s.label }}</div>
+            <div style="padding:2px 12px 8px">
+              <sc-if value="{{ booting }}" hint-placeholder-val="{{ true }}">
+                <div style="height:22px;width:60%;border-radius:5px;background:linear-gradient(90deg,#161b23 25%,#1f2530 37%,#161b23 63%);background-size:400px 100%;animation:shimmer 1.3s infinite"></div>
+              </sc-if>
+              <sc-if value="{{ notBooting }}">
+                <div style="font-size:24px;font-weight:800;animation:fadeIn .4s ease;color:{{ s.color }}">{{ s.value }}</div>
+              </sc-if>
+            </div>
+            <sc-if value="{{ s.spark }}">
+              <div style="display:flex;align-items:flex-end;gap:3px;height:44px;padding:0 12px 12px">
+                <i style="width:9px;background:#F5A623;border-radius:2px 2px 0 0;height:40%;display:block"></i><i style="width:9px;background:#F5A623;border-radius:2px 2px 0 0;height:55%;display:block"></i><i style="width:9px;background:#F5A623;border-radius:2px 2px 0 0;height:60%;display:block"></i><i style="width:9px;background:#F5A623;border-radius:2px 2px 0 0;height:50%;display:block"></i><i style="width:9px;background:#F5A623;border-radius:2px 2px 0 0;height:70%;display:block"></i><i style="width:9px;background:#F5A623;border-radius:2px 2px 0 0;height:80%;display:block"></i><i style="width:9px;background:#F5A623;border-radius:2px 2px 0 0;height:86%;display:block"></i>
+              </div>
+            </sc-if>
+            <sc-if value="{{ notMobile }}"><div sc-camel-on-mouse-down="{{ s.resizeHandler }}" style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;color:#3a4552;font-size:10px;display:flex;align-items:flex-end;justify-content:flex-end;padding:2px">◢</div></sc-if>
+          </div>
+        </div>
+      </sc-for>
+
+      <div style="{{ panelStyle.reports.filt }}">
+        <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+          <div sc-camel-on-mouse-down="{{ handlers.reports.filt.onDragStart }}" style="cursor:move;user-select:none;padding:10px 12px;border-bottom:1px solid #1f2530"><h2 style="font-size:12px;margin:0">⠿ 🔎 Filtros</h2></div>
+          <div style="padding:11px;overflow:auto;flex:1;display:flex;gap:8px;flex-wrap:wrap">
+            <sc-raw-select style="background:#0b0f14;border:1px solid #262f3a;color:#dfe6ee;border-radius:7px;padding:7px 9px;font-size:10.5px;font-family:inherit"><option>Feature: todas</option></sc-raw-select>
+            <sc-raw-select style="background:#0b0f14;border:1px solid #262f3a;color:#dfe6ee;border-radius:7px;padding:7px 9px;font-size:10.5px;font-family:inherit"><option>Escenario: todos</option></sc-raw-select>
+            <sc-raw-select style="background:#0b0f14;border:1px solid #262f3a;color:#dfe6ee;border-radius:7px;padding:7px 9px;font-size:10.5px;font-family:inherit"><option>Fecha: última semana</option></sc-raw-select>
+          </div>
+          <sc-if value="{{ notMobile }}"><div sc-camel-on-mouse-down="{{ handlers.reports.filt.onResizeStart }}" style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;color:#3a4552;font-size:10px;display:flex;align-items:flex-end;justify-content:flex-end;padding:2px">◢</div></sc-if>
+        </div>
+      </div>
+
+      <div style="{{ panelStyle.reports.causes }}">
+        <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+          <div sc-camel-on-mouse-down="{{ handlers.reports.causes.onDragStart }}" style="cursor:move;user-select:none;padding:10px 12px;border-bottom:1px solid #1f2530;display:flex;justify-content:space-between"><h2 style="font-size:12px;margin:0">⠿ Fallos agrupados por causa</h2><span style="font-size:9px;color:#5f6b7a">clasificación del Reparador</span></div>
+          <div style="padding:11px;overflow:auto;flex:1;font-size:10.5px">
+            <div style="padding:8px 0;border-bottom:1px solid #1c2229;display:flex;justify-content:space-between">Locator ambiguo <b>5</b></div>
+            <div style="padding:8px 0;border-bottom:1px solid #1c2229;display:flex;justify-content:space-between">Timeout <b>4</b></div>
+            <div style="padding:8px 0;display:flex;justify-content:space-between">Fallo de la aplicación <b>3</b></div>
+          </div>
+          <sc-if value="{{ notMobile }}"><div sc-camel-on-mouse-down="{{ handlers.reports.causes.onResizeStart }}" style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;color:#3a4552;font-size:10px;display:flex;align-items:flex-end;justify-content:flex-end;padding:2px">◢</div></sc-if>
+        </div>
+      </div>
+
+      <div style="{{ panelStyle.reports.hist }}">
+        <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+          <div sc-camel-on-mouse-down="{{ handlers.reports.hist.onDragStart }}" style="cursor:move;user-select:none;padding:10px 12px;border-bottom:1px solid #1f2530;display:flex;justify-content:space-between;align-items:center"><h2 style="font-size:12px;margin:0">⠿ Historial de ejecuciones</h2><button style="border:1px solid #2a333f;background:#161b23;color:#dbe4ed;border-radius:6px;padding:5px 9px;font-size:9.5px;font-family:inherit;cursor:pointer">⬇️ Exportar</button></div>
+          <div style="padding:11px;overflow:auto;flex:1">
+            <sc-raw-table style="width:100%;border-collapse:collapse;font-size:10.5px">
+              <sc-raw-tr><sc-raw-th style="text-align:left;color:#5f6b7a;text-transform:uppercase;font-size:9px;border-bottom:1px solid #232c37;padding:6px">Hora</sc-raw-th><sc-raw-th style="text-align:left;color:#5f6b7a;text-transform:uppercase;font-size:9px;border-bottom:1px solid #232c37;padding:6px">Tests</sc-raw-th><sc-raw-th style="text-align:left;color:#5f6b7a;text-transform:uppercase;font-size:9px;border-bottom:1px solid #232c37;padding:6px">Coste</sc-raw-th><sc-raw-th style="border-bottom:1px solid #232c37;padding:6px"></sc-raw-th></sc-raw-tr>
+              <sc-raw-tr><sc-raw-td style="padding:8px 6px;border-bottom:1px solid #1c2229">18:03</sc-raw-td><sc-raw-td style="padding:8px 6px;border-bottom:1px solid #1c2229">8✅ 2❌</sc-raw-td><sc-raw-td style="padding:8px 6px;border-bottom:1px solid #1c2229">$0,00</sc-raw-td><sc-raw-td style="padding:8px 6px;border-bottom:1px solid #1c2229"><button style="border:1px solid #2a333f;background:#161b23;color:#dbe4ed;border-radius:6px;padding:4px 8px;font-size:9.5px;font-family:inherit;cursor:pointer">Ver</button></sc-raw-td></sc-raw-tr>
+              <sc-raw-tr><sc-raw-td style="padding:8px 6px">17:40</sc-raw-td><sc-raw-td style="padding:8px 6px">9✅ 0❌</sc-raw-td><sc-raw-td style="padding:8px 6px">$0,00</sc-raw-td><sc-raw-td style="padding:8px 6px"><button style="border:1px solid #2a333f;background:#161b23;color:#dbe4ed;border-radius:6px;padding:4px 8px;font-size:9.5px;font-family:inherit;cursor:pointer">Ver</button></sc-raw-td></sc-raw-tr>
+            </sc-raw-table>
+          </div>
+          <sc-if value="{{ notMobile }}"><div sc-camel-on-mouse-down="{{ handlers.reports.hist.onResizeStart }}" style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;color:#3a4552;font-size:10px;display:flex;align-items:flex-end;justify-content:flex-end;padding:2px">◢</div></sc-if>
+        </div>
+      </div>
+    </div>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ isConfig }}">
+  <section style="display:flex;flex-direction:column;flex:1;min-height:0;animation:pageFade .35s ease">
+    <h1 style="font-size:20px;margin:0 0 4px;font-weight:800">⚙️ Configuración</h1>
+    <div style="font-size:11px;color:#8891a0;margin-bottom:14px">Edita las dos capas — mismo criterio de edición inline que map.json, por ser datos estructurados.</div>
+    <div style="{{ canvasStyle.config }}" data-canvas="true">
+
+      <div style="{{ panelStyle.config.proj }}">
+        <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+          <div sc-camel-on-mouse-down="{{ handlers.config.proj.onDragStart }}" style="cursor:move;user-select:none;padding:10px 12px;border-bottom:1px solid #1f2530"><h2 style="font-size:12px;margin:0">⠿ 📁 Este proyecto — mi-app</h2></div>
+          <div style="padding:12px;overflow:auto;flex:1;font-size:10.5px">
+            <div style="padding:8px 0;border-bottom:1px solid #1c2229;display:flex;justify-content:space-between;align-items:center;gap:8px">URL objetivo <input value="https://staging.mi-app.dev" style="width:170px;background:#0b0f14;border:1px solid #262f3a;color:#dfe6ee;border-radius:7px;padding:6px 8px;font-size:10px;font-family:inherit"></div>
+            <div style="padding:8px 0;border-bottom:1px solid #1c2229;display:flex;justify-content:space-between;align-items:center;gap:8px">Entorno <sc-raw-select style="background:#0b0f14;border:1px solid #262f3a;color:#dfe6ee;border-radius:7px;padding:6px 8px;font-size:10px;font-family:inherit"><option>staging</option><option>producción</option></sc-raw-select></div>
+            <div style="padding:8px 0;display:flex;justify-content:space-between;align-items:center;gap:8px">🔑 Credenciales de test <input type="password" value="********" style="width:170px;background:#0b0f14;border:1px solid #262f3a;color:#dfe6ee;border-radius:7px;padding:6px 8px;font-size:10px;font-family:inherit"></div>
+            <h2 style="font-size:12px;margin:14px 0 3px">🧠 Memoria del proyecto</h2>
+            <div style="font-size:9px;color:#5f6b7a;margin-bottom:6px">.agente-qa/memory.json — editable, no caja negra</div>
+            <div style="padding:7px 0;border-bottom:1px solid #1c2229">"Los datos de usuario se crean vía API"</div>
+            <div style="padding:7px 0;border-bottom:1px solid #1c2229">"Nunca usar usuarios reales en tests automáticos"</div>
+            <div style="padding:7px 0">"Los tests deben usar Page Objects"</div>
+            <button style="margin-top:8px;border:1px solid #2a333f;background:#161b23;color:#dbe4ed;border-radius:7px;padding:6px 10px;font-size:10px;font-family:inherit;cursor:pointer">➕ Añadir regla</button>
+          </div>
+          <sc-if value="{{ notMobile }}"><div sc-camel-on-mouse-down="{{ handlers.config.proj.onResizeStart }}" style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;color:#3a4552;font-size:10px;display:flex;align-items:flex-end;justify-content:flex-end;padding:2px">◢</div></sc-if>
+        </div>
+      </div>
+
+      <div style="{{ panelStyle.config.global }}">
+        <div style="height:100%;width:100%;position:relative;display:flex;flex-direction:column;background:#11151c;border:1px solid #1f2530;border-radius:10px;overflow:hidden">
+          <div sc-camel-on-mouse-down="{{ handlers.config.global.onDragStart }}" style="cursor:move;user-select:none;padding:10px 12px;border-bottom:1px solid #1f2530"><h2 style="font-size:12px;margin:0">⠿ 🌍 Global — agente-qa-mcp</h2></div>
+          <div style="padding:12px;overflow:auto;flex:1;font-size:10.5px">
+            <div style="font-size:9px;color:#5f6b7a;margin-bottom:6px">%APPDATA%/agente-qa-mcp/</div>
+            <div style="padding:7px 0;border-bottom:1px solid #1c2229;display:flex;justify-content:space-between;align-items:center;gap:8px">Modalidad LLM <sc-raw-select style="background:#0b0f14;border:1px solid #262f3a;color:#dfe6ee;border-radius:7px;padding:6px 8px;font-size:10px;font-family:inherit"><option>API key</option><option>claude-cli</option></sc-raw-select></div>
+            <div style="padding:7px 0;border-bottom:1px solid #1c2229;display:flex;justify-content:space-between;align-items:center;gap:8px">Proveedor <sc-raw-select style="background:#0b0f14;border:1px solid #262f3a;color:#dfe6ee;border-radius:7px;padding:6px 8px;font-size:10px;font-family:inherit"><option>anthropic</option><option>openai</option></sc-raw-select></div>
+            <div style="padding:7px 0;border-bottom:1px solid #1c2229;display:flex;justify-content:space-between;align-items:center;gap:8px">Perfil rápido <sc-raw-select style="background:#0b0f14;border:1px solid #262f3a;color:#dfe6ee;border-radius:7px;padding:6px 8px;font-size:10px;font-family:inherit"><option>claude-haiku-4.5</option></sc-raw-select></div>
+            <div style="padding:7px 0;border-bottom:1px solid #1c2229;display:flex;justify-content:space-between;align-items:center;gap:8px">Modo de coste <sc-raw-select style="background:#0b0f14;border:1px solid #262f3a;color:#dfe6ee;border-radius:7px;padding:6px 8px;font-size:10px;font-family:inherit"><option>equilibrado</option><option>ahorro</option></sc-raw-select></div>
+            <h2 style="font-size:12px;margin:14px 0 6px;display:flex;justify-content:space-between;align-items:center">🩺 Estado del entorno <button style="border:1px solid #2a333f;background:#161b23;color:#dbe4ed;border-radius:6px;padding:5px 9px;font-size:9.5px;font-family:inherit;cursor:pointer">Ejecutar doctor</button></h2>
+            <div style="font-size:10.5px">✅ Node 22 · ✅ Navegadores Playwright · ✅ MCP · ✅ claves</div>
+          </div>
+          <sc-if value="{{ notMobile }}"><div sc-camel-on-mouse-down="{{ handlers.config.global.onResizeStart }}" style="position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;color:#3a4552;font-size:10px;display:flex;align-items:flex-end;justify-content:flex-end;padding:2px">◢</div></sc-if>
+        </div>
+      </div>
+    </div>
+  </section>
+  </sc-if>
+
+  </div>
+</main>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script="">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const mk = (x, y, w, h) => ({ x, y, w, h, z: 1 });
+    this.state = {
+      activePage: 'dashboard',
+      isMobile: (typeof window !== 'undefined' ? window.innerWidth < 900 : false),
+      sidebarOpen: false,
+      booting: true,
+      agentTab: { explorar: 'crawler', redactar: 'redactor', generar: 'generador' },
+      subtab: { generar: 'go-po' },
+      chatInput: { explorar: '', redactar: '', generar: '', ejecutar: '', reparar: '' },
+      chatLoading: { explorar: false, redactar: false, generar: false, ejecutar: false, reparar: false },
+      opLoading: { explorar: false, redactar: false, generar: false, ejecutar: false, reparar: false },
+      opDone: { explorar: false, redactar: false, generar: false, ejecutar: false, reparar: false },
+      chats: {
+        explorar: [
+          { ai: true, who: 'mapeador-mcp', text: 'He detectado una SPA. Separo routes de screen states para que los escenarios representen transiciones sin navegación.' },
+          { ai: false, who: 'Tú', text: '¿Qué falta para automatizar Create User?' },
+          { ai: true, who: 'mapeador-mcp', text: 'El botón Create tiene 2 coincidencias. Puedo resolverlo si me lo pides.' }
+        ],
+        redactar: [
+          { ai: false, who: 'Tú', text: 'Quiero probar un registro con email duplicado.' },
+          { ai: true, who: 'redactor', text: 'Ya existe "Users List" y el formulario de alta en el mapa. ¿Añado el caso a create-user.feature o creo uno nuevo?' }
+        ],
+        generar: [
+          { ai: true, who: 'generador', text: 'Genero sobre la plantilla de formulario. Los localizadores se reescriben desde el mapa al final — no los invento yo.' }
+        ],
+        ejecutar: [
+          { ai: true, who: 'Informador', text: '9 de 10 tests en verde. 1 fallo: Duplicate email, locator ambiguo (2 matches).' },
+          { ai: false, who: 'Tú', text: '¿por qué falló?' }
+        ],
+        reparar: [
+          { ai: true, who: 'Reparador', text: 'He analizado el fallo, el DOM y el trace. El botón "Create" matchea 2 elementos dentro de un modal SPA.' },
+          { ai: false, who: 'Tú', text: '¿es seguro cambiarlo?' },
+          { ai: true, who: 'Reparador', text: 'Sí, el nuevo locator devuelve 1 elemento. Confianza 96%.' }
+        ]
+      },
+      panels: {
+        dashboard: { s0: mk(0, 0, 15.3, 15), s1: mk(16.8, 0, 15.3, 15), s2: mk(33.6, 0, 15.3, 15), s3: mk(50.4, 0, 15.3, 15), s4: mk(67.2, 0, 15.3, 15), s5: mk(84, 0, 15.3, 15), cur: mk(0, 20, 48, 78), act: mk(51, 20, 49, 78) },
+        reports: { s0: mk(0, 0, 32, 34), s1: mk(34, 0, 32, 34), s2: mk(68, 0, 32, 34), filt: mk(0, 38, 100, 15), causes: mk(0, 57, 48, 41), hist: mk(51, 57, 49, 41) },
+        config: { proj: mk(0, 0, 48, 100), global: mk(51, 0, 49, 100) },
+        explorar: { left: mk(0, 0, 25, 100), mid: mk(26.5, 0, 46, 100), right: mk(74, 0, 26, 100) },
+        redactar: { left: mk(0, 0, 25, 100), mid: mk(26.5, 0, 46, 100), right: mk(74, 0, 26, 100) },
+        generar: { left: mk(0, 0, 25, 100), mid: mk(26.5, 0, 46, 100), right: mk(74, 0, 26, 100) },
+        ejecutar: { left: mk(0, 0, 25, 100), mid: mk(26.5, 0, 46, 100), right: mk(74, 0, 26, 100) },
+        reparar: { left: mk(0, 0, 25, 100), mid: mk(26.5, 0, 46, 100), right: mk(74, 0, 26, 100) }
+      }
+    };
+    this.zCounter = 10;
+    this._resize = this._resize.bind(this);
+  }
+  componentDidMount() {
+    window.addEventListener('resize', this._resize);
+    this._resize();
+    setTimeout(() => this.setState({ booting: false }), 700);
+  }
+  componentWillUnmount() {
+    window.removeEventListener('resize', this._resize);
+  }
+  _resize() {
+    const mobile = window.innerWidth < 900;
+    if (mobile !== this.state.isMobile) this.setState({ isMobile: mobile });
+  }
+  go(page) {
+    this.setState({ activePage: page, sidebarOpen: false });
+    const el = document.getElementById('qa-agent-content-scroll');
+    if (el) el.scrollTop = 0;
+  }
+  toggleSidebar() { this.setState(s => ({ sidebarOpen: !s.sidebarOpen })); }
+  closeSidebar() { this.setState({ sidebarOpen: false }); }
+  selectAgentTab(page, tab) { this.setState(s => ({ agentTab: { ...s.agentTab, [page]: tab } })); }
+  selectSubtab(page, tab) { this.setState(s => ({ subtab: { ...s.subtab, [page]: tab } })); }
+  setChatInput(page, val) { this.setState(s => ({ chatInput: { ...s.chatInput, [page]: val } })); }
+  sendChat(page) {
+    const text = (this.state.chatInput[page] || '').trim();
+    if (!text) return;
+    this.setState(s => ({
+      chats: { ...s.chats, [page]: [...s.chats[page], { ai: false, who: 'Tú', text }] },
+      chatInput: { ...s.chatInput, [page]: '' },
+      chatLoading: { ...s.chatLoading, [page]: true }
+    }));
+    const replies = { explorar: 'Reviso el mapa y te confirmo en un momento.', redactar: 'Anotado — lo reflejo en el escenario.', generar: 'Reviso la plantilla y regenero si hace falta.', ejecutar: 'Consultando el trace del run…', reparar: 'Comparando con localizadores similares…' };
+    setTimeout(() => {
+      this.setState(s => ({
+        chats: { ...s.chats, [page]: [...s.chats[page], { ai: true, who: this.state.agentTab[page] || 'agente', text: replies[page] || 'Ok.' }] },
+        chatLoading: { ...s.chatLoading, [page]: false }
+      }));
+    }, 900);
+  }
+  runOp(page) {
+    if (this.state.opLoading[page]) return;
+    this.setState(s => ({ opLoading: { ...s.opLoading, [page]: true }, opDone: { ...s.opDone, [page]: false } }));
+    setTimeout(() => {
+      this.setState(s => ({ opLoading: { ...s.opLoading, [page]: false }, opDone: { ...s.opDone, [page]: true } }));
+      setTimeout(() => this.setState(s => ({ opDone: { ...s.opDone, [page]: false } })), 1800);
+    }, 1100);
+  }
+  clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+  startDrag(page, id, e) {
+    if (this.state.isMobile) return;
+    e.preventDefault(); e.stopPropagation();
+    const canvasEl = e.currentTarget.closest('[data-canvas]');
+    if (!canvasEl) return;
+    const rect = canvasEl.getBoundingClientRect();
+    const p = this.state.panels[page][id];
+    const startX = e.clientX, startY = e.clientY, ox = p.x, oy = p.y;
+    this.zCounter++;
+    const z = this.zCounter;
+    this.setState(s => ({ panels: { ...s.panels, [page]: { ...s.panels[page], [id]: { ...s.panels[page][id], z } } } }));
+    const onMove = (ev) => {
+      const dx = (ev.clientX - startX) / rect.width * 100;
+      const dy = (ev.clientY - startY) / rect.height * 100;
+      const nx = this.clamp(ox + dx, 0, 100 - p.w);
+      const ny = this.clamp(oy + dy, 0, 100 - p.h);
+      this.setState(s => ({ panels: { ...s.panels, [page]: { ...s.panels[page], [id]: { ...s.panels[page][id], x: nx, y: ny } } } }));
+    };
+    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+  startResize(page, id, e) {
+    if (this.state.isMobile) return;
+    e.preventDefault(); e.stopPropagation();
+    const canvasEl = e.currentTarget.closest('[data-canvas]');
+    if (!canvasEl) return;
+    const rect = canvasEl.getBoundingClientRect();
+    const p = this.state.panels[page][id];
+    const startX = e.clientX, startY = e.clientY, ow = p.w, oh = p.h;
+    this.zCounter++;
+    const z = this.zCounter;
+    this.setState(s => ({ panels: { ...s.panels, [page]: { ...s.panels[page], [id]: { ...s.panels[page][id], z } } } }));
+    const minW = 10, minH = 12;
+    const onMove = (ev) => {
+      const dw = (ev.clientX - startX) / rect.width * 100;
+      const dh = (ev.clientY - startY) / rect.height * 100;
+      const nw = this.clamp(ow + dw, minW, 100 - p.x);
+      const nh = this.clamp(oh + dh, minH, 100 - p.y);
+      this.setState(s => ({ panels: { ...s.panels, [page]: { ...s.panels[page], [id]: { ...s.panels[page][id], w: nw, h: nh } } } }));
+    };
+    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+  panelStyleFor(page, id) {
+    const p = this.state.panels[page][id];
+    if (this.state.isMobile) {
+      return { position: 'relative', width: '100%', height: 380, marginBottom: 12, zIndex: 1 };
+    }
+    return { position: 'absolute', left: p.x + '%', top: p.y + '%', width: p.w + '%', height: p.h + '%', zIndex: p.z || 1 };
+  }
+  renderVals() {
+    const S = this.state;
+    const navMeta = {
+      dashboard: { icon: '📊', label: 'Dashboard' }, explorar: { icon: '🗺️', label: 'Explorar' },
+      redactar: { icon: '✍️', label: 'Redactar' }, generar: { icon: '🧪', label: 'Generar' },
+      ejecutar: { icon: '▶️', label: 'Ejecutar' }, reparar: { icon: '🔧', label: 'Reparar' },
+      reports: { icon: '📈', label: 'Reports' }, config: { icon: '⚙️', label: 'Configuración' }
+    };
+    const navStyle = (id) => ({
+      display: 'flex', alignItems: 'center', gap: 8, width: '100%', border: '0',
+      background: S.activePage === id ? 'rgba(245,166,35,.14)' : 'transparent',
+      color: S.activePage === id ? '#f5c877' : '#a9b4c0', textAlign: 'left', padding: '9px 10px',
+      borderRadius: 8, fontSize: 12, fontFamily: 'inherit', fontWeight: S.activePage === id ? 600 : 400, cursor: 'pointer'
+    });
+    const navTop = ['dashboard', 'explorar', 'redactar', 'generar', 'ejecutar', 'reparar'].map(id => ({
+      id, icon: navMeta[id].icon, label: navMeta[id].label, style: navStyle(id), onClick: () => this.go(id)
+    }));
+    const reportsNavItem = { icon: navMeta.reports.icon, label: navMeta.reports.label, style: navStyle('reports'), onClick: () => this.go('reports') };
+    const configNavItem = { icon: navMeta.config.icon, label: navMeta.config.label, style: navStyle('config'), onClick: () => this.go('config') };
+
+    const pages = ['dashboard', 'reports', 'config', 'explorar', 'redactar', 'generar', 'ejecutar', 'reparar'];
+    const panelStyle = {}; const handlers = {};
+    pages.forEach(pg => {
+      panelStyle[pg] = {}; handlers[pg] = {};
+      Object.keys(S.panels[pg]).forEach(id => {
+        panelStyle[pg][id] = this.panelStyleFor(pg, id);
+        handlers[pg][id] = { onDragStart: (e) => this.startDrag(pg, id, e), onResizeStart: (e) => this.startResize(pg, id, e) };
+      });
+    });
+
+    const statDefs = [
+      { id: 's0', label: 'Pantallas', value: '14', color: '#e8edf5' },
+      { id: 's1', label: 'Locators', value: '62', color: '#e8edf5' },
+      { id: 's2', label: 'Features', value: '8', color: '#e8edf5' },
+      { id: 's3', label: 'Escenarios', value: '23', color: '#e8edf5' },
+      { id: 's4', label: 'Tests', value: '41', color: '#e8edf5' },
+      { id: 's5', label: 'Pass rate', value: '86%', color: '#52d17c' }
+    ].map(d => ({ ...d, panelStyle: panelStyle.dashboard[d.id], dragHandler: handlers.dashboard[d.id].onDragStart, resizeHandler: handlers.dashboard[d.id].onResizeStart }));
+
+    const reportStatDefs = [
+      { id: 's0', label: 'Pass rate', value: '86%', color: '#52d17c', spark: true },
+      { id: 's1', label: 'Flaky tests', value: '7', color: '#e5c668', spark: false },
+      { id: 's2', label: 'Fallos abiertos', value: '15', color: '#ff7f88', spark: false }
+    ].map(d => ({ ...d, panelStyle: panelStyle.reports[d.id], dragHandler: handlers.reports[d.id].onDragStart, resizeHandler: handlers.reports[d.id].onResizeStart }));
+
+    const chatViews = {};
+    ['explorar', 'redactar', 'generar', 'ejecutar', 'reparar'].forEach(pg => {
+      chatViews[pg] = {
+        messages: S.chats[pg].map(m => ({ ...m, notAi: !m.ai })),
+        input: S.chatInput[pg], loading: S.chatLoading[pg],
+        onInput: (e) => this.setChatInput(pg, e.target.value),
+        onSend: () => this.sendChat(pg),
+        onKeyDown: (e) => { if (e.key === 'Enter') this.sendChat(pg); }
+      };
+    });
+
+    const ops = {};
+    ['explorar', 'redactar', 'generar', 'ejecutar', 'reparar'].forEach(pg => {
+      ops[pg] = { loading: S.opLoading[pg], done: S.opDone[pg], idle: !S.opLoading[pg] && !S.opDone[pg], onRun: () => this.runOp(pg) };
+    });
+
+    const tabStyle = (sel) => ({
+      flex: 1, border: '1px solid #232c37', background: sel ? '#233042' : '#12171f',
+      color: sel ? '#fff' : '#8794a3', borderRadius: '6px 6px 0 0', padding: '6px', fontSize: 9,
+      fontFamily: 'inherit', cursor: 'pointer', borderBottomColor: sel ? '#233042' : '#232c37'
+    });
+    const agentTabsExplorar = ['crawler', 'mapeador-mcp'].map(t => ({ id: t, label: t, style: tabStyle(S.agentTab.explorar === t), onClick: () => this.selectAgentTab('explorar', t) }));
+    const agentTabsRedactar = ['redactor', 'redactor-mcp'].map(t => ({ id: t, label: t, style: tabStyle(S.agentTab.redactar === t), onClick: () => this.selectAgentTab('redactar', t) }));
+    const agentTabsGenerar = ['generador', 'generador-mcp'].map(t => ({ id: t, label: t, style: tabStyle(S.agentTab.generar === t), onClick: () => this.selectAgentTab('generar', t) }));
+    const subStyle = (sel) => ({ border: '1px solid #232c37', background: sel ? '#233042' : '#151b23', color: sel ? '#fff' : '#8794a3', borderRadius: 6, padding: '5px 9px', fontSize: 9, fontFamily: 'inherit', cursor: 'pointer' });
+    const subtabsGenerar = [{ id: 'go-po', label: 'Page Object' }, { id: 'go-spec', label: 'Spec' }].map(t => ({ ...t, style: subStyle(S.subtab.generar === t.id), onClick: () => this.selectSubtab('generar', t.id) }));
+
+    const canvasHeights = { dashboard: 760, reports: 760, config: 620, explorar: 640, redactar: 640, generar: 640, ejecutar: 640, reparar: 640 };
+    const canvasStyle = {};
+    Object.keys(canvasHeights).forEach(pg => {
+      canvasStyle[pg] = S.isMobile
+        ? { position: 'static', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'auto' }
+        : { position: 'relative', flex: 1, minHeight: canvasHeights[pg] + 'px' };
+    });
+
+    const appGridStyle = S.isMobile
+      ? { display: 'block', height: '100vh', width: '100vw', overflow: 'hidden', position: 'relative' }
+      : { display: 'grid', gridTemplateColumns: '230px 1fr', height: '100vh', width: '100vw' };
+    const sidebarBase = { background: '#0d1117', borderRight: '1px solid #1c2229', display: 'flex', flexDirection: 'column' };
+    const sidebarStyle = S.isMobile
+      ? { ...sidebarBase, position: 'fixed', top: 0, left: 0, height: '100vh', width: 230, zIndex: 60, transform: S.sidebarOpen ? 'translateX(0)' : 'translateX(-100%)', transition: 'transform .25s ease', boxShadow: S.sidebarOpen ? '20px 0 40px rgba(0,0,0,.5)' : 'none' }
+      : { ...sidebarBase, position: 'relative', width: 230, height: '100vh' };
+    const backdropStyle = (S.isMobile && S.sidebarOpen) ? { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 55, animation: 'fadeIn .2s ease' } : { display: 'none' };
+
+    return {
+      activePage: S.activePage, booting: S.booting, notBooting: !S.booting, isMobile: S.isMobile, notMobile: !S.isMobile,
+      isDashboard: S.activePage === 'dashboard', isExplorar: S.activePage === 'explorar', isRedactar: S.activePage === 'redactar',
+      isGenerar: S.activePage === 'generar', isEjecutar: S.activePage === 'ejecutar', isReparar: S.activePage === 'reparar',
+      isReports: S.activePage === 'reports', isConfig: S.activePage === 'config',
+      navTop, reportsNavItem, configNavItem,
+      crumbLabel: navMeta[S.activePage].label,
+      panelStyle, handlers, statDefs, reportStatDefs, chatViews, ops,
+      agentTabsExplorar, agentTabsRedactar, agentTabsGenerar, subtabsGenerar,
+      subtabs: { generarPO: S.subtab.generar === 'go-po', generarSpec: S.subtab.generar === 'go-spec' },
+      canvasStyle, appGridStyle, sidebarStyle, backdropStyle,
+      toggleSidebar: () => this.toggleSidebar(), closeSidebar: () => this.closeSidebar(),
+      goEjecutar: () => this.go('ejecutar'), goReparar: () => this.go('reparar')
+    };
+  }
+}
+</script>
+
+
+</body></html>

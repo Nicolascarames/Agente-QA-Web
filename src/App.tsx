@@ -9,8 +9,7 @@ import { Ejecutar } from "./Ejecutar";
 import { Reparar } from "./Reparar";
 import { Reports } from "./Reports";
 
-const PESTANAS = ["Dashboard", "Configuración", "Explorar", "Redactar", "Generar", "Ejecutar", "Reparar", "Reports"] as const;
-type Pestana = (typeof PESTANAS)[number];
+type Pestana = "Dashboard" | "Configuración" | "Explorar" | "Redactar" | "Generar" | "Ejecutar" | "Reparar" | "Reports";
 
 function contenidoPestana(pestana: Pestana) {
   switch (pestana) {
@@ -33,11 +32,33 @@ function contenidoPestana(pestana: Pestana) {
   }
 }
 
+// Grupos e iconos de la barra lateral, calcados de `navMeta` en
+// design/mockup-design.js. "Operaciones" son las seis puertas de trabajo;
+// "Proyecto" son las dos pantallas de lectura/ajuste del proyecto activo.
+const NAV_OPERACIONES: { pestana: Pestana; icon: string }[] = [
+  { pestana: "Dashboard", icon: "📊" },
+  { pestana: "Explorar", icon: "🗺️" },
+  { pestana: "Redactar", icon: "✍️" },
+  { pestana: "Generar", icon: "🧪" },
+  { pestana: "Ejecutar", icon: "▶️" },
+  { pestana: "Reparar", icon: "🔧" },
+];
+const NAV_PROYECTO: { pestana: Pestana; icon: string }[] = [
+  { pestana: "Reports", icon: "📈" },
+  { pestana: "Configuración", icon: "⚙️" },
+];
+
 export default function App() {
   const [pestana, setPestana] = useState<Pestana>("Dashboard");
   const [proyectoActual, setProyectoActual] = useState<string>("");
   const [recientes, setRecientes] = useState<string[]>([]);
   const [rutaCampo, setRutaCampo] = useState("");
+  const [sidebarAbierta, setSidebarAbierta] = useState(false);
+
+  // El indicador "● en curso" del mockup se alimenta de datos reales en el
+  // Bloque 3: hoy Explorar guarda su estado de ejecución en local, sin
+  // exponerlo al shell. Se deja el hueco listo, sin inventar una corrida.
+  const corridaActiva: string | null = null;
 
   useEffect(() => {
     void obtenerProyecto().then((datos) => {
@@ -55,13 +76,43 @@ export default function App() {
     });
   }, []);
 
+  const ir = useCallback((p: Pestana) => {
+    setPestana(p);
+    setSidebarAbierta(false);
+  }, []);
+
+  const claseItemNav = (p: Pestana) =>
+    `flex w-full items-center gap-1.5 rounded-8 border-0 bg-transparent px-2.5 py-2 text-left text-md font-normal text-text-muted transition-colors ${
+      p === pestana ? "bg-accent-bg font-semibold text-accent-soft" : "hover:text-text"
+    }`;
+
   return (
-    <div className="flex h-screen flex-col bg-bg text-text">
-      <header className="flex flex-col gap-2 border-b border-accent/30 px-4 py-3">
-        <div className="flex items-center gap-3">
-          <span className="text-accent">Agente QA Web</span>
+    <div className="flex h-screen w-screen overflow-hidden bg-bg text-text">
+      {sidebarAbierta && (
+        <div
+          className="fixed inset-0 z-[55] animate-fade-in bg-[var(--backdrop)] min-[900px]:hidden"
+          onClick={() => {
+            setSidebarAbierta(false);
+          }}
+        />
+      )}
+
+      <aside
+        className={`flex w-[230px] flex-shrink-0 flex-col border-r border-bg-row bg-bg-elev max-[899px]:fixed max-[899px]:inset-y-0 max-[899px]:left-0 max-[899px]:z-[60] max-[899px]:shadow-[var(--sidebar-shadow)] max-[899px]:transition-transform max-[899px]:duration-200 ${
+          sidebarAbierta ? "max-[899px]:translate-x-0" : "max-[899px]:-translate-x-full"
+        }`}
+      >
+        <div className="px-3 pb-2.5 pt-3.5">
+          <div className="flex items-center gap-1.5 text-xl font-extrabold">
+            🤖 QA <span className="text-accent-soft">AGENT</span>
+          </div>
+          <div className="mt-1 text-2xs text-text-faint">Agente-QA-Web · tema oscuro</div>
+        </div>
+
+        <div className="mx-3 mb-3.5 rounded-8 border border-border-soft bg-bg-panel p-2.5">
+          <div className="text-2xs uppercase tracking-[.05em] text-text-faint">📁 Proyecto</div>
           <form
-            className="flex flex-1 items-center gap-2"
+            className="mt-1 flex items-center gap-1.5"
             onSubmit={(e) => {
               e.preventDefault();
               if (rutaCampo.trim()) cambiarA(rutaCampo.trim());
@@ -73,15 +124,15 @@ export default function App() {
                 setRutaCampo(e.target.value);
               }}
               placeholder="Carpeta del proyecto"
-              className="flex-1 rounded-md border border-accent/30 bg-panel px-2 py-1 text-sm"
+              className="min-w-0 flex-1 rounded-4 border border-border bg-bg-sunken px-1.5 py-1 text-2xs text-text"
             />
-            <button type="submit" className="rounded-md border border-accent/60 px-3 py-1 text-sm text-accent">
-              Cambiar
+            <button type="submit" className="rounded-4 border border-border-strong px-1.5 py-1 text-2xs text-accent-soft">
+              Ir
             </button>
           </form>
           {recientes.length > 0 && (
             <select
-              className="rounded-md border border-accent/30 bg-panel px-2 py-1 text-sm"
+              className="mt-1.5 w-full rounded-4 border border-border bg-bg-sunken px-1.5 py-1 text-2xs text-text"
               value=""
               onChange={(e) => {
                 if (e.target.value) cambiarA(e.target.value);
@@ -95,28 +146,74 @@ export default function App() {
               ))}
             </select>
           )}
+          <p className="mt-1.5 truncate text-2xs text-text-faint" title={proyectoActual}>
+            {proyectoActual || "sin proyecto"}
+          </p>
+          <p className="mt-1 text-2xs text-text-ghost">URL objetivo: pendiente — llega con Configuración (Bloque 4).</p>
         </div>
-        <p className="truncate text-xs text-text/50" title={proyectoActual}>
-          {proyectoActual || "sin proyecto"}
-        </p>
-      </header>
 
-      <nav className="flex gap-1 border-b border-accent/30 px-4 py-2 text-sm">
-        {PESTANAS.map((p) => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => {
-              setPestana(p);
-            }}
-            className={`rounded-md px-3 py-1 ${p === pestana ? "bg-panel text-accent" : "text-text/60 hover:text-text"}`}
-          >
-            {p}
-          </button>
-        ))}
-      </nav>
+        <div className="px-3 pb-1.5 pt-1.5 text-2xs uppercase tracking-[.05em] text-text-faint">Operaciones</div>
+        <div className="flex flex-col gap-1 px-2">
+          {NAV_OPERACIONES.map((n) => (
+            <button
+              key={n.pestana}
+              type="button"
+              onClick={() => {
+                ir(n.pestana);
+              }}
+              className={claseItemNav(n.pestana)}
+            >
+              <span>{n.icon}</span>
+              <span>{n.pestana}</span>
+            </button>
+          ))}
+        </div>
 
-      <main className="relative flex-1 overflow-hidden">{contenidoPestana(pestana)}</main>
+        <div className="px-3 pb-1.5 pt-3.5 text-2xs uppercase tracking-[.05em] text-text-faint">Proyecto</div>
+        <div className="flex flex-col gap-1 px-2">
+          {NAV_PROYECTO.map((n) => (
+            <button
+              key={n.pestana}
+              type="button"
+              onClick={() => {
+                ir(n.pestana);
+              }}
+              className={claseItemNav(n.pestana)}
+            >
+              <span>{n.icon}</span>
+              <span>{n.pestana}</span>
+            </button>
+          ))}
+        </div>
+      </aside>
+
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="flex min-h-[48px] items-center justify-between gap-2.5 border-b border-bg-row bg-bg-elev px-4">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                setSidebarAbierta((v) => !v);
+              }}
+              className="hidden rounded-7 border border-border-strong bg-bg-panel px-2 py-1.5 text-lg text-text-strong max-[899px]:inline-block"
+            >
+              ☰
+            </button>
+            <div className="truncate text-md text-text-faint">
+              QA Agent / <b className="text-text-bright">{pestana}</b>
+            </div>
+          </div>
+          {corridaActiva && (
+            <div className="whitespace-nowrap rounded-6 bg-info-bg px-2.5 py-1 text-sm font-semibold text-info">
+              ● en curso: {corridaActiva}
+            </div>
+          )}
+        </header>
+
+        <div key={pestana} className="relative flex-1 animate-page-fade overflow-hidden">
+          {contenidoPestana(pestana)}
+        </div>
+      </main>
     </div>
   );
 }

@@ -2,7 +2,9 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["dist-client/**", "dist-server/**", "node_modules/**"],
+    // design/ es material de referencia desempaquetado del mockup (ver
+    // design/README.md), no código de la app: no se lintea ni se tipa.
+    ignores: ["dist-client/**", "dist-server/**", "node_modules/**", "design/**"],
   },
   ...tseslint.configs.recommendedTypeChecked,
   {

@@ -15,6 +15,7 @@
     "vite.config.ts",
     "vitest.config.ts",
     "postcss.config.js",
-    "scripts/dev.mjs"
+    "scripts/dev.mjs",
+    "scripts/comprobar-estilos.mjs"
   ]
 }
