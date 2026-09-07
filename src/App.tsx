@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cambiarProyecto, obtenerConfigProyecto, obtenerProyecto } from "./api";
 import { Dashboard } from "./Dashboard";
 import { Configuracion } from "./Configuracion";
@@ -11,6 +11,9 @@ import { Reports } from "./Reports";
 import { useCorridaGlobal } from "./useCorridaGlobal";
 import { ConsolaGlobal } from "./ConsolaGlobal";
 import { GuiaPestana } from "./GuiaPestana";
+import { CajonFicha } from "./CajonFicha";
+import { catalogoResuelto } from "./catalogo/catalogo";
+import { idFicha } from "./catalogo/porPestana";
 
 type Pestana = "Dashboard" | "Configuración" | "Explorar" | "Redactar" | "Generar" | "Ejecutar" | "Reparar" | "Reports";
 
@@ -58,6 +61,22 @@ export default function App() {
   const [rutaCampo, setRutaCampo] = useState("");
   const [sidebarAbierta, setSidebarAbierta] = useState(false);
   const [appUrl, setAppUrl] = useState<string | null>(null);
+
+  // Id de la ficha con el cajón de detalle abierto (Bloque 4), o `null` si está cerrado. Vive
+  // aquí (no en GuiaPestana) porque el cajón se pinta por encima de todo el árbol y lo abrirán
+  // también el buscador y la consola asistida de bloques futuros.
+  const [fichaAbierta, setFichaAbierta] = useState<string | null>(null);
+  // Memoizado por identidad: `CajonFicha` reinicia efectos internos (mostrada/flagFoco) cuando
+  // `resuelta` cambia de identidad, y `catalogoResuelto()` construye un array/objetos nuevos en
+  // cada llamada — sin este `useMemo`, cualquier re-render de `App` con el cajón abierto (p. ej.
+  // los que dispara `useCorridaGlobal` en cada evento SSE) los reiniciaría de más.
+  const resueltaAbierta = useMemo(
+    () => (fichaAbierta ? (catalogoResuelto().find((resuelta) => idFicha(resuelta.ficha) === fichaAbierta) ?? null) : null),
+    [fichaAbierta],
+  );
+  const cerrarFicha = useCallback(() => {
+    setFichaAbierta(null);
+  }, []);
 
   // El indicador "● en curso" y el panel de consola global comparten el mismo hook: vive aquí
   // (nunca se desmonta al cambiar de pestaña), a diferencia del antiguo estado que solo subía
@@ -277,7 +296,7 @@ export default function App() {
 
         {/* Banda 3 — la guía de la pestaña activa. */}
         <div className="relative" data-canvas="true" style={{ height: alturaBanda }}>
-          <GuiaPestana pestana={pestana} />
+          <GuiaPestana pestana={pestana} onAbrirFicha={setFichaAbierta} />
           <button
             type="button"
             onClick={() => {
@@ -290,6 +309,11 @@ export default function App() {
         </div>
       </main>
       </div>
+
+      {/* Fuera del `<main>`/`<aside>` a propósito: ningún panel (react-rnd usa `transform` para
+          posicionarse) debe quedar entre este cajón y el viewport, o su `position: fixed` dejaría
+          de calcularse contra la ventana. */}
+      <CajonFicha resuelta={resueltaAbierta} onCerrar={cerrarFicha} />
     </div>
   );
 }
