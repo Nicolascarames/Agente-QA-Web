@@ -8,6 +8,8 @@ import { Generar } from "./Generar";
 import { Ejecutar } from "./Ejecutar";
 import { Reparar } from "./Reparar";
 import { Reports } from "./Reports";
+import { Motor } from "./Motor";
+import { Instalar } from "./Instalar";
 import { useCorridaGlobal } from "./useCorridaGlobal";
 import { ConsolaGlobal } from "./ConsolaGlobal";
 import { GuiaPestana } from "./GuiaPestana";
@@ -15,7 +17,17 @@ import { CajonFicha } from "./CajonFicha";
 import { catalogoResuelto } from "./catalogo/catalogo";
 import { idFicha } from "./catalogo/porPestana";
 
-type Pestana = "Dashboard" | "Configuración" | "Explorar" | "Redactar" | "Generar" | "Ejecutar" | "Reparar" | "Reports";
+type Pestana =
+  | "Dashboard"
+  | "Configuración"
+  | "Explorar"
+  | "Redactar"
+  | "Generar"
+  | "Ejecutar"
+  | "Reparar"
+  | "Reports"
+  | "Motor"
+  | "Instalar";
 
 function contenidoPestana(pestana: Pestana, onCorridaActivaCambiada: (descripcion: string | null) => void) {
   switch (pestana) {
@@ -35,12 +47,18 @@ function contenidoPestana(pestana: Pestana, onCorridaActivaCambiada: (descripcio
       return <Reparar />;
     case "Reports":
       return <Reports />;
+    case "Motor":
+      return <Motor />;
+    case "Instalar":
+      return <Instalar />;
   }
 }
 
 // Grupos e iconos de la barra lateral, calcados de `navMeta` en
 // design/mockup-design.js. "Operaciones" son las seis puertas de trabajo;
 // "Proyecto" son las dos pantallas de lectura/ajuste del proyecto activo.
+// "Referencia" (Bloque 6 de la spec de guía integrada) es la sección nueva que sustituye a
+// `docs/esquema-flujo.html`: material de consulta, no trabajo sobre un proyecto concreto.
 const NAV_OPERACIONES: { pestana: Pestana; icon: string }[] = [
   { pestana: "Dashboard", icon: "📊" },
   { pestana: "Explorar", icon: "🗺️" },
@@ -52,6 +70,10 @@ const NAV_OPERACIONES: { pestana: Pestana; icon: string }[] = [
 const NAV_PROYECTO: { pestana: Pestana; icon: string }[] = [
   { pestana: "Reports", icon: "📈" },
   { pestana: "Configuración", icon: "⚙️" },
+];
+const NAV_REFERENCIA: { pestana: Pestana; icon: string }[] = [
+  { pestana: "Motor", icon: "🧠" },
+  { pestana: "Instalar", icon: "📦" },
 ];
 
 export default function App() {
@@ -228,6 +250,23 @@ export default function App() {
         <div className="px-3 pb-1.5 pt-3.5 text-2xs uppercase tracking-[.05em] text-text-faint">Proyecto</div>
         <div className="flex flex-col gap-1 px-2">
           {NAV_PROYECTO.map((n) => (
+            <button
+              key={n.pestana}
+              type="button"
+              onClick={() => {
+                ir(n.pestana);
+              }}
+              className={claseItemNav(n.pestana)}
+            >
+              <span>{n.icon}</span>
+              <span>{n.pestana}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="px-3 pb-1.5 pt-3.5 text-2xs uppercase tracking-[.05em] text-text-faint">Referencia</div>
+        <div className="flex flex-col gap-1 px-2">
+          {NAV_REFERENCIA.map((n) => (
             <button
               key={n.pestana}
               type="button"
