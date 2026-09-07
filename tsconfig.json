@@ -7,6 +7,6 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true
   },
-  "references": [{ "path": "./tsconfig.server.json" }, { "path": "./tsconfig.app.json" }],
+  "references": [{ "path": "./tsconfig.server.json" }, { "path": "./tsconfig.app.json" }, { "path": "./tsconfig.catalogo-guard.json" }],
   "files": []
 }

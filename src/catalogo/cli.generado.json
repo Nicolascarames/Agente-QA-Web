@@ -1,0 +1,854 @@
+{
+  "version": "0.1.0",
+  "opcionesGlobales": [
+    {
+      "flags": "-V, --version",
+      "corta": "-V",
+      "larga": "--version",
+      "valor": null,
+      "valorObligatorio": false,
+      "negable": false,
+      "porDefecto": null,
+      "descripcion": "output the version number"
+    },
+    {
+      "flags": "--json",
+      "corta": null,
+      "larga": "--json",
+      "valor": null,
+      "valorObligatorio": false,
+      "negable": false,
+      "porDefecto": null,
+      "descripcion": "emite un evento NDJSON por línea en stdout en vez de texto legible para humano"
+    }
+  ],
+  "comandos": [
+    {
+      "ruta": [
+        "validate"
+      ],
+      "nombre": "validate",
+      "descripcion": "Valida un map.json contra el esquema del contrato",
+      "argumentos": [
+        {
+          "nombre": "file",
+          "obligatorio": true,
+          "variadico": false,
+          "descripcion": "ruta al fichero map.json"
+        }
+      ],
+      "opciones": [],
+      "subcomandos": []
+    },
+    {
+      "ruta": [
+        "config"
+      ],
+      "nombre": "config",
+      "descripcion": "Configura los perfiles rapido y experto, el modo de coste y qué perfil usa cada rol",
+      "argumentos": [],
+      "opciones": [
+        {
+          "flags": "--show",
+          "corta": null,
+          "larga": "--show",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "muestra la configuración resuelta de los dos perfiles, sin preguntar nada"
+        },
+        {
+          "flags": "--rapido-provider <provider>",
+          "corta": null,
+          "larga": "--rapido-provider",
+          "valor": "provider",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "proveedor del perfil rapido: anthropic, openai o google"
+        },
+        {
+          "flags": "--rapido-model <model>",
+          "corta": null,
+          "larga": "--rapido-model",
+          "valor": "model",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "modelo del perfil rapido"
+        },
+        {
+          "flags": "--rapido-api-key <apiKey>",
+          "corta": null,
+          "larga": "--rapido-api-key",
+          "valor": "apiKey",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "clave de API del perfil rapido"
+        },
+        {
+          "flags": "--experto-provider <provider>",
+          "corta": null,
+          "larga": "--experto-provider",
+          "valor": "provider",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "proveedor del perfil experto: anthropic, openai o google"
+        },
+        {
+          "flags": "--experto-model <model>",
+          "corta": null,
+          "larga": "--experto-model",
+          "valor": "model",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "modelo del perfil experto"
+        },
+        {
+          "flags": "--experto-api-key <apiKey>",
+          "corta": null,
+          "larga": "--experto-api-key",
+          "valor": "apiKey",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "clave de API del perfil experto"
+        },
+        {
+          "flags": "--cost-mode <modo>",
+          "corta": null,
+          "larga": "--cost-mode",
+          "valor": "modo",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "modo de coste: ahorro, equilibrado o calidad"
+        },
+        {
+          "flags": "--role-map-loop <profile>",
+          "corta": null,
+          "larga": "--role-map-loop",
+          "valor": "profile",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "perfil del bucle de mapeo, map/run (rapido o experto)"
+        },
+        {
+          "flags": "--role-run-translate <profile>",
+          "corta": null,
+          "larga": "--role-run-translate",
+          "valor": "profile",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "perfil de la traducción de `run \"...\"` a ámbito (rapido o experto)"
+        },
+        {
+          "flags": "--role-login-fallback <profile>",
+          "corta": null,
+          "larga": "--role-login-fallback",
+          "valor": "profile",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "perfil del sub-objetivo de login sin receta, Vía B (rapido o experto)"
+        },
+        {
+          "flags": "--role-web-chat <profile>",
+          "corta": null,
+          "larga": "--role-web-chat",
+          "valor": "profile",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "perfil del chat de la futura interfaz web (rapido o experto; aún sin uso real)"
+        },
+        {
+          "flags": "--role-diagnosis <profile>",
+          "corta": null,
+          "larga": "--role-diagnosis",
+          "valor": "profile",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "perfil de diagnóstico y planificación, futuro Reparar (rapido o experto; aún sin uso real)"
+        }
+      ],
+      "subcomandos": []
+    },
+    {
+      "ruta": [
+        "init"
+      ],
+      "nombre": "init",
+      "descripcion": "Inicializa una carpeta como proyecto de agente-qa-mcp",
+      "argumentos": [
+        {
+          "nombre": "ruta",
+          "obligatorio": false,
+          "variadico": false,
+          "descripcion": "carpeta a inicializar"
+        }
+      ],
+      "opciones": [
+        {
+          "flags": "--url <url>",
+          "corta": null,
+          "larga": "--url",
+          "valor": "url",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "URL de la aplicación"
+        },
+        {
+          "flags": "--env <env>",
+          "corta": null,
+          "larga": "--env",
+          "valor": "env",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "entorno: dev, test, staging, production"
+        },
+        {
+          "flags": "--yes",
+          "corta": null,
+          "larga": "--yes",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "no preguntar; exige --url y --env"
+        }
+      ],
+      "subcomandos": []
+    },
+    {
+      "ruta": [
+        "doctor"
+      ],
+      "nombre": "doctor",
+      "descripcion": "Comprueba que la configuración y el proyecto actual están listos",
+      "argumentos": [],
+      "opciones": [],
+      "subcomandos": []
+    },
+    {
+      "ruta": [
+        "llm"
+      ],
+      "nombre": "llm",
+      "descripcion": "Comandos relacionados con el LLM configurado",
+      "argumentos": [],
+      "opciones": [],
+      "subcomandos": [
+        {
+          "ruta": [
+            "llm",
+            "ping"
+          ],
+          "nombre": "ping",
+          "descripcion": "Manda un mensaje mínimo con una herramienta de juguete al proveedor configurado",
+          "argumentos": [],
+          "opciones": [
+            {
+              "flags": "--profile <profile>",
+              "corta": null,
+              "larga": "--profile",
+              "valor": "profile",
+              "valorObligatorio": true,
+              "negable": false,
+              "porDefecto": null,
+              "descripcion": "perfil base: rapido o experto (por defecto rapido)"
+            },
+            {
+              "flags": "--provider <provider>",
+              "corta": null,
+              "larga": "--provider",
+              "valor": "provider",
+              "valorObligatorio": true,
+              "negable": false,
+              "porDefecto": null,
+              "descripcion": "fuerza el proveedor por encima del perfil: anthropic, openai o google"
+            },
+            {
+              "flags": "--model <model>",
+              "corta": null,
+              "larga": "--model",
+              "valor": "model",
+              "valorObligatorio": true,
+              "negable": false,
+              "porDefecto": null,
+              "descripcion": "fuerza el modelo"
+            },
+            {
+              "flags": "--no-metrics",
+              "corta": null,
+              "larga": "--no-metrics",
+              "valor": null,
+              "valorObligatorio": false,
+              "negable": true,
+              "porDefecto": null,
+              "descripcion": "no registra esta llamada en la base de métricas"
+            }
+          ],
+          "subcomandos": []
+        }
+      ]
+    },
+    {
+      "ruta": [
+        "metrics"
+      ],
+      "nombre": "metrics",
+      "descripcion": "Muestra las últimas llamadas al LLM registradas, o borra la base de métricas",
+      "argumentos": [],
+      "opciones": [
+        {
+          "flags": "--last <n>",
+          "corta": null,
+          "larga": "--last",
+          "valor": "n",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": "20",
+          "descripcion": "número de llamadas a mostrar"
+        },
+        {
+          "flags": "--reset",
+          "corta": null,
+          "larga": "--reset",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "borra la base de métricas (pide confirmación)"
+        },
+        {
+          "flags": "--json",
+          "corta": null,
+          "larga": "--json",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "con --last: imprime las filas de runs/run_events como JSON en vez de la lista de llamadas al LLM"
+        }
+      ],
+      "subcomandos": []
+    },
+    {
+      "ruta": [
+        "browse"
+      ],
+      "nombre": "browse",
+      "descripcion": "Abre un navegador real, navega a la URL y enseña por consola lo que vería el LLM",
+      "argumentos": [
+        {
+          "nombre": "url",
+          "obligatorio": true,
+          "variadico": false,
+          "descripcion": "URL a la que navegar"
+        }
+      ],
+      "opciones": [
+        {
+          "flags": "--headed",
+          "corta": null,
+          "larga": "--headed",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "muestra la ventana del navegador en vez de correr sin cabeza"
+        },
+        {
+          "flags": "--detail",
+          "corta": null,
+          "larga": "--detail",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "imprime también el snapshot crudo y el tamaño en caracteres de ambos"
+        },
+        {
+          "flags": "--json",
+          "corta": null,
+          "larga": "--json",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "imprime el PageSummary como JSON en vez de texto legible"
+        }
+      ],
+      "subcomandos": []
+    },
+    {
+      "ruta": [
+        "snapshot"
+      ],
+      "nombre": "snapshot",
+      "descripcion": "Escribe o actualiza .agente-qa/map/map.json con la pantalla actual, localizadores verificados en vivo",
+      "argumentos": [
+        {
+          "nombre": "url",
+          "obligatorio": true,
+          "variadico": false,
+          "descripcion": "URL a la que navegar"
+        }
+      ],
+      "opciones": [
+        {
+          "flags": "--headed",
+          "corta": null,
+          "larga": "--headed",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "muestra la ventana del navegador en vez de correr sin cabeza"
+        }
+      ],
+      "subcomandos": []
+    },
+    {
+      "ruta": [
+        "map"
+      ],
+      "nombre": "map",
+      "descripcion": "El LLM navega por la app y el código escribe .agente-qa/map/map.json, dentro de límites de coste e iteraciones",
+      "argumentos": [],
+      "opciones": [
+        {
+          "flags": "--goal <texto>",
+          "corta": null,
+          "larga": "--goal",
+          "valor": "texto",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "objetivo en lenguaje natural para esta corrida (excluyente con --all/--units/--revisar)"
+        },
+        {
+          "flags": "--all",
+          "corta": null,
+          "larga": "--all",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "explora tanto como sea razonable, sin un objetivo concreto (excluyente con --goal/--units/--revisar)"
+        },
+        {
+          "flags": "--units <ids>",
+          "corta": null,
+          "larga": "--units",
+          "valor": "ids",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "ids de pantalla ya conocidos a revisitar, separados por coma, ej. login,checkout (excluyente con --goal/--all/--revisar)"
+        },
+        {
+          "flags": "--revisar",
+          "corta": null,
+          "larga": "--revisar",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "repasa y arregla los localizadores dudosos (frágiles o ambiguos) de un mapa ya existente, sin reexplorar toda la app (excluyente con --goal/--all/--units)"
+        },
+        {
+          "flags": "--ask",
+          "corta": null,
+          "larga": "--ask",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "tras la corrida, resalta en el navegador y pregunta por consola por cada elemento que el código no supo distinguir (combinable con --revisar; sin terminal interactiva no hace nada)"
+        },
+        {
+          "flags": "--url <url>",
+          "corta": null,
+          "larga": "--url",
+          "valor": "url",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "URL de la aplicación; si no se da, usa la de config.json"
+        },
+        {
+          "flags": "--headed",
+          "corta": null,
+          "larga": "--headed",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "muestra la ventana del navegador en vez de correr sin cabeza"
+        },
+        {
+          "flags": "--max-cost <n>",
+          "corta": null,
+          "larga": "--max-cost",
+          "valor": "n",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "tope de coste en USD para esta corrida"
+        },
+        {
+          "flags": "--max-iterations <n>",
+          "corta": null,
+          "larga": "--max-iterations",
+          "valor": "n",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "tope de iteraciones del bucle para esta corrida"
+        },
+        {
+          "flags": "--no-metrics",
+          "corta": null,
+          "larga": "--no-metrics",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": true,
+          "porDefecto": null,
+          "descripcion": "no registra esta corrida en la base de métricas"
+        },
+        {
+          "flags": "--login",
+          "corta": null,
+          "larga": "--login",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "intenta pasar el login (receta declarada, o el agente la resuelve navegando) antes de mapear"
+        },
+        {
+          "flags": "--no-login",
+          "corta": null,
+          "larga": "--no-login",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": true,
+          "porDefecto": null,
+          "descripcion": "no intenta login, aunque haya receta o credenciales disponibles"
+        },
+        {
+          "flags": "--fresh-session",
+          "corta": null,
+          "larga": "--fresh-session",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "ignora la sesión guardada aunque esté fresca: fuerza login de nuevo"
+        },
+        {
+          "flags": "--allow-writes",
+          "corta": null,
+          "larga": "--allow-writes",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "permite enviar formularios sin preguntar (nunca en environment: production)"
+        },
+        {
+          "flags": "--no-writes",
+          "corta": null,
+          "larga": "--no-writes",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": true,
+          "porDefecto": null,
+          "descripcion": "no envía ningún formulario ni pregunta: los denegados quedan igual en writeActions[]"
+        },
+        {
+          "flags": "--profile <profile>",
+          "corta": null,
+          "larga": "--profile",
+          "valor": "profile",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "fuerza el perfil de arranque del bucle de mapeo (rapido o experto), por encima de la tabla rol→perfil"
+        }
+      ],
+      "subcomandos": []
+    },
+    {
+      "ruta": [
+        "run"
+      ],
+      "nombre": "run",
+      "descripcion": "Traduce una frase libre a un ámbito de mapeo (goal/all/units) y ejecuta lo mismo que \"map\"",
+      "argumentos": [
+        {
+          "nombre": "texto",
+          "obligatorio": true,
+          "variadico": false,
+          "descripcion": "qué quieres mapear, en lenguaje natural"
+        }
+      ],
+      "opciones": [
+        {
+          "flags": "--url <url>",
+          "corta": null,
+          "larga": "--url",
+          "valor": "url",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "URL de la aplicación; si no se da, usa la de config.json"
+        },
+        {
+          "flags": "--headed",
+          "corta": null,
+          "larga": "--headed",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "muestra la ventana del navegador en vez de correr sin cabeza"
+        },
+        {
+          "flags": "--max-cost <n>",
+          "corta": null,
+          "larga": "--max-cost",
+          "valor": "n",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "tope de coste en USD para esta corrida"
+        },
+        {
+          "flags": "--max-iterations <n>",
+          "corta": null,
+          "larga": "--max-iterations",
+          "valor": "n",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "tope de iteraciones del bucle para esta corrida"
+        },
+        {
+          "flags": "--no-metrics",
+          "corta": null,
+          "larga": "--no-metrics",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": true,
+          "porDefecto": null,
+          "descripcion": "no registra esta corrida en la base de métricas"
+        },
+        {
+          "flags": "--login",
+          "corta": null,
+          "larga": "--login",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "intenta pasar el login antes de mapear"
+        },
+        {
+          "flags": "--no-login",
+          "corta": null,
+          "larga": "--no-login",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": true,
+          "porDefecto": null,
+          "descripcion": "no intenta login, aunque haya receta o credenciales disponibles"
+        },
+        {
+          "flags": "--fresh-session",
+          "corta": null,
+          "larga": "--fresh-session",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "ignora la sesión guardada aunque esté fresca: fuerza login de nuevo"
+        },
+        {
+          "flags": "--allow-writes",
+          "corta": null,
+          "larga": "--allow-writes",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "permite enviar formularios sin preguntar (nunca en environment: production)"
+        },
+        {
+          "flags": "--no-writes",
+          "corta": null,
+          "larga": "--no-writes",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": true,
+          "porDefecto": null,
+          "descripcion": "no envía ningún formulario ni pregunta"
+        },
+        {
+          "flags": "--profile <profile>",
+          "corta": null,
+          "larga": "--profile",
+          "valor": "profile",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "fuerza el perfil de arranque del bucle de mapeo (rapido o experto), por encima de la tabla rol→perfil"
+        }
+      ],
+      "subcomandos": []
+    },
+    {
+      "ruta": [
+        "mcp"
+      ],
+      "nombre": "mcp",
+      "descripcion": "Inspección del servidor MCP (@playwright/mcp)",
+      "argumentos": [],
+      "opciones": [],
+      "subcomandos": [
+        {
+          "ruta": [
+            "mcp",
+            "tools"
+          ],
+          "nombre": "tools",
+          "descripcion": "Lista las tools que expone el servidor MCP, quién las llama hoy (LLM, código, nadie) y su grupo de capacidad",
+          "argumentos": [],
+          "opciones": [
+            {
+              "flags": "--json",
+              "corta": null,
+              "larga": "--json",
+              "valor": null,
+              "valorObligatorio": false,
+              "negable": false,
+              "porDefecto": null,
+              "descripcion": "imprime la lista y el recuento como JSON en vez de tabla de texto"
+            }
+          ],
+          "subcomandos": []
+        }
+      ]
+    },
+    {
+      "ruta": [
+        "record"
+      ],
+      "nombre": "record",
+      "descripcion": "Graba un flujo hecho a mano —o conducido por Claude Code con --auto— en el navegador y lo convierte en pantallas del map.json (spec 4, puerta --auto de la spec 5)",
+      "argumentos": [
+        {
+          "nombre": "url",
+          "obligatorio": true,
+          "variadico": false,
+          "descripcion": "URL a la que navegar antes de arrancar la grabación"
+        }
+      ],
+      "opciones": [
+        {
+          "flags": "--raw",
+          "corta": null,
+          "larga": "--raw",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "solo imprime el código Playwright grabado por consola, sin volcarlo al map.json (Bloque 1)"
+        },
+        {
+          "flags": "--headed",
+          "corta": null,
+          "larga": "--headed",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "muestra la ventana del navegador en vez de correr sin cabeza"
+        },
+        {
+          "flags": "--max-duration <duración>",
+          "corta": null,
+          "larga": "--max-duration",
+          "valor": "duración",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "tiempo máximo de grabación antes de parar sola (por defecto 15m)"
+        },
+        {
+          "flags": "--auto <objetivo>",
+          "corta": null,
+          "larga": "--auto",
+          "valor": "objetivo",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "en vez de grabar a mano, Claude Code (claude -p, con tu suscripción) conduce el navegador persiguiendo este objetivo"
+        },
+        {
+          "flags": "--allow-writes",
+          "corta": null,
+          "larga": "--allow-writes",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "con --auto: permite a Claude Code hacer clic/escribir/enviar formularios sin preguntar (nunca hace falta en environment: production)"
+        },
+        {
+          "flags": "--no-writes",
+          "corta": null,
+          "larga": "--no-writes",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": true,
+          "porDefecto": null,
+          "descripcion": "con --auto: Claude Code solo navega y lee, nunca hace clic ni escribe"
+        }
+      ],
+      "subcomandos": []
+    },
+    {
+      "ruta": [
+        "catalog"
+      ],
+      "nombre": "catalog",
+      "descripcion": "Vuelca en JSON todos los comandos, subcomandos, argumentos y opciones reales del CLI, con sus descripciones tal cual están en el código. La salida ES el documento: no aplica --json global ni emite NDJSON.",
+      "argumentos": [],
+      "opciones": [
+        {
+          "flags": "--pretty",
+          "corta": null,
+          "larga": "--pretty",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "indenta el JSON a 2 espacios en vez de sacarlo compacto en una línea"
+        }
+      ],
+      "subcomandos": []
+    }
+  ]
+}

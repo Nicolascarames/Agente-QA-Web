@@ -16,6 +16,7 @@
     "vitest.config.ts",
     "postcss.config.js",
     "scripts/dev.mjs",
-    "scripts/comprobar-estilos.mjs"
+    "scripts/comprobar-estilos.mjs",
+    "scripts/sincronizar-catalogo.mjs"
   ]
 }
