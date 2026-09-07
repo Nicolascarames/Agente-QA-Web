@@ -248,6 +248,17 @@ describe("construirArgsCorrida", () => {
     });
   });
 
+  it("grabacion-humana necesita url y arma --headed para que la persona vea el navegador", () => {
+    const sinUrl = construirArgsCorrida({ puerta: "grabacion-humana" });
+    expect(sinUrl.ok).toBe(false);
+    if (!sinUrl.ok) expect(sinUrl.motivo).toContain("url");
+
+    expect(construirArgsCorrida({ puerta: "grabacion-humana", url: "http://x" })).toEqual({
+      ok: true,
+      args: ["record", "http://x", "--headed", "--json"],
+    });
+  });
+
   it("bucle-agentico con ámbito seleccion arma --units con las unidades", () => {
     expect(construirArgsCorrida({ puerta: "bucle-agentico", ambito: "seleccion", unidades: ["s1", "s2"] })).toEqual({
       ok: true,

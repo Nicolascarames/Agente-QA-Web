@@ -246,8 +246,11 @@ export function construirArgsCorrida(cuerpo: CuerpoExplorar): { ok: true; args: 
       return { ok: true, args: ["snapshot", cuerpo.url, "--json"] };
     }
     case "grabacion-humana": {
+      // Es la persona quien conduce el navegador (a diferencia de "grabacion-conducida", donde
+      // conduce Claude Code): sin `--headed`, `openBrowser` lanza Chromium sin cabeza
+      // (`browser.ts`) y desde la web parece que el botón no hace nada.
       if (!cuerpo.url) return { ok: false, motivo: 'La puerta "grabacion-humana" necesita "url".' };
-      return { ok: true, args: ["record", cuerpo.url, "--json"] };
+      return { ok: true, args: ["record", cuerpo.url, "--headed", "--json"] };
     }
     case "grabacion-conducida": {
       if (!cuerpo.url) return { ok: false, motivo: 'La puerta "grabacion-conducida" necesita "url".' };
