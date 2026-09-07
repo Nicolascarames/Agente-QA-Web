@@ -8,6 +8,8 @@ import { Generar } from "./Generar";
 import { Ejecutar } from "./Ejecutar";
 import { Reparar } from "./Reparar";
 import { Reports } from "./Reports";
+import { useCorridaGlobal } from "./useCorridaGlobal";
+import { ConsolaGlobal } from "./ConsolaGlobal";
 
 type Pestana = "Dashboard" | "Configuración" | "Explorar" | "Redactar" | "Generar" | "Ejecutar" | "Reparar" | "Reports";
 
@@ -56,9 +58,11 @@ export default function App() {
   const [sidebarAbierta, setSidebarAbierta] = useState(false);
   const [appUrl, setAppUrl] = useState<string | null>(null);
 
-  // El indicador "● en curso" lo enciende Explorar (única pestaña con corridas hoy) subiendo
-  // su estado real por esta callback — nunca se inventa una corrida aquí arriba.
-  const [corridaActiva, setCorridaActiva] = useState<string | null>(null);
+  // El indicador "● en curso" y el panel de consola global comparten el mismo hook: vive aquí
+  // (nunca se desmonta al cambiar de pestaña), a diferencia del antiguo estado que solo subía
+  // desde Explorar.
+  const { corridaActiva, eventos, resumenFinal, marcarCorridaActiva } = useCorridaGlobal();
+  const [consolaAbierta, setConsolaAbierta] = useState(false);
 
   const cargarAppUrl = useCallback(() => {
     void obtenerConfigProyecto().then((datos) => {
@@ -198,7 +202,7 @@ export default function App() {
         </div>
       </aside>
 
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden" data-canvas="true">
         <header className="flex min-h-[48px] items-center justify-between gap-2.5 border-b border-bg-row bg-bg-elev px-4">
           <div className="flex min-w-0 items-center gap-2.5">
             <button
@@ -214,16 +218,34 @@ export default function App() {
               QA Agent / <b className="text-text-bright">{pestana}</b>
             </div>
           </div>
-          {corridaActiva && (
-            <div className="whitespace-nowrap rounded-6 bg-info-bg px-2.5 py-1 text-sm font-semibold text-info">
-              ● en curso: {corridaActiva}
-            </div>
-          )}
+          <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setConsolaAbierta((v) => !v)}
+              className="whitespace-nowrap rounded-6 border border-border-strong bg-bg-panel px-2.5 py-1 text-sm font-semibold text-text-strong"
+            >
+              🖥️ Consola
+            </button>
+            {corridaActiva && (
+              <div className="whitespace-nowrap rounded-6 bg-info-bg px-2.5 py-1 text-sm font-semibold text-info">
+                ● en curso: {corridaActiva}
+              </div>
+            )}
+          </div>
         </header>
 
         <div key={pestana} className="relative flex-1 animate-page-fade overflow-hidden">
-          {contenidoPestana(pestana, setCorridaActiva)}
+          {contenidoPestana(pestana, marcarCorridaActiva)}
         </div>
+        {consolaAbierta && (
+          <ConsolaGlobal
+            corridaActiva={corridaActiva}
+            eventos={eventos}
+            resumenFinal={resumenFinal}
+            marcarCorridaActiva={marcarCorridaActiva}
+            onCerrar={() => setConsolaAbierta(false)}
+          />
+        )}
       </main>
     </div>
   );

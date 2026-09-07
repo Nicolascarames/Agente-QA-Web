@@ -9,7 +9,7 @@ import { projectPaths } from "agente-qa-contract/project";
 import { buildApp } from "./app.js";
 import { enviarMensaje, hayCorridaActiva, lanzarCorrida } from "./corridas.js";
 import type { ResultadoLocalizarCli } from "./cli.js";
-import type { EstadoProyecto, EstadoProyectoActivo, EventoNdjson, RespuestaMensaje } from "../shared/tipos.js";
+import type { EstadoProyecto, EstadoProyectoActivo, EventoNdjson, RespuestaComando, RespuestaMensaje } from "../shared/tipos.js";
 
 const fixtureMapa = path.join(path.dirname(fileURLToPath(import.meta.url)), "__fixtures__", "map-valido.json");
 
@@ -147,6 +147,50 @@ describe("buildApp", () => {
       expect(respuesta.json<{ error: string }>().error).toContain("ya terminó");
       // No debe caer en el camino de "lanzar una corrida nueva": el mensaje no se pierde en silencio.
       expect(spawnFn).not.toHaveBeenCalled();
+      await app.close();
+    });
+  });
+
+  describe("POST /api/comando", () => {
+    it("lanza el comando escrito como argv real del CLI", async () => {
+      const spawnFn = vi.fn().mockImplementation(() => {
+        const proceso = crearProcesoFake();
+        setImmediate(() => {
+          proceso.stdout?.emit("data", Buffer.from(lineaEvento({ runId: "run-comando-1", type: "operation.started" })));
+        });
+        return proceso;
+      });
+      const app = buildApp({
+        proyectoInicial: proyecto,
+        opcionesCorridas: { spawnFn, localizarCli: () => Promise.resolve(LOCALIZADO_OK) },
+      });
+
+      const respuesta = await app.inject({
+        method: "POST",
+        url: "/api/comando",
+        payload: { texto: "record --headed https://ejemplo.com" },
+      });
+      expect(respuesta.statusCode).toBe(200);
+      expect(respuesta.json<RespuestaComando>()).toEqual({ runId: "run-comando-1" });
+      expect(spawnFn).toHaveBeenCalledWith("agente-qa-mcp", ["record", "--headed", "https://ejemplo.com"], { cwd: proyecto });
+      await app.close();
+    });
+
+    it("rechaza con 400 un comando no reconocido, sin llegar a spawnear", async () => {
+      const spawnFn = vi.fn();
+      const app = buildApp({ proyectoInicial: proyecto, opcionesCorridas: { spawnFn } });
+
+      const respuesta = await app.inject({ method: "POST", url: "/api/comando", payload: { texto: "borrar-todo --force" } });
+      expect(respuesta.statusCode).toBe(400);
+      expect(respuesta.json<{ error: string }>().error).toContain("no es un comando reconocido");
+      expect(spawnFn).not.toHaveBeenCalled();
+      await app.close();
+    });
+
+    it('con "texto" vacío responde 400', async () => {
+      const app = buildApp({ proyectoInicial: proyecto });
+      const respuesta = await app.inject({ method: "POST", url: "/api/comando", payload: { texto: "  " } });
+      expect(respuesta.statusCode).toBe(400);
       await app.close();
     });
   });

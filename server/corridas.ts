@@ -137,8 +137,9 @@ export async function lanzarCorrida(proyecto: string, args: string[], opciones: 
         try {
           evento = JSON.parse(recortada) as EventoNdjson;
         } catch {
-          // Una línea de stdout que no es NDJSON del canal de eventos no tumba la corrida.
-          continue;
+          // Comandos sin --json (doctor, metrics, config...) imprimen texto humano: se reenvía
+          // igual como línea de registro cruda en vez de descartarla en silencio.
+          evento = { runId: corrida.runId, ts: new Date().toISOString(), agent: "web", type: "raw.stdout", data: { linea: recortada } };
         }
 
         if (corrida.runId === "" && evento.runId) {

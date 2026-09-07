@@ -165,6 +165,11 @@ export interface RespuestaExplorar {
   runId: string;
 }
 
+/** Respuesta de `POST /api/comando`: siempre lanza una corrida nueva (nunca redirige a una activa). */
+export interface RespuestaComando {
+  runId: string;
+}
+
 /**
  * `POST /api/mensaje` (Bloque 6): si había corrida activa, confirma el envío por stdin (`enviado:
  * true`); si no la había, se comporta como `/api/explorar` con la puerta "run" y devuelve el
