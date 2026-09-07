@@ -5,6 +5,9 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { tokenizarComando } from "../shared/tokenizarComando.js";
+
+export { tokenizarComando };
 
 const dirActual = path.dirname(fileURLToPath(import.meta.url));
 
@@ -17,17 +20,6 @@ const cliGenerado = JSON.parse(
 ) as { comandos: { nombre: string }[] };
 
 const COMANDOS_PERMITIDOS = new Set(cliGenerado.comandos.map((comando) => comando.nombre));
-
-/** Tokeniza respetando comillas simples/dobles, para flags como `--auto "<objetivo con espacios>"`. */
-export function tokenizarComando(texto: string): string[] {
-  const regex = /"([^"]*)"|'([^']*)'|(\S+)/g;
-  const tokens: string[] = [];
-  let coincidencia: RegExpExecArray | null;
-  while ((coincidencia = regex.exec(texto)) !== null) {
-    tokens.push(coincidencia[1] ?? coincidencia[2] ?? coincidencia[3] ?? "");
-  }
-  return tokens;
-}
 
 export function construirArgsComandoLibre(texto: string): { ok: true; args: string[] } | { ok: false; motivo: string } {
   const args = tokenizarComando(texto.trim());

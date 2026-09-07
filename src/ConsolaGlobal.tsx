@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Panel } from "./Panel";
 import { enviarComando } from "./api";
+import { Autocompletado } from "./consola/Autocompletado";
 import type { EventoNdjson } from "../shared/tipos";
 import type { ResumenFinalCorrida } from "./useCorridaGlobal";
 
@@ -50,9 +51,12 @@ export interface ConsolaGlobalProps {
   eventos: EventoNdjson[];
   resumenFinal: ResumenFinalCorrida | null;
   marcarCorridaActiva: (etiqueta: string | null) => void;
+  /** Abre el cajón de detalle (Bloque 4) desde el autocompletado (Bloque 7), pulsando `?` sobre
+   *  una sugerencia. El estado vive en `App.tsx`, igual que para `GuiaPestana`. */
+  onAbrirFicha: (id: string) => void;
 }
 
-export function ConsolaGlobal({ corridaActiva, eventos, resumenFinal, marcarCorridaActiva }: ConsolaGlobalProps) {
+export function ConsolaGlobal({ corridaActiva, eventos, resumenFinal, marcarCorridaActiva, onAbrirFicha }: ConsolaGlobalProps) {
   const [comando, setComando] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -88,15 +92,13 @@ export function ConsolaGlobal({ corridaActiva, eventos, resumenFinal, marcarCorr
         {resumenFinal && <TarjetaResumen resumen={resumenFinal} />}
         {error && <p className="text-xs text-danger">{error}</p>}
         <div className="flex gap-1.5">
-          <input
-            value={comando}
-            onChange={(evento) => setComando(evento.target.value)}
-            onKeyDown={(evento) => {
-              if (evento.key === "Enter") enviar();
-            }}
+          <Autocompletado
+            valor={comando}
+            onCambiarValor={setComando}
+            onEnviar={enviar}
+            onAbrirFicha={onAbrirFicha}
             disabled={enviando}
             placeholder="record --headed <url>"
-            className="flex-1 rounded-6 border border-border-strong bg-bg-panel px-2 py-1 text-sm text-text-strong"
           />
           <button
             type="button"

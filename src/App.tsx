@@ -330,6 +330,7 @@ export default function App() {
             eventos={eventos}
             resumenFinal={resumenFinal}
             marcarCorridaActiva={marcarCorridaActiva}
+            onAbrirFicha={setFichaAbierta}
           />
         </div>
 
