@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { cambiarProyecto, obtenerConfigProyecto, obtenerProyecto } from "./api";
 import { Dashboard } from "./Dashboard";
 import { Configuracion } from "./Configuracion";
@@ -10,6 +10,7 @@ import { Reparar } from "./Reparar";
 import { Reports } from "./Reports";
 import { useCorridaGlobal } from "./useCorridaGlobal";
 import { ConsolaGlobal } from "./ConsolaGlobal";
+import { GuiaPestana } from "./GuiaPestana";
 
 type Pestana = "Dashboard" | "Configuración" | "Explorar" | "Redactar" | "Generar" | "Ejecutar" | "Reparar" | "Reports";
 
@@ -62,7 +63,27 @@ export default function App() {
   // (nunca se desmonta al cambiar de pestaña), a diferencia del antiguo estado que solo subía
   // desde Explorar.
   const { corridaActiva, eventos, resumenFinal, marcarCorridaActiva } = useCorridaGlobal();
-  const [consolaAbierta, setConsolaAbierta] = useState(false);
+
+  // Tres bandas apiladas dentro de `<main>` (Bloque 3): cada una es su propio `[data-canvas]` de
+  // un viewport de alto menos la topbar, así los paneles flotantes de cada banda quedan acotados a
+  // ella. La altura de la topbar se mide en runtime (no se adivina) porque su contenido (el aviso
+  // "en curso") puede cambiar su alto real entre pestañas.
+  const topbarRef = useRef<HTMLElement | null>(null);
+  const banda1Ref = useRef<HTMLDivElement | null>(null);
+  const banda2Ref = useRef<HTMLDivElement | null>(null);
+  const [alturaTopbar, setAlturaTopbar] = useState(48);
+
+  useLayoutEffect(() => {
+    const nodo = topbarRef.current;
+    if (!nodo) return;
+    const medir = () => setAlturaTopbar(nodo.getBoundingClientRect().height);
+    medir();
+    const observador = new ResizeObserver(medir);
+    observador.observe(nodo);
+    return () => observador.disconnect();
+  }, []);
+
+  const alturaBanda = `calc(100vh - ${String(alturaTopbar)}px)`;
 
   const cargarAppUrl = useCallback(() => {
     void obtenerConfigProyecto().then((datos) => {
@@ -102,7 +123,8 @@ export default function App() {
     }`;
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-bg text-text">
+    <div className="min-h-screen w-screen bg-bg text-text">
+      <div className="flex h-screen w-screen overflow-hidden">
       {sidebarAbierta && (
         <div
           className="fixed inset-0 z-[55] animate-fade-in bg-[var(--backdrop)] min-[900px]:hidden"
@@ -202,8 +224,8 @@ export default function App() {
         </div>
       </aside>
 
-      <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden" data-canvas="true">
-        <header className="flex min-h-[48px] items-center justify-between gap-2.5 border-b border-bg-row bg-bg-elev px-4">
+      <main className="relative min-w-0 flex-1 overflow-y-auto">
+        <header ref={topbarRef} className="sticky top-0 z-20 flex min-h-[48px] items-center justify-between gap-2.5 border-b border-bg-row bg-bg-elev px-4">
           <div className="flex min-w-0 items-center gap-2.5">
             <button
               type="button"
@@ -219,13 +241,6 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => setConsolaAbierta((v) => !v)}
-              className="whitespace-nowrap rounded-6 border border-border-strong bg-bg-panel px-2.5 py-1 text-sm font-semibold text-text-strong"
-            >
-              🖥️ Consola
-            </button>
             {corridaActiva && (
               <div className="whitespace-nowrap rounded-6 bg-info-bg px-2.5 py-1 text-sm font-semibold text-info">
                 ● en curso: {corridaActiva}
@@ -234,19 +249,47 @@ export default function App() {
           </div>
         </header>
 
-        <div key={pestana} className="relative flex-1 animate-page-fade overflow-hidden">
-          {contenidoPestana(pestana, marcarCorridaActiva)}
+        {/* Banda 1 — la pestaña activa. */}
+        <div ref={banda1Ref} className="relative" data-canvas="true" style={{ height: alturaBanda }}>
+          <div key={pestana} className="relative h-full animate-page-fade overflow-hidden">
+            {contenidoPestana(pestana, marcarCorridaActiva)}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              banda2Ref.current?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="absolute bottom-3 right-3 z-10 rounded-6 border border-border-strong bg-bg-panel px-2.5 py-1 text-xs font-semibold text-text-strong shadow-[var(--sidebar-shadow)]"
+          >
+            ↓ Consola y guía
+          </button>
         </div>
-        {consolaAbierta && (
+
+        {/* Banda 2 — la consola global, igual que antes pero acotada a su propio lienzo. */}
+        <div ref={banda2Ref} className="relative" data-canvas="true" style={{ height: alturaBanda }}>
           <ConsolaGlobal
             corridaActiva={corridaActiva}
             eventos={eventos}
             resumenFinal={resumenFinal}
             marcarCorridaActiva={marcarCorridaActiva}
-            onCerrar={() => setConsolaAbierta(false)}
           />
-        )}
+        </div>
+
+        {/* Banda 3 — la guía de la pestaña activa. */}
+        <div className="relative" data-canvas="true" style={{ height: alturaBanda }}>
+          <GuiaPestana pestana={pestana} />
+          <button
+            type="button"
+            onClick={() => {
+              banda1Ref.current?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="absolute bottom-3 right-3 z-10 rounded-6 border border-border-strong bg-bg-panel px-2.5 py-1 text-xs font-semibold text-text-strong shadow-[var(--sidebar-shadow)]"
+          >
+            ↑ Arriba
+          </button>
+        </div>
       </main>
+      </div>
     </div>
   );
 }

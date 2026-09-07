@@ -50,10 +50,9 @@ export interface ConsolaGlobalProps {
   eventos: EventoNdjson[];
   resumenFinal: ResumenFinalCorrida | null;
   marcarCorridaActiva: (etiqueta: string | null) => void;
-  onCerrar: () => void;
 }
 
-export function ConsolaGlobal({ corridaActiva, eventos, resumenFinal, marcarCorridaActiva, onCerrar }: ConsolaGlobalProps) {
+export function ConsolaGlobal({ corridaActiva, eventos, resumenFinal, marcarCorridaActiva }: ConsolaGlobalProps) {
   const [comando, setComando] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -77,13 +76,8 @@ export function ConsolaGlobal({ corridaActiva, eventos, resumenFinal, marcarCorr
   };
 
   return (
-    <Panel tabId="global" panelId="consola" titulo="Consola" disposicionPorDefecto={{ x: 55, y: 68, w: 43, h: 30, z: 20 }}>
+    <Panel tabId="global" panelId="consola" titulo="Consola" disposicionPorDefecto={{ x: 2, y: 4, w: 96, h: 90, z: 10 }}>
       <div className="flex h-full flex-col gap-2">
-        <div className="flex justify-end">
-          <button type="button" onClick={onCerrar} className="text-xs text-text-faint hover:text-text-strong">
-            ✕ cerrar
-          </button>
-        </div>
         <ul className="flex-1 overflow-auto">
           {eventos.length === 0 ? (
             <p className="text-text-dim">Sin eventos todavía: lanza una puerta o escribe un comando.</p>
