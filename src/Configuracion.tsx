@@ -70,12 +70,13 @@ type CargaProyecto = { estado: "cargando" } | { estado: "error"; mensaje: string
 /**
  * `llm` de `CambiosConfigProyecto`: o `suscripcion` (nada más que decir) o `api` con proveedor y
  * modelo completos — nunca a medias, mismo criterio que el contrato (Spec B, Bloque 3). Devuelve
- * un mensaje de error en vez de lanzar: el formulario lo enseña y no manda el `PUT`.
+ * un mensaje de error en vez de lanzar: `guardar()` lo enseña y omite `llm` del `PUT`, pero sigue
+ * mandando el resto de campos (hallazgo 2 de la revisión de la Spec B — antes abortaba todo).
  */
 export function construirCambiosLlm(modalidad: Modalidad, proveedor: Proveedor | "", modelo: string): CambiosLlmProyecto | { error: string } {
   if (modalidad === "suscripcion") return { modalidad: "suscripcion" };
   if (!proveedor || modelo.trim() === "") {
-    return { error: 'Con modalidad "api" hacen falta proveedor y modelo: no se ha guardado nada.' };
+    return { error: 'Con modalidad "api" hacen falta proveedor y modelo: se ha guardado el resto, pero no la modalidad de LLM.' };
   }
   return { modalidad: "api", proveedor, modelo: modelo.trim() };
 }
@@ -87,7 +88,10 @@ function SeccionProyecto() {
 
   const [appUrl, setAppUrl] = useState("");
   const [environment, setEnvironment] = useState<EnvironmentApp>("dev");
-  const [modalidad, setModalidad] = useState<Modalidad>("api");
+  // `null` = el proyecto no tiene `llm` en config.json todavía y el usuario no ha tocado el
+  // selector: "sin configurar", no "api sin proveedor ni modelo" (hallazgo 2 de la revisión de
+  // la Spec B). Guardar() no valida ni manda `llm` mientras siga en `null`.
+  const [modalidad, setModalidad] = useState<Modalidad | null>(null);
   const [proveedorLlm, setProveedorLlm] = useState<Proveedor | "">("");
   const [modeloLlm, setModeloLlm] = useState("");
   const [maxIterations, setMaxIterations] = useState(40);
@@ -107,9 +111,9 @@ function SeccionProyecto() {
         if (datos.inicializado) {
           setAppUrl(datos.config.appUrl.valor);
           setEnvironment(datos.config.environment.valor);
-          setModalidad(datos.config.llm.modalidad);
-          setProveedorLlm(datos.config.llm.proveedor ?? "");
-          setModeloLlm(datos.config.llm.modelo ?? "");
+          setModalidad(datos.config.llm?.modalidad ?? null);
+          setProveedorLlm(datos.config.llm?.proveedor ?? "");
+          setModeloLlm(datos.config.llm?.modelo ?? "");
           setMaxIterations(datos.config.limits.maxIterations.valor);
           setMaxScreens(datos.config.limits.maxScreens.valor);
           setMaxCostUsd(datos.config.limits.maxCostUsd.valor);
@@ -136,16 +140,24 @@ function SeccionProyecto() {
       setMensaje('La memoria del proyecto no es JSON válido: no se ha guardado nada.');
       return;
     }
-    const llm = construirCambiosLlm(modalidad, proveedorLlm, modeloLlm);
-    if ("error" in llm) {
-      setMensaje(llm.error);
-      return;
+    // `modalidad === null` = sin configurar y sin tocar (ver comentario del `useState`): no hay
+    // nada que validar ni que mandar en `llm`, y el resto de campos se guarda igual (hallazgo 2
+    // de la revisión de la Spec B — antes un `llm` incompleto abortaba el `PUT` entero).
+    let llm: CambiosLlmProyecto | undefined;
+    let avisoLlm: string | null = null;
+    if (modalidad !== null) {
+      const resultado = construirCambiosLlm(modalidad, proveedorLlm, modeloLlm);
+      if ("error" in resultado) {
+        avisoLlm = resultado.error;
+      } else {
+        llm = resultado;
+      }
     }
     setGuardando(true);
     void guardarConfigProyecto({
       appUrl,
       environment,
-      llm,
+      ...(llm ? { llm } : {}),
       limits: { maxIterations, maxScreens, maxCostUsd },
       credenciales: {
         ...(nuevoUsuario ? { usuario: nuevoUsuario } : {}),
@@ -154,7 +166,7 @@ function SeccionProyecto() {
       memoria,
     })
       .then(() => {
-        setMensaje("Guardado.");
+        setMensaje(avisoLlm ?? "Guardado.");
         setNuevoUsuario("");
         setNuevoPassword("");
         recargar();
@@ -228,10 +240,14 @@ function SeccionProyecto() {
       </div>
 
       {/* Modalidad de LLM (Spec B, Bloque 1): una sola activa, nunca perfiles ni roles. Vive en
-          `llm` de config.json, siempre editable desde aquí — no tiene capa "entorno". */}
+          `llm` de config.json, siempre editable desde aquí — no tiene capa "entorno". Ningún
+          botón queda marcado si el proyecto todavía no tiene `llm` (recién creado con `init`):
+          "sin configurar" no es lo mismo que "api" (hallazgo 2 de la revisión de la Spec B). */}
       <p className="mb-0.5 mt-3 text-xs uppercase tracking-[.04em] text-text-faint">Modalidad de LLM</p>
       <div className={CLASE_FILA}>
-        <span className="text-text-muted">Modalidad</span>
+        <span className="text-text-muted">
+          Modalidad {modalidad === null && <span className="text-xs text-text-ghost">(sin configurar)</span>}
+        </span>
         <div className="flex overflow-hidden rounded-6 border border-border-soft">
           {MODALIDADES.map((valor) => {
             const activo = modalidad === valor;
@@ -248,6 +264,12 @@ function SeccionProyecto() {
           })}
         </div>
       </div>
+      {modalidad === "suscripcion" && (
+        <p className="mb-1 rounded-6 border-l-2 border-accent pl-2 text-xs text-accent">
+          Con "suscripcion" solo funciona la grabación conducida (<code>record --auto</code>). Explorar (mapear/ejecutar) necesita
+          modalidad "api": si lanzas una corrida ahí, morirá con un error en cuanto arranque.
+        </p>
+      )}
       {modalidad === "api" && (
         <>
           <label className={CLASE_FILA}>

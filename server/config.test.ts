@@ -68,7 +68,7 @@ describe("config de proyecto", () => {
 
   // --- `llm` (Spec B, Bloque 1: una sola modalidad activa, ya no perfiles/roles/modo de coste) ---
 
-  it("sin `llm` en config.json, cae a modalidad api sin proveedor ni modelo (a la espera de que se configure)", async () => {
+  it("sin `llm` en config.json, no sintetiza una modalidad: `llm` viene ausente", async () => {
     const paths = projectPaths(proyecto);
     await mkdir(paths.dir, { recursive: true });
     await writeFile(paths.configPath, JSON.stringify(CONFIG_JSON_VALIDO, null, 2), "utf8");
@@ -76,7 +76,7 @@ describe("config de proyecto", () => {
     const respuesta = await leerConfigProyecto(proyecto);
     expect(respuesta.inicializado).toBe(true);
     if (!respuesta.inicializado) return;
-    expect(respuesta.config.llm).toEqual({ modalidad: "api", proveedor: null, modelo: null });
+    expect(respuesta.config.llm).toBeUndefined();
   });
 
   it("lee la modalidad api con proveedor y modelo ya guardados en config.json", async () => {

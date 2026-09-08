@@ -39,8 +39,8 @@ export const SECCION_MOTOR: PaginaReferencia = {
         {
           tipo: "lista",
           items: [
-            '"api" — proveedor (Anthropic, OpenAI, Google o Groq) + modelo + clave propios, pagados por llamada.',
-            '"suscripcion" — usa el binario `claude` (Claude Code) de la máquina, con su sesión de pago ya iniciada; sin proveedor ni modelo que declarar.',
+            '"api" — proveedor (Anthropic, OpenAI, Google o Groq) + modelo + clave propios, pagados por llamada. Es la única modalidad que soporta el bucle agéntico turno a turno de `map`/`run` (pestaña Explorar).',
+            '"suscripcion" — usa el binario `claude` (Claude Code) de la máquina, con su sesión de pago ya iniciada; sin proveedor ni modelo que declarar. Solo sirve para `record --auto`.',
           ],
         },
         {
@@ -48,6 +48,14 @@ export const SECCION_MOTOR: PaginaReferencia = {
           nota: {
             tipo: "ok",
             texto: "Se configura con `agente-qa-mcp config`; `config --show` la enseña sin preguntar nada (con \"api\", la clave enmascarada).",
+          },
+        },
+        {
+          tipo: "nota",
+          nota: {
+            tipo: "aviso",
+            texto:
+              'Con "suscripcion" activa, Explorar (`map`/`run`) no funciona: `createProvider()` la rechaza en cuanto arranca la corrida. Cambia a "api" antes de explorar; "suscripcion" solo vale para grabación conducida.',
           },
         },
       ],

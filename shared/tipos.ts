@@ -95,7 +95,10 @@ export interface ConfigProyecto {
     maxScreens: CampoConfig<number>;
     maxCostUsd: CampoConfig<number>;
   };
-  llm: LlmProyecto;
+  /** Ausente si el proyecto no tiene `llm` en `config.json` todavía (p.ej. uno recién creado con
+   *  `init`, que no lo escribe): "sin configurar" no es lo mismo que "api sin proveedor ni
+   *  modelo", así que no se sintetiza ese valor por defecto. */
+  llm?: LlmProyecto;
   credenciales: {
     usuario: CampoSecreto;
     password: CampoSecreto;

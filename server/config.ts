@@ -27,12 +27,14 @@ function campoProyecto<T>(valor: T): CampoConfig<T> {
 }
 
 /**
- * `llm` de `config.json`, o el valor por defecto (`api` sin proveedor ni modelo aún) si el
- * proyecto no lo tiene todavía — no dispara la migración silenciosa desde perfiles/roles que sí
- * hace `agente-qa-mcp config --show`: eso es cosa del CLI, esto solo refleja lo que ya hay en disco.
+ * `llm` de `config.json`, o `undefined` si el proyecto no lo tiene todavía (p.ej. uno recién
+ * creado con `init`, que no lo escribe) — "sin configurar" no es "api sin proveedor ni modelo",
+ * así que no se sintetiza ese valor por defecto. No dispara la migración silenciosa desde
+ * perfiles/roles que sí hace `agente-qa-mcp config --show`: eso es cosa del CLI, esto solo
+ * refleja lo que ya hay en disco.
  */
-function llmProyecto(llm: LlmConfig | undefined): LlmProyecto {
-  if (llm === undefined) return { modalidad: "api", proveedor: null, modelo: null };
+function llmProyecto(llm: LlmConfig | undefined): LlmProyecto | undefined {
+  if (llm === undefined) return undefined;
   if (llm.modalidad === "suscripcion") return { modalidad: "suscripcion", proveedor: null, modelo: null };
   return { modalidad: "api", proveedor: llm.proveedor ?? null, modelo: llm.modelo ?? null };
 }
