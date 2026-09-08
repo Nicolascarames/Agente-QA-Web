@@ -3,8 +3,9 @@
 // problemas encontrados, cada uno con su motivo en castellano. Función pura, sin DOM — la pinta
 // `ConsolaGlobal.tsx`, en el mismo sitio donde ya mostraba el error del servidor.
 import { tokenizarComando } from "../../shared/tokenizarComando";
-import { cliGenerado, type ComandoCli, type FichaResuelta, type OpcionCli } from "../catalogo/catalogo";
+import type { FichaResuelta } from "../catalogo/catalogo";
 import { VALORES_CERRADOS } from "./analizarLinea";
+import { buscarFichaPorRuta, todasLasOpciones } from "./resolverComando";
 
 export interface ProblemaLinea {
   motivo: string;
@@ -23,20 +24,6 @@ function distanciaLevenshtein(a: string, b: string): number {
     }
   }
   return filas[a.length][b.length];
-}
-
-function buscarFichaPorRuta(catalogo: FichaResuelta[], ruta: string[]): FichaResuelta | undefined {
-  const clave = ruta.join(" ");
-  return catalogo.find((resuelta) => resuelta.ficha.ruta.join(" ") === clave);
-}
-
-/** Opciones del comando más las globales (`--json`, `-V`/`--version`) que Commander acepta en
- *  cualquier subcomando aunque la ficha no las repita — si el propio comando ya declara una con
- *  el mismo nombre largo (p.ej. `metrics --json`, con otro significado), gana la local. */
-function todasLasOpciones(cli: ComandoCli): OpcionCli[] {
-  const locales = new Set(cli.opciones.map((opcion) => opcion.larga));
-  const globales = cliGenerado.opcionesGlobales.filter((opcion) => !locales.has(opcion.larga));
-  return [...cli.opciones, ...globales];
 }
 
 /**

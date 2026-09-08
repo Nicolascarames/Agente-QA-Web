@@ -88,6 +88,10 @@ export default function App() {
   // aquí (no en GuiaPestana) porque el cajón se pinta por encima de todo el árbol y lo abrirán
   // también el buscador y la consola asistida de bloques futuros.
   const [fichaAbierta, setFichaAbierta] = useState<string | null>(null);
+  // Opción (`--auto`, etc.) que debe aparecer ya resaltada al abrir el cajón (Bloque 7 de la spec
+  // de guía integrada): la pone `?` sobre una sugerencia de flag del autocompletado, vía
+  // `abrirFicha` más abajo. `null` para cualquier otra vía de apertura (guía, buscador).
+  const [opcionResaltada, setOpcionResaltada] = useState<string | null>(null);
   // Memoizado por identidad: `CajonFicha` reinicia efectos internos (mostrada/flagFoco) cuando
   // `resuelta` cambia de identidad, y `catalogoResuelto()` construye un array/objetos nuevos en
   // cada llamada — sin este `useMemo`, cualquier re-render de `App` con el cajón abierto (p. ej.
@@ -96,8 +100,13 @@ export default function App() {
     () => (fichaAbierta ? (catalogoResuelto().find((resuelta) => idFicha(resuelta.ficha) === fichaAbierta) ?? null) : null),
     [fichaAbierta],
   );
+  const abrirFicha = useCallback((id: string, opcion?: string) => {
+    setFichaAbierta(id);
+    setOpcionResaltada(opcion ?? null);
+  }, []);
   const cerrarFicha = useCallback(() => {
     setFichaAbierta(null);
+    setOpcionResaltada(null);
   }, []);
 
   // Ejemplo elegido en el cajón de detalle (Bloque 8 de la spec de guía integrada): vive aquí,
@@ -108,6 +117,7 @@ export default function App() {
   const insertarEjemploEnConsola = useCallback((texto: string) => {
     setEjemploParaConsola({ texto, version: Date.now() });
     setFichaAbierta(null);
+    setOpcionResaltada(null);
   }, []);
 
   // El indicador "● en curso" y el panel de consola global comparten el mismo hook: vive aquí
@@ -318,7 +328,9 @@ export default function App() {
         </header>
 
         {/* Banda 1 — la pestaña activa. */}
-        <div ref={banda1Ref} className="relative" data-canvas="true" style={{ height: alturaBanda }}>
+        {/* `scrollMarginTop: alturaTopbar` para que `scrollIntoView` (líneas ~328 y ~354) no deje
+            el borde superior de la banda tapado bajo la topbar `sticky top-0`. */}
+        <div ref={banda1Ref} className="relative" data-canvas="true" style={{ height: alturaBanda, scrollMarginTop: alturaTopbar }}>
           <div key={pestana} className="relative h-full animate-page-fade overflow-hidden">
             {contenidoPestana(pestana, marcarCorridaActiva)}
           </div>
@@ -334,20 +346,20 @@ export default function App() {
         </div>
 
         {/* Banda 2 — la consola global, igual que antes pero acotada a su propio lienzo. */}
-        <div ref={banda2Ref} className="relative" data-canvas="true" style={{ height: alturaBanda }}>
+        <div ref={banda2Ref} className="relative" data-canvas="true" style={{ height: alturaBanda, scrollMarginTop: alturaTopbar }}>
           <ConsolaGlobal
             corridaActiva={corridaActiva}
             eventos={eventos}
             resumenFinal={resumenFinal}
             marcarCorridaActiva={marcarCorridaActiva}
-            onAbrirFicha={setFichaAbierta}
+            onAbrirFicha={abrirFicha}
             ejemploAInsertar={ejemploParaConsola}
           />
         </div>
 
         {/* Banda 3 — la guía de la pestaña activa. */}
         <div className="relative" data-canvas="true" style={{ height: alturaBanda }}>
-          <GuiaPestana pestana={pestana} onAbrirFicha={setFichaAbierta} />
+          <GuiaPestana pestana={pestana} onAbrirFicha={abrirFicha} />
           <button
             type="button"
             onClick={() => {
@@ -364,7 +376,7 @@ export default function App() {
       {/* Fuera del `<main>`/`<aside>` a propósito: ningún panel (react-rnd usa `transform` para
           posicionarse) debe quedar entre este cajón y el viewport, o su `position: fixed` dejaría
           de calcularse contra la ventana. */}
-      <CajonFicha resuelta={resueltaAbierta} onCerrar={cerrarFicha} onInsertarEjemplo={insertarEjemploEnConsola} />
+      <CajonFicha resuelta={resueltaAbierta} onCerrar={cerrarFicha} onInsertarEjemplo={insertarEjemploEnConsola} opcionInicial={opcionResaltada} />
     </div>
   );
 }

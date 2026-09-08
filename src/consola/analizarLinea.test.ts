@@ -21,7 +21,7 @@ describe("analizarLinea", () => {
     expect(analisis.sugerencias.map((sugerencia) => sugerencia.inserta)).toEqual(["ping"]);
   });
 
-  it("tipo flag: 'record --' ofrece las seis opciones reales de record", () => {
+  it("tipo flag: 'record --' ofrece las seis opciones reales de record más las dos globales", () => {
     const analisis = analizarLinea("record --", 9, catalogo);
     expect(analisis.tipo).toBe("flag");
     expect(analisis.comando).toEqual(["record"]);
@@ -32,6 +32,8 @@ describe("analizarLinea", () => {
       "--auto",
       "--allow-writes",
       "--no-writes",
+      "--version",
+      "--json",
     ]);
     // `--auto` cambia de ejes (conductor claude-code / coste suscripción): se ve en su sugerencia.
     const auto = analisis.sugerencias.find((sugerencia) => sugerencia.inserta === "--auto");
@@ -62,5 +64,18 @@ describe("analizarLinea", () => {
     expect(analisis.tipo).toBe("flag");
     expect(analisis.comando).toEqual(["map"]);
     expect(analisis.sugerencias.some((sugerencia) => sugerencia.inserta === "--goal")).toBe(true);
+  });
+
+  it("no sugiere una flag que 'validarLinea' (B8) rechazaría por incompatible con las ya puestas", () => {
+    const analisis = analizarLinea("map --all --", 12, catalogo);
+    expect(analisis.tipo).toBe("flag");
+    const insertadas = analisis.sugerencias.map((sugerencia) => sugerencia.inserta);
+    expect(insertadas).not.toContain("--goal");
+  });
+
+  it("incluye las opciones globales de Commander: 'map --js' sugiere '--json'", () => {
+    const analisis = analizarLinea("map --js", 8, catalogo);
+    expect(analisis.tipo).toBe("flag");
+    expect(analisis.sugerencias.map((sugerencia) => sugerencia.inserta)).toContain("--json");
   });
 });

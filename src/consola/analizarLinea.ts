@@ -7,6 +7,7 @@ import type { FichaResuelta, OpcionCli } from "../catalogo/catalogo";
 import { ejesConOpcion } from "../catalogo/ejesConOpcion";
 import { idFicha } from "../catalogo/porPestana";
 import type { EjesFicha, FichaComando } from "../catalogo/tipos";
+import { buscarFichaPorRuta, todasLasOpciones } from "./resolverComando";
 
 export type TipoToken = "comando" | "subcomando" | "argumento" | "flag" | "valor-de-flag";
 
@@ -54,11 +55,6 @@ export const VALORES_CERRADOS: Record<string, readonly string[]> = {
 
 function coincidePrefijo(valor: string, prefijo: string): boolean {
   return valor.toLowerCase().startsWith(prefijo.toLowerCase());
-}
-
-function buscarFichaPorRuta(catalogo: FichaResuelta[], ruta: string[]): FichaResuelta | undefined {
-  const clave = ruta.join(" ");
-  return catalogo.find((resuelta) => resuelta.ficha.ruta.join(" ") === clave);
 }
 
 /** Sugerencia de un nombre de comando/subcomando: `inserta` es el segmento que rellena el token
@@ -138,11 +134,14 @@ export function analizarLinea(texto: string, cursor: number, catalogo: FichaResu
     return { tokenActual, inicioToken, tipo: "argumento", comando: resuelta ? resuelta.ficha.ruta : null, sugerencias: [] };
   }
 
+  // Opciones del comando más las globales (`--json`, `-V`/`--version`): mismo cálculo que usa
+  // `validarLinea.ts` para aceptarlas, así que lo que aquí se sugiere es justo lo que allí no da
+  // error (antes de este cambio, `analizarLinea.ts` no las conocía y nunca sugería `--json`).
+  const opciones = todasLasOpciones(resuelta.cli);
+
   const restoArgs = anteriores.slice(largoRuta);
   const tokenAnterior = restoArgs.length > 0 ? restoArgs[restoArgs.length - 1] : null;
-  const opcionAnterior = tokenAnterior
-    ? resuelta.cli.opciones.find((opcion) => opcion.larga === tokenAnterior || opcion.corta === tokenAnterior)
-    : undefined;
+  const opcionAnterior = tokenAnterior ? opciones.find((opcion) => opcion.larga === tokenAnterior || opcion.corta === tokenAnterior) : undefined;
 
   // El token anterior es un flag que exige valor y todavía no lo tiene: este token es su valor.
   if (opcionAnterior?.valorObligatorio) {
@@ -152,7 +151,20 @@ export function analizarLinea(texto: string, cursor: number, catalogo: FichaResu
   }
 
   if (tokenActual.startsWith("-")) {
-    const sugerencias = resuelta.cli.opciones
+    // Flags ya puestas antes del token que se está escribiendo ahora mismo, para no sugerir una
+    // que `validarLinea.ts` (B8) rechazaría en el acto por `ficha.incompatibles` (p.ej. no ofrecer
+    // `--goal` en `map --all --`, ya que `--all` y `--goal` son excluyentes).
+    const flagsPuestas = new Set(
+      restoArgs.map((token) => opciones.find((opcion) => opcion.larga === token || opcion.corta === token)?.larga).filter((larga) => larga !== undefined),
+    );
+    const prohibidasPorFlagsPuestas = new Set<string>();
+    for (const [primero, segundo] of resuelta.ficha.incompatibles) {
+      if (flagsPuestas.has(primero)) prohibidasPorFlagsPuestas.add(segundo);
+      if (flagsPuestas.has(segundo)) prohibidasPorFlagsPuestas.add(primero);
+    }
+
+    const sugerencias = opciones
+      .filter((opcion) => !prohibidasPorFlagsPuestas.has(opcion.larga))
       .filter((opcion) => coincidePrefijo(opcion.larga, tokenActual) || (opcion.corta !== null && coincidePrefijo(opcion.corta, tokenActual)))
       .map((opcion) => sugerenciaDeOpcion(resuelta.ficha, opcion));
     return { tokenActual, inicioToken, tipo: "flag", comando: resuelta.ficha.ruta, sugerencias };

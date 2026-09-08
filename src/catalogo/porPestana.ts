@@ -21,13 +21,8 @@ function agrupar(): Map<string, FichaResuelta[]> {
 
 const PESTANAS = agrupar();
 
-/** Ids de ficha que le tocan a una pestaña, en el orden del catálogo; vacío si no tiene ninguna. */
-export function idsPorPestana(pestana: string): string[] {
-  return (PESTANAS.get(pestana) ?? []).map((resuelta) => idFicha(resuelta.ficha));
-}
-
-/** Fichas resueltas de una pestaña, mismo orden que `idsPorPestana`. Atajo para quien (como
- *  `GuiaPestana`) necesita pintar la ficha entera, no solo su id. */
+/** Fichas resueltas de una pestaña, en el orden del catálogo; vacío si no tiene ninguna. Atajo
+ *  para quien (como `GuiaPestana`) necesita pintar la ficha entera. */
 export function fichasDePestana(pestana: string): FichaResuelta[] {
   return PESTANAS.get(pestana) ?? [];
 }

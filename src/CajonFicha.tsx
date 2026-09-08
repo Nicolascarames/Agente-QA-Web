@@ -17,6 +17,10 @@ export interface CajonFichaProps {
   /** Pulsar un ejemplo con `plantilla: true` lo manda a la consola asistida (Bloque 8), que lo
    *  inserta con el primer hueco `<...>` ya seleccionado — ver `plantillas.ts`. */
   onInsertarEjemplo: (texto: string) => void;
+  /** Opción (`--auto`, etc.) que debe aparecer ya resaltada al abrir, en vez de en reposo — la usa
+   *  el `?` del autocompletado (Bloque 7) sobre una sugerencia de flag. `null`/`undefined` abre el
+   *  cajón sin nada resaltado, igual que antes. */
+  opcionInicial?: string | null;
 }
 
 // Igual que el `:not([tabindex="-1"])` del resto de la web: selector de "cosas que Tab visita",
@@ -48,7 +52,7 @@ function Lista({ titulo, items }: { titulo: string; items: string[] }) {
   );
 }
 
-export function CajonFicha({ resuelta, onCerrar, onInsertarEjemplo }: CajonFichaProps) {
+export function CajonFicha({ resuelta, onCerrar, onInsertarEjemplo, opcionInicial }: CajonFichaProps) {
   const abierto = resuelta !== null;
 
   // Se conserva la última ficha no nula para que el cajón siga mostrando su contenido mientras
@@ -58,11 +62,13 @@ export function CajonFicha({ resuelta, onCerrar, onInsertarEjemplo }: CajonFicha
     if (resuelta) setMostrada(resuelta);
   }, [resuelta]);
 
-  // Flag (`"--auto"`) sobre el que está el ratón o el foco de teclado; `null` en reposo.
+  // Flag (`"--auto"`) sobre el que está el ratón o el foco de teclado; `null` en reposo. Al abrir
+  // arranca en `opcionInicial` en vez de siempre `null`, para que `?` sobre una sugerencia de flag
+  // del autocompletado (Bloque 7) abra el cajón con esa opción ya resaltada.
   const [flagFoco, setFlagFoco] = useState<string | null>(null);
   useEffect(() => {
-    setFlagFoco(null);
-  }, [resuelta]);
+    setFlagFoco(opcionInicial ?? null);
+  }, [resuelta, opcionInicial]);
 
   const contenedorRef = useRef<HTMLDivElement | null>(null);
   const disparadorRef = useRef<HTMLElement | null>(null);

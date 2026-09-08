@@ -73,9 +73,15 @@ export function GuiaPestana({ pestana, onAbrirFicha }: GuiaPestanaProps) {
     setTodasLasPestanas(false);
   };
 
+  // `catalogoResuelto()` construye árboles nuevos en cada llamada (misma trampa ya corregida para
+  // `resueltaAbierta` en `App.tsx`, Bloque 4): sin memoizar, cada render con "todas las pestañas"
+  // encendido le daba a `universo` una identidad nueva aunque el contenido fuera el mismo, e
+  // invalidaba de más el `useMemo` de `fichas` de abajo.
+  const catalogoCompleto = useMemo(() => catalogoResuelto(), []);
+
   // Universo sobre el que se filtra: solo la pestaña activa, o las 17 fichas del catálogo cuando
   // el interruptor "todas las pestañas" está encendido.
-  const universo = todasLasPestanas ? catalogoResuelto() : fichasDePestana(pestana);
+  const universo = todasLasPestanas ? catalogoCompleto : fichasDePestana(pestana);
   const fichas = useMemo(() => filtrarFichas(universo, criterio), [universo, criterio]);
   const filtrosActivos = hayFiltroActivo(criterio);
 

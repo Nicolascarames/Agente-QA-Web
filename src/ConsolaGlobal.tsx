@@ -55,8 +55,10 @@ export interface ConsolaGlobalProps {
   resumenFinal: ResumenFinalCorrida | null;
   marcarCorridaActiva: (etiqueta: string | null) => void;
   /** Abre el cajón de detalle (Bloque 4) desde el autocompletado (Bloque 7), pulsando `?` sobre
-   *  una sugerencia. El estado vive en `App.tsx`, igual que para `GuiaPestana`. */
-  onAbrirFicha: (id: string) => void;
+   *  una sugerencia. El estado vive en `App.tsx`, igual que para `GuiaPestana`. `opcion` (solo
+   *  cuando la sugerencia era una flag, p.ej. `--auto`) llega hasta `CajonFicha` para abrirlo con
+   *  esa opción ya resaltada, en vez de siempre en reposo. */
+  onAbrirFicha: (id: string, opcion?: string) => void;
   /** Ejemplo elegido en el cajón de detalle (Bloque 8): cada clic pone un objeto nuevo (con su
    *  propio `version`) aunque el texto se repita, para que el `useEffect` de más abajo se dispare
    *  también la segunda vez que se pulsa el mismo ejemplo. `null` en reposo. */

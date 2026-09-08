@@ -13,8 +13,10 @@ export interface AutocompletadoProps {
   onCambiarValor: (texto: string) => void;
   /** Ejecuta el comando escrito; se llama con la lista de sugerencias cerrada (Enter normal). */
   onEnviar: () => void;
-  /** Abre el cajón de detalle (Bloque 4) sobre la ficha de la sugerencia marcada. */
-  onAbrirFicha: (id: string) => void;
+  /** Abre el cajón de detalle (Bloque 4) sobre la ficha de la sugerencia marcada, con esa opción
+   *  ya resaltada dentro cuando la sugerencia era una flag (mismo efecto que pasar el ratón o
+   *  tabular hasta ella una vez abierto el cajón). */
+  onAbrirFicha: (id: string, opcion?: string) => void;
   disabled: boolean;
   placeholder?: string;
 }
@@ -80,7 +82,8 @@ export function Autocompletado({ valor, onCambiarValor, onEnviar, onAbrirFicha, 
       }
       if (evento.key === "?") {
         evento.preventDefault();
-        onAbrirFicha(sugerencias[indiceMarcado].rutaFicha);
+        const sugerencia = sugerencias[indiceMarcado];
+        onAbrirFicha(sugerencia.rutaFicha, analisis.tipo === "flag" ? sugerencia.inserta : undefined);
         return;
       }
     }
