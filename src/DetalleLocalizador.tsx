@@ -47,7 +47,7 @@ export function DetalleLocalizador({
   const seleccionar = useCallback((loc: LocatorEntry) => {
     setSeleccionado(loc.name);
     setKind(loc.kind);
-    setTs(loc.ts);
+    setTs(loc.ts ?? "");
     setDisambiguatedBy(loc.disambiguatedBy ?? "");
     setMensaje(null);
   }, []);

@@ -1,14 +1,22 @@
 import { promises as fs } from "node:fs";
-import { AppMapSchema, LocatorEntrySchema, parseAppMap, type LocatorEntry } from "agente-qa-contract";
+import { z } from "zod";
+import { AppMapSchema, parseAppMap, type LocatorEntry } from "agente-qa-contract";
 import { projectPaths } from "agente-qa-contract/project";
 import { hayCorridaActiva } from "./corridas.js";
 import type { CuerpoCorreccionLocalizador } from "../shared/tipos.js";
 
 /**
  * Subconjunto editable de un `LocatorEntry` desde el panel de detalle (Bloque 7): `kind`, `ts` y
- * `disambiguatedBy`, tal como los define el contrato — sin reinventar su validación a mano.
+ * `disambiguatedBy`. Antes se derivaba con `LocatorEntrySchema.pick(...)`, pero desde que el
+ * contrato añadió el refinamiento verified/seen (Bloque 4 de la spec A), Zod ya no permite
+ * `.pick()` sobre un schema con `.superRefine()`. Esta corrección siempre deja el localizador en
+ * `status: "verified"` (ver más abajo), así que `ts` es obligatorio aquí igual que antes.
  */
-const CampoEditableLocalizadorSchema = LocatorEntrySchema.pick({ kind: true, ts: true, disambiguatedBy: true });
+const CampoEditableLocalizadorSchema = z.object({
+  kind: z.enum(["input", "button", "link", "select", "text", "heading"]),
+  ts: z.string().min(1),
+  disambiguatedBy: z.string().optional(),
+});
 
 export type CorregirLocalizadorResultado = { ok: true; locator: LocatorEntry } | { ok: false; motivo: string };
 
@@ -83,6 +91,7 @@ export async function corregirLocalizador(
     ...(anterior.stateId !== undefined ? { stateId: anterior.stateId } : {}),
     ...(anterior.attributes !== undefined ? { attributes: anterior.attributes } : {}),
     producedBy: { agent: "web-manual", version: versionAgenteQaWeb, at: ahora },
+    status: "verified",
     verifiedAt: ahora,
     ...(anterior.fragile !== undefined ? { fragile: anterior.fragile } : {}),
   };

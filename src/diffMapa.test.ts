@@ -10,6 +10,7 @@ const MAPA_VACIO: MapaCompleto = { existe: false };
 function locatorFake(overrides: Partial<LocatorEntry> & { name: string }): LocatorEntry {
   return {
     kind: "button",
+    status: "verified",
     ts: `getByRole('button', { name: '${overrides.name}' })`,
     count: 1,
     producedBy: PRODUCED_BY,
