@@ -100,6 +100,16 @@ export default function App() {
     setFichaAbierta(null);
   }, []);
 
+  // Ejemplo elegido en el cajón de detalle (Bloque 8 de la spec de guía integrada): vive aquí,
+  // no en `ConsolaGlobal` ni en `CajonFicha`, porque son ramas hermanas del árbol — el clic sale
+  // de una y tiene que llegar a la otra. `version` fuerza el efecto de `ConsolaGlobal` a disparar
+  // aunque se repita el mismo ejemplo dos veces seguidas.
+  const [ejemploParaConsola, setEjemploParaConsola] = useState<{ texto: string; version: number } | null>(null);
+  const insertarEjemploEnConsola = useCallback((texto: string) => {
+    setEjemploParaConsola({ texto, version: Date.now() });
+    setFichaAbierta(null);
+  }, []);
+
   // El indicador "● en curso" y el panel de consola global comparten el mismo hook: vive aquí
   // (nunca se desmonta al cambiar de pestaña), a diferencia del antiguo estado que solo subía
   // desde Explorar.
@@ -331,6 +341,7 @@ export default function App() {
             resumenFinal={resumenFinal}
             marcarCorridaActiva={marcarCorridaActiva}
             onAbrirFicha={setFichaAbierta}
+            ejemploAInsertar={ejemploParaConsola}
           />
         </div>
 
@@ -353,7 +364,7 @@ export default function App() {
       {/* Fuera del `<main>`/`<aside>` a propósito: ningún panel (react-rnd usa `transform` para
           posicionarse) debe quedar entre este cajón y el viewport, o su `position: fixed` dejaría
           de calcularse contra la ventana. */}
-      <CajonFicha resuelta={resueltaAbierta} onCerrar={cerrarFicha} />
+      <CajonFicha resuelta={resueltaAbierta} onCerrar={cerrarFicha} onInsertarEjemplo={insertarEjemploEnConsola} />
     </div>
   );
 }

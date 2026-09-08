@@ -39,7 +39,9 @@ export interface NotaFicha {
 }
 
 export interface EjemploComando {
-  /** Línea completa y realista, ya con valores de ejemplo — nunca un placeholder tipo `<url>`. */
+  /** Línea de ejemplo. Con `plantilla: true`, los huecos `<...>` (`<url>`, `<objetivo>`...)
+   *  quedan seleccionados al insertarla en la consola asistida, para reescribirlos uno a uno con
+   *  Tab (Bloque 8 de la spec de guía integrada) — el resto de la línea va concreto y realista. */
   texto: string;
   /** Qué demuestra este ejemplo, en una frase. */
   explica: string;
@@ -74,7 +76,9 @@ export interface FichaComando {
   notas: NotaFicha[];
   ejes: EjesFicha;
   palabrasClave: string[];
-  /** Pares de flags que no tiene sentido combinar en la misma línea. Vacío en este bloque
-   *  (se rellena en el Bloque 8); la función que lo valida ya existe en `catalogo.ts`. */
+  /** Pares de flags que no tiene sentido combinar en la misma línea — cada uno verificado a mano
+   *  contra el código real de `agente-qa-mcp` (lo rechaza con error, o lo ignora en silencio),
+   *  nunca por intuición. Vacío si el comando no tiene ninguna combinación así (la mayoría).
+   *  `validarLinea.ts` (Bloque 8) es quien lo usa para avisar antes de enviar. */
   incompatibles: string[][];
 }

@@ -38,7 +38,7 @@ export interface AnalisisLinea {
 // - `--profile`, `--role-*`: `PROFILE_NAMES` en `config/profiles.ts` (rapido/experto).
 // - `--provider`, `--rapido-provider`, `--experto-provider`: `PROVIDERS` en `config/resolve.ts`.
 // - `--cost-mode`: `COST_MODES` en `config/costMode.ts`.
-const VALORES_CERRADOS: Record<string, readonly string[]> = {
+export const VALORES_CERRADOS: Record<string, readonly string[]> = {
   "--env": ["dev", "test", "staging", "production"],
   "--profile": ["rapido", "experto"],
   "--provider": ["anthropic", "openai", "google", "groq"],

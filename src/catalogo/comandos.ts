@@ -51,7 +51,23 @@ export const COMANDOS: FichaComando[] = [
     ],
     ejes: EJE_CONFIG,
     palabrasClave: ["configuración", "perfil", "rapido", "experto", "proveedor", "modelo", "clave", "api key", "coste", "cost-mode", "rol"],
-    incompatibles: [],
+    // Verificado en `src/cli/commands/config.ts`: la acción decide `options.show ? runShow() :
+    // runInteractive(options)` — con `--show`, `runShow()` no recibe ningún otro flag, así que
+    // cualquiera de estos junto a `--show` se ignora en silencio, nunca "además muestra y cambia".
+    incompatibles: [
+      ["--show", "--rapido-provider"],
+      ["--show", "--rapido-model"],
+      ["--show", "--rapido-api-key"],
+      ["--show", "--experto-provider"],
+      ["--show", "--experto-model"],
+      ["--show", "--experto-api-key"],
+      ["--show", "--cost-mode"],
+      ["--show", "--role-map-loop"],
+      ["--show", "--role-run-translate"],
+      ["--show", "--role-login-fallback"],
+      ["--show", "--role-web-chat"],
+      ["--show", "--role-diagnosis"],
+    ],
   },
   {
     ruta: ["init"],
@@ -78,7 +94,7 @@ export const COMANDOS: FichaComando[] = [
       "--yes": { matiz: "No pregunta nada: si falta --url o --env, falla en vez de preguntar (pensado para scripts)." },
     },
     ejemplos: [
-      { texto: "init --url https://www.saucedemo.com --env test --yes", explica: "Crea el proyecto sin ninguna pregunta interactiva.", plantilla: true },
+      { texto: "init --url <url> --env test --yes", explica: "Crea el proyecto sin ninguna pregunta interactiva.", plantilla: true },
       { texto: "init", explica: "Crea el proyecto preguntando la URL y el entorno.", plantilla: true },
     ],
     notas: [
@@ -175,7 +191,12 @@ export const COMANDOS: FichaComando[] = [
     notas: [{ tipo: "peligro", texto: "--reset borra el histórico entero sin forma de deshacerlo tras confirmar." }],
     ejes: EJE_DETERMINISTA_SIN_AGENTE,
     palabrasClave: ["metrics", "métricas", "coste", "historial", "llamadas", "tokens", "reset"],
-    incompatibles: [],
+    // Verificado en `src/cli/commands/metrics.ts`: la acción hace `options.reset ? runReset() :
+    // json ? runListJson(last) : runList(last)` — con `--reset`, ni `--last` ni `--json` se leen.
+    incompatibles: [
+      ["--reset", "--last"],
+      ["--reset", "--json"],
+    ],
   },
   // ── Explorar ───────────────────────────────────────────────────────────────────────────
   {
@@ -194,7 +215,7 @@ export const COMANDOS: FichaComando[] = [
       "--detail": { matiz: "Añade el snapshot crudo completo — solo para depurar, es mucho más largo que el resumen." },
       "--json": { matiz: "Es un volcado del PageSummary como JSON, no un flujo NDJSON de eventos (ese es el --json global de map/run/record/snapshot)." },
     },
-    ejemplos: [{ texto: "browse https://www.saucedemo.com --headed", explica: "Mira una pantalla con el navegador visible.", plantilla: true }],
+    ejemplos: [{ texto: "browse <url> --headed", explica: "Mira una pantalla con el navegador visible.", plantilla: true }],
     notas: [
       { tipo: "ok", texto: "Coste cero: no llama a ningún LLM." },
       { tipo: "aviso", texto: "Requiere `npx playwright install chromium` una vez, si nunca se ha usado ningún comando de navegador." },
@@ -216,7 +237,7 @@ export const COMANDOS: FichaComando[] = [
     cuandoUsarlo: ["Para una pantalla suelta y estática, sin necesidad de que un LLM navegue para llegar a ella.", "Como paso de verificación rápida tras tocar el HTML de una pantalla."],
     cuandoNo: ["Para un flujo de varias pantallas encadenadas (login → panel) — eso es `record` o `map`."],
     opciones: { "--headed": { matiz: "Muestra la ventana real en vez de correr sin cabeza." } },
-    ejemplos: [{ texto: "snapshot https://www.saucedemo.com", explica: "Mapea esa pantalla suelta, sin cabeza.", plantilla: true }],
+    ejemplos: [{ texto: "snapshot <url>", explica: "Mapea esa pantalla suelta, sin cabeza.", plantilla: true }],
     notas: [{ tipo: "ok", texto: "Coste cero: no hay ningún LLM de por medio, solo lectura determinista del DOM." }],
     ejes: EJE_MAPEADOR_DETERMINISTA,
     palabrasClave: ["snapshot", "pantalla", "map.json", "localizadores", "verificar"],
@@ -247,9 +268,9 @@ export const COMANDOS: FichaComando[] = [
       "--no-writes": { matiz: "Solo tiene efecto con --auto: Claude Code se queda en modo solo lectura, nunca hace clic ni escribe." },
     },
     ejemplos: [
-      { texto: "record https://www.saucedemo.com --headed", explica: "Grabas tú el flujo a mano.", plantilla: true },
-      { texto: 'record https://www.saucedemo.com --auto "haz login como standard_user"', explica: "Claude Code conduce el navegador por ti.", plantilla: true },
-      { texto: "record https://www.saucedemo.com --raw --headed", explica: "Solo imprime el código Playwright, sin tocar el mapa.", plantilla: true },
+      { texto: "record <url> --headed", explica: "Grabas tú el flujo a mano.", plantilla: true },
+      { texto: 'record <url> --auto "<objetivo>"', explica: "Claude Code conduce el navegador por ti.", plantilla: true },
+      { texto: "record <url> --raw --headed", explica: "Solo imprime el código Playwright, sin tocar el mapa.", plantilla: true },
     ],
     notas: [
       { tipo: "ok", texto: "La grabación humana no gasta ni un token: coste cero siempre." },
@@ -258,7 +279,10 @@ export const COMANDOS: FichaComando[] = [
     ],
     ejes: EJE_MAPEADOR_HUMANO,
     palabrasClave: ["record", "grabar", "grabación", "auto", "claude code", "raw", "flujo"],
-    incompatibles: [],
+    // Verificado en `src/cli/commands/record.ts`: la acción rechaza con error si
+    // `options.allowWrites === true && options.writes === false` (idéntico al de `map`, misma
+    // línea de código).
+    incompatibles: [["--allow-writes", "--no-writes"]],
   },
   {
     ruta: ["map"],
@@ -292,8 +316,8 @@ export const COMANDOS: FichaComando[] = [
       "--profile": { matiz: "Fuerza el perfil de arranque (rapido/experto) por encima de la tabla rol→perfil, solo para esta corrida." },
     },
     ejemplos: [
-      { texto: 'map --goal "lo necesario para hacer login" --headed --max-cost 0.50', explica: "Explora un objetivo concreto con tope de gasto.", plantilla: true },
-      { texto: "map --all --url https://www.saucedemo.com", explica: "Explora tanto como sea razonable de toda la app.", plantilla: true },
+      { texto: 'map --goal "<objetivo>" --headed --max-cost 0.50', explica: "Explora un objetivo concreto con tope de gasto.", plantilla: true },
+      { texto: "map --all --url <url>", explica: "Explora tanto como sea razonable de toda la app.", plantilla: true },
       { texto: "map --revisar --ask --headed", explica: "Repasa lo dudoso de un mapa ya existente y pregunta lo que no sabe distinguir.", plantilla: true },
     ],
     notas: [
@@ -302,7 +326,18 @@ export const COMANDOS: FichaComando[] = [
     ],
     ejes: EJE_MAPEADOR_LLM,
     palabrasClave: ["map", "mapear", "explorar", "goal", "objetivo", "all", "units", "revisar", "ask", "bucle"],
-    incompatibles: [],
+    // Verificado en `src/cli/commands/map.ts`: la acción cuenta cuántos de goal/all/units/revisar
+    // llegaron y rechaza con error si hay más de uno (exactamente uno es obligatorio); y rechaza
+    // por separado si `--allow-writes` y `--no-writes` llegan juntos.
+    incompatibles: [
+      ["--goal", "--all"],
+      ["--goal", "--units"],
+      ["--goal", "--revisar"],
+      ["--all", "--units"],
+      ["--all", "--revisar"],
+      ["--units", "--revisar"],
+      ["--allow-writes", "--no-writes"],
+    ],
   },
   {
     ruta: ["run"],
@@ -329,7 +364,7 @@ export const COMANDOS: FichaComando[] = [
       "--profile": { matiz: "Fuerza el perfil de arranque (rapido/experto) por encima de la tabla rol→perfil, solo para esta corrida." },
     },
     ejemplos: [
-      { texto: 'run "explora el login y el registro"', explica: "Pide el objetivo en lenguaje normal.", plantilla: true },
+      { texto: 'run "<objetivo>"', explica: "Pide el objetivo en lenguaje normal.", plantilla: true },
       { texto: 'run "graba cómo doy de alta un registro"', explica: "Detecta que es una grabación y abre el navegador para ti.", plantilla: true },
     ],
     notas: [{ tipo: "aviso", texto: "La traducción de la frase gasta un LLM de por sí (rol run-translate), además del bucle de mapeo." }],

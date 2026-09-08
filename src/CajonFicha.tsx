@@ -14,6 +14,9 @@ import type { NotaFicha } from "./catalogo/tipos";
 export interface CajonFichaProps {
   resuelta: FichaResuelta | null;
   onCerrar: () => void;
+  /** Pulsar un ejemplo con `plantilla: true` lo manda a la consola asistida (Bloque 8), que lo
+   *  inserta con el primer hueco `<...>` ya seleccionado — ver `plantillas.ts`. */
+  onInsertarEjemplo: (texto: string) => void;
 }
 
 // Igual que el `:not([tabindex="-1"])` del resto de la web: selector de "cosas que Tab visita",
@@ -45,7 +48,7 @@ function Lista({ titulo, items }: { titulo: string; items: string[] }) {
   );
 }
 
-export function CajonFicha({ resuelta, onCerrar }: CajonFichaProps) {
+export function CajonFicha({ resuelta, onCerrar, onInsertarEjemplo }: CajonFichaProps) {
   const abierto = resuelta !== null;
 
   // Se conserva la última ficha no nula para que el cajón siga mostrando su contenido mientras
@@ -189,12 +192,28 @@ export function CajonFicha({ resuelta, onCerrar }: CajonFichaProps) {
             <section>
               <h3 className="text-2xs font-semibold uppercase tracking-[.05em] text-text-faint">Ejemplos</h3>
               <ul className="mt-1 flex flex-col gap-2">
-                {ficha.ejemplos.map((ejemplo) => (
-                  <li key={ejemplo.texto} className="rounded-6 border border-border-soft bg-bg-sunken p-2">
-                    <code className="block break-all text-2xs text-accent-soft">{ejemplo.texto}</code>
-                    <p className="mt-1 text-2xs text-text-muted">{ejemplo.explica}</p>
-                  </li>
-                ))}
+                {ficha.ejemplos.map((ejemplo) =>
+                  ejemplo.plantilla ? (
+                    <li key={ejemplo.texto}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onInsertarEjemplo(ejemplo.texto);
+                        }}
+                        title="Insertar en la consola"
+                        className="w-full rounded-6 border border-border-soft bg-bg-sunken p-2 text-left hover:border-accent"
+                      >
+                        <code className="block break-all text-2xs text-accent-soft">{ejemplo.texto}</code>
+                        <p className="mt-1 text-2xs text-text-muted">{ejemplo.explica}</p>
+                      </button>
+                    </li>
+                  ) : (
+                    <li key={ejemplo.texto} className="rounded-6 border border-border-soft bg-bg-sunken p-2">
+                      <code className="block break-all text-2xs text-accent-soft">{ejemplo.texto}</code>
+                      <p className="mt-1 text-2xs text-text-muted">{ejemplo.explica}</p>
+                    </li>
+                  ),
+                )}
               </ul>
             </section>
           )}
