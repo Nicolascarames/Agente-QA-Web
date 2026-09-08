@@ -23,6 +23,15 @@ consola.
   y la web nunca te enseña datos inventados mientras tanto.
 - Los paneles de cada pantalla se pueden mover y redimensionar a tu gusto; la próxima vez que abras
   esa pestaña, siguen donde los dejaste.
+- **Guía integrada**: bajo cada pestaña hay una ficha por cada comando que se puede usar ahí — qué
+  hace, sus opciones reales y ejemplos que se insertan solos en la consola con los huecos ya
+  marcados para rellenar. Se filtra por quién lo conduce, lo que cuesta o si ya está construido, y
+  se busca por texto. En la barra lateral, "Referencia" (Motor/Instalar) explica todo lo que no es un
+  comando en sí: perfiles, modos de coste, cómo se eligen los localizadores, cómo instalar los dos
+  repos.
+- **Consola global asistida**: la caja de comandos autocompleta mientras escribes (comandos, flags y
+  sus valores válidos) y te avisa antes de que pulses Enter si algo de la línea está mal, en vez de
+  dejarte descubrirlo al fallar.
 
 ## Qué le falta
 

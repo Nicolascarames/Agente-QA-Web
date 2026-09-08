@@ -1,6 +1,6 @@
 # ESTADO — Agente-QA-Web
 
-Actualizado: 2026-09-05
+Actualizado: 2026-09-08
 
 ## Qué es esto
 
@@ -89,6 +89,39 @@ interacción entre bloques.
   quede "corriendo" para siempre.
 - Al terminar una corrida, sus conexiones SSE se cierran explícitamente para que un observador en otra
   pestaña reconecte solo y enganche con la corrida siguiente.
+
+### Catálogo editorial y guía integrada (spec `2026-09-07-guia-integrada-y-consola-asistida.md`, Bloques 2-9)
+
+- `src/catalogo/` — 17 fichas editoriales escritas a mano (`comandos.ts`) cruzadas con
+  `cli.generado.json` (generado por `npm run catalogo:sync` desde `agente-qa-mcp catalog --pretty`)
+  en `catalogo.ts`. Un test guard vivo (`catalogo.cli-vivo.test.ts`) ejecuta el binario real de
+  `agente-qa-mcp` y falla si el JSON se desincroniza del código; se salta con aviso si el binario no
+  está localizable en esta máquina (`catalogo.test.ts` es el guard que corre siempre).
+- Bajo cada pestaña, `<main>` apila tres bandas de la misma altura con scroll de rueda entre ellas
+  (Bloque 3): la pestaña activa, la consola global, y `GuiaPestana` con la ficha plegada de cada
+  comando de esa pestaña. Botones "↓ Consola y guía" / "↑ Arriba" saltan directamente entre bandas.
+- `CajonFicha.tsx` (Bloque 4): cajón de detalle por la derecha con la plantilla completa de una
+  ficha (una línea, "Qué hace"/"Qué deja"/"Cuándo usarlo"/"Cuándo NO", opciones reales con su matiz
+  editorial, ejemplos, notas). Los ejes de cabecera cambian si el foco (ratón o teclado) está sobre
+  una opción con efecto propio (`catalogo/ejesConOpcion.ts`). Foco atrapado, Escape cierra, el foco
+  vuelve a quien abrió el cajón.
+- `FiltrosGuia.tsx` (Bloque 5): chips por conductor/coste/estado (OR dentro del eje, AND entre ejes,
+  semántica en `catalogo/filtrar.ts`) más un buscador de texto y el interruptor "todas las pestañas",
+  que amplía el universo de búsqueda a las 17 fichas del catálogo en vez de solo las de la pestaña
+  activa.
+- Sección "Referencia" en la barra lateral (Bloque 6): `Motor.tsx` (perfiles rápido/experto, `record
+  --auto`, modos de coste, precedencia, tabla rol→perfil, escalado, herramientas que ve el modelo, la
+  escalera de localizadores, qué se guarda de cada elemento del mapa, la sesión, los frenos en
+  producción) e `Instalar.tsx` (cómo instalar y lanzar los dos repos), sobre datos puros de
+  `src/catalogo/secciones.ts` — sustituyen a `Agente-QA-MCP/docs/esquema-flujo.html`, archivado.
+- `src/consola/analizarLinea.ts` + `Autocompletado.tsx` (Bloque 7): autocompletado de la consola
+  global (comandos, subcomandos, flags y valores cerrados como `--env`/`--profile`/`--provider`/
+  `--cost-mode`, verificados a mano contra el código de `agente-qa-mcp`), con los ejes de cada
+  sugerencia visibles antes de aceptarla.
+- `src/consola/validarLinea.ts` + `plantillas.ts` (Bloque 8): valida la línea ya escrita contra el
+  catálogo real antes de dejar enviarla (opciones que no existen, con "¿querías decir...?" por
+  distancia de Levenshtein); los ejemplos marcados `plantilla: true` se insertan con huecos `<...>`
+  que se seleccionan y se van saltando con Tab.
 
 ## Qué está a medias
 
