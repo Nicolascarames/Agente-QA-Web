@@ -1,43 +1,17 @@
-// Lectura/escritura de las dos capas de configuración (spec Bloque 4): el `config.json`/`.env`
-// del proyecto activo (`projectPaths` del contrato) y el `.env` global de `agente-qa-mcp`
-// (`entornoMcp.ts`). Puro en el sentido de que no guarda nada en memoria: cada lectura vuelve a
-// tocar disco, igual que `estado.ts`.
+// Lectura/escritura de la configuración de proyecto (spec Bloque 4, `llm` desde Spec B/Bloque 3):
+// el `config.json`/`.env` del proyecto activo (`projectPaths` del contrato). Puro en el sentido
+// de que no guarda nada en memoria: cada lectura vuelve a tocar disco, igual que `estado.ts`.
 import { promises as fs } from "node:fs";
-import { parseProjectConfig, projectPaths, type ProjectConfig } from "agente-qa-contract/project";
+import { parseProjectConfig, projectPaths, type LlmConfig, type ProjectConfig } from "agente-qa-contract/project";
 import type {
-  CambiosConfigGlobal,
   CambiosConfigProyecto,
   CampoConfig,
-  CampoConfigVacio,
   CampoSecreto,
-  ConfigGlobal,
   ConfigProyecto,
   ConfigProyectoRespuesta,
-  ModoCoste,
-  Perfil,
-  PerfilConfig,
-  Proveedor,
-  Rol,
+  LlmProyecto,
 } from "../shared/tipos.js";
-import {
-  MODO_COSTE_POR_DEFECTO,
-  PERFILES,
-  PERFIL_POR_DEFECTO_ROL,
-  ROLES,
-  VAR_MODO_COSTE,
-  VAR_PASSWORD_APP,
-  VAR_USUARIO_APP,
-  buscarVariable,
-  envGlobalMcpPath,
-  escribirVariable,
-  esModoCoste,
-  esProveedor,
-  nombreVarPerfilModelo,
-  nombreVarPerfilProveedor,
-  nombreVarRol,
-  type CampoResuelto,
-  type EscribirVariableResultado,
-} from "./entornoMcp.js";
+import { VAR_PASSWORD_APP, VAR_USUARIO_APP, buscarVariable, escribirVariable, type CampoResuelto } from "./entornoMcp.js";
 
 async function existeDirectorio(ruta: string): Promise<boolean> {
   try {
@@ -52,9 +26,15 @@ function campoProyecto<T>(valor: T): CampoConfig<T> {
   return { valor, capa: "proyecto", editable: true };
 }
 
-function campoVacio<T extends string>(resuelto: CampoResuelto | undefined): CampoConfigVacio<T> {
-  if (resuelto === undefined) return { valor: null, capa: null, editable: true };
-  return { valor: resuelto.valor as T, capa: resuelto.capa, editable: resuelto.capa !== "entorno" };
+/**
+ * `llm` de `config.json`, o el valor por defecto (`api` sin proveedor ni modelo aún) si el
+ * proyecto no lo tiene todavía — no dispara la migración silenciosa desde perfiles/roles que sí
+ * hace `agente-qa-mcp config --show`: eso es cosa del CLI, esto solo refleja lo que ya hay en disco.
+ */
+function llmProyecto(llm: LlmConfig | undefined): LlmProyecto {
+  if (llm === undefined) return { modalidad: "api", proveedor: null, modelo: null };
+  if (llm.modalidad === "suscripcion") return { modalidad: "suscripcion", proveedor: null, modelo: null };
+  return { modalidad: "api", proveedor: llm.proveedor ?? null, modelo: llm.modelo ?? null };
 }
 
 /** Nunca lleva el valor completo: mismo criterio que `ClaveInfo` de `claves.ts`. */
@@ -105,6 +85,7 @@ export async function leerConfigProyecto(rootDir: string): Promise<ConfigProyect
       maxScreens: campoProyecto(base.limits?.maxScreens ?? 25),
       maxCostUsd: campoProyecto(base.limits?.maxCostUsd ?? 2),
     },
+    llm: llmProyecto(base.llm),
     credenciales: {
       usuario: campoSecreto(usuario),
       password: campoSecreto(password),
@@ -148,6 +129,7 @@ export async function escribirConfigProyecto(
     },
     ...(actualParcial.loginRecipe !== undefined ? { loginRecipe: actualParcial.loginRecipe } : {}),
     ...(actualParcial.testIdAttribute !== undefined ? { testIdAttribute: actualParcial.testIdAttribute } : {}),
+    ...(actualParcial.llm !== undefined ? { llm: actualParcial.llm } : {}),
   };
 
   const siguiente: ProjectConfig = {
@@ -159,6 +141,7 @@ export async function escribirConfigProyecto(
       maxScreens: cambios.limits?.maxScreens ?? actual.limits.maxScreens,
       maxCostUsd: cambios.limits?.maxCostUsd ?? actual.limits.maxCostUsd,
     },
+    ...(cambios.llm !== undefined ? { llm: cambios.llm } : {}),
   };
 
   const validado = parseProjectConfig(siguiente);
@@ -177,67 +160,6 @@ export async function escribirConfigProyecto(
   }
   if (cambios.memoria !== undefined) {
     await fs.writeFile(paths.memoryPath, JSON.stringify(cambios.memoria, null, 2) + "\n", "utf8");
-  }
-
-  return { ok: true };
-}
-
-export async function leerConfigGlobal(rootDir: string): Promise<ConfigGlobal> {
-  const perfiles = {} as Record<Perfil, PerfilConfig>;
-  for (const perfil of PERFILES) {
-    const provider = await buscarVariable(nombreVarPerfilProveedor(perfil), rootDir);
-    const model = await buscarVariable(nombreVarPerfilModelo(perfil), rootDir);
-    perfiles[perfil] = {
-      provider: provider && esProveedor(provider.valor) ? campoVacio<Proveedor>(provider) : { valor: null, capa: null, editable: true },
-      model: campoVacio<string>(model),
-    };
-  }
-
-  const modoCosteResuelto = await buscarVariable(VAR_MODO_COSTE, rootDir);
-  const modoCoste: CampoConfig<ModoCoste> =
-    modoCosteResuelto && esModoCoste(modoCosteResuelto.valor)
-      ? { valor: modoCosteResuelto.valor, capa: modoCosteResuelto.capa, editable: modoCosteResuelto.capa !== "entorno" }
-      : { valor: MODO_COSTE_POR_DEFECTO, capa: "global", editable: true };
-
-  const roles = {} as Record<Rol, CampoConfig<Perfil>>;
-  for (const rol of ROLES) {
-    const resuelto = await buscarVariable(nombreVarRol(rol), rootDir);
-    roles[rol] =
-      resuelto && (PERFILES as readonly string[]).includes(resuelto.valor)
-        ? { valor: resuelto.valor as Perfil, capa: resuelto.capa, editable: resuelto.capa !== "entorno" }
-        : { valor: PERFIL_POR_DEFECTO_ROL[rol], capa: "global", editable: true };
-  }
-
-  return { perfiles, modoCoste, roles };
-}
-
-/** Todo lo global se escribe en el `.env` de `agente-qa-mcp`, nunca en el del proyecto activo. */
-export async function escribirConfigGlobal(rootDir: string, cambios: CambiosConfigGlobal): Promise<EscribirVariableResultado> {
-  const globalEnvPath = envGlobalMcpPath();
-
-  for (const perfil of PERFILES) {
-    const cambiosPerfil = cambios.perfiles?.[perfil];
-    if (cambiosPerfil?.provider !== undefined) {
-      const resultado = await escribirVariable(nombreVarPerfilProveedor(perfil), cambiosPerfil.provider, "global", rootDir, globalEnvPath);
-      if (!resultado.ok) return resultado;
-    }
-    if (cambiosPerfil?.model !== undefined) {
-      const resultado = await escribirVariable(nombreVarPerfilModelo(perfil), cambiosPerfil.model, "global", rootDir, globalEnvPath);
-      if (!resultado.ok) return resultado;
-    }
-  }
-
-  if (cambios.modoCoste !== undefined) {
-    const resultado = await escribirVariable(VAR_MODO_COSTE, cambios.modoCoste, "global", rootDir, globalEnvPath);
-    if (!resultado.ok) return resultado;
-  }
-
-  for (const rol of ROLES) {
-    const valor = cambios.roles?.[rol];
-    if (valor !== undefined) {
-      const resultado = await escribirVariable(nombreVarRol(rol), valor, "global", rootDir, globalEnvPath);
-      if (!resultado.ok) return resultado;
-    }
   }
 
   return { ok: true };

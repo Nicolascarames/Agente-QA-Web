@@ -8,7 +8,7 @@ import { leerEstadoProyecto, leerMapaCompleto } from "./estado.js";
 import { corregirLocalizador } from "./mapa.js";
 import { anadirReciente, leerRecientes } from "./proyecto.js";
 import { escribirClave, listarClaves, verClave } from "./claves.js";
-import { escribirConfigGlobal, escribirConfigProyecto, leerConfigGlobal, leerConfigProyecto, verCredencialProyecto } from "./config.js";
+import { escribirConfigProyecto, leerConfigProyecto, verCredencialProyecto } from "./config.js";
 import { aResultadoCli, ejecutarCli, localizarCli } from "./cli.js";
 import { esProveedor } from "./entornoMcp.js";
 import {
@@ -25,10 +25,8 @@ import {
 } from "./corridas.js";
 import { construirArgsComandoLibre } from "./comandoLibre.js";
 import type {
-  CambiosConfigGlobal,
   CambiosConfigProyecto,
   ClaveInfo,
-  ConfigGlobal,
   ConfigProyectoRespuesta,
   CuerpoCorreccionLocalizador,
   CuerpoExplorar,
@@ -115,7 +113,7 @@ export function buildApp(opts: AppOptions): FastifyInstance {
     await reply.status(resultado.codigo === 0 ? 200 : 500).send(resultado);
   });
 
-  // --- Configuración (Bloque 4): dos capas, proyecto y global ---------------------------
+  // --- Configuración (Bloque 4; `llm` desde Spec B/Bloque 3): todo vive en el proyecto -----
 
   app.get("/api/config/proyecto", async (): Promise<ConfigProyectoRespuesta> => leerConfigProyecto(proyectoActivo));
 
@@ -146,17 +144,6 @@ export function buildApp(opts: AppOptions): FastifyInstance {
       await reply.send({ valor: resultado.valor });
     }
   );
-
-  app.get("/api/config/global", async (): Promise<ConfigGlobal> => leerConfigGlobal(proyectoActivo));
-
-  app.put<{ Body: CambiosConfigGlobal }>("/api/config/global", async (req, reply) => {
-    const resultado = await escribirConfigGlobal(proyectoActivo, req.body ?? {});
-    if (!resultado.ok) {
-      await reply.status(400).send({ error: resultado.motivo });
-      return;
-    }
-    await reply.send(await leerConfigGlobal(proyectoActivo));
-  });
 
   // --- Claves de API (decisión 8 de la entrevista: enmascaradas, la clave completa solo por /ver) --
 
@@ -213,11 +200,10 @@ export function buildApp(opts: AppOptions): FastifyInstance {
     await reply.status(resultado.codigo === 0 ? 200 : 500).send(resultado);
   });
 
-  app.post<{ Body: { provider?: string; model?: string; profile?: string } }>("/api/llm-ping", async (req, reply) => {
+  app.post<{ Body: { provider?: string; model?: string } }>("/api/llm-ping", async (req, reply) => {
     const args = ["llm", "ping"];
     if (req.body?.provider) args.push("--provider", req.body.provider);
     if (req.body?.model) args.push("--model", req.body.model);
-    if (req.body?.profile) args.push("--profile", req.body.profile);
     const resultado = await ejecutarCli(args, proyectoActivo);
     await reply.status(resultado.codigo === 0 ? 200 : 500).send(resultado);
   });

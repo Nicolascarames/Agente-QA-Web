@@ -3,42 +3,29 @@ import { Panel } from "./Panel";
 import {
   ejecutarDoctor,
   guardarClave,
-  guardarConfigGlobal,
   guardarConfigProyecto,
   obtenerCli,
   obtenerClaves,
-  obtenerConfigGlobal,
   obtenerConfigProyecto,
   probarProveedor,
   verClaveCompleta,
   verCredencialProyecto,
 } from "./api";
 import type {
-  CambiosConfigGlobal,
+  CambiosLlmProyecto,
   CapaConfig,
   ClaveInfo,
-  ConfigGlobal,
   ConfigProyectoRespuesta,
   EnvironmentApp,
-  ModoCoste,
-  Perfil,
+  Modalidad,
   Proveedor,
   ResultadoCli,
   ResultadoSubproceso,
-  Rol,
 } from "../shared/tipos";
 
 const ENTORNOS: EnvironmentApp[] = ["dev", "test", "staging", "production"];
 const PROVEEDORES: Proveedor[] = ["anthropic", "openai", "google", "groq"];
-const PERFILES: Perfil[] = ["rapido", "experto"];
-const MODOS_COSTE: ModoCoste[] = ["ahorro", "equilibrado", "calidad"];
-const ROLES: { id: Rol; etiqueta: string }[] = [
-  { id: "map-loop", etiqueta: "Bucle de mapeo (map/run)" },
-  { id: "run-translate", etiqueta: 'Traducción de run "..."' },
-  { id: "login-fallback", etiqueta: "Login sin receta declarada" },
-  { id: "web-chat", etiqueta: "Chat de esta web" },
-  { id: "diagnosis", etiqueta: "Diagnóstico (futuro Reparar)" },
-];
+const MODALIDADES: Modalidad[] = ["api", "suscripcion"];
 
 const CLASE_CAMPO = "rounded-7 border border-border-soft bg-bg-sunken px-2 py-1.5 text-sm text-text-strong disabled:opacity-40";
 const CLASE_FILA = "flex items-center justify-between gap-2 border-b border-bg-row py-2 last:border-b-0";
@@ -80,6 +67,19 @@ export function Configuracion() {
 
 type CargaProyecto = { estado: "cargando" } | { estado: "error"; mensaje: string } | { estado: "listo"; datos: ConfigProyectoRespuesta };
 
+/**
+ * `llm` de `CambiosConfigProyecto`: o `suscripcion` (nada más que decir) o `api` con proveedor y
+ * modelo completos — nunca a medias, mismo criterio que el contrato (Spec B, Bloque 3). Devuelve
+ * un mensaje de error en vez de lanzar: el formulario lo enseña y no manda el `PUT`.
+ */
+export function construirCambiosLlm(modalidad: Modalidad, proveedor: Proveedor | "", modelo: string): CambiosLlmProyecto | { error: string } {
+  if (modalidad === "suscripcion") return { modalidad: "suscripcion" };
+  if (!proveedor || modelo.trim() === "") {
+    return { error: 'Con modalidad "api" hacen falta proveedor y modelo: no se ha guardado nada.' };
+  }
+  return { modalidad: "api", proveedor, modelo: modelo.trim() };
+}
+
 function SeccionProyecto() {
   const [carga, setCarga] = useState<CargaProyecto>({ estado: "cargando" });
   const [guardando, setGuardando] = useState(false);
@@ -87,6 +87,9 @@ function SeccionProyecto() {
 
   const [appUrl, setAppUrl] = useState("");
   const [environment, setEnvironment] = useState<EnvironmentApp>("dev");
+  const [modalidad, setModalidad] = useState<Modalidad>("api");
+  const [proveedorLlm, setProveedorLlm] = useState<Proveedor | "">("");
+  const [modeloLlm, setModeloLlm] = useState("");
   const [maxIterations, setMaxIterations] = useState(40);
   const [maxScreens, setMaxScreens] = useState(25);
   const [maxCostUsd, setMaxCostUsd] = useState(2);
@@ -104,6 +107,9 @@ function SeccionProyecto() {
         if (datos.inicializado) {
           setAppUrl(datos.config.appUrl.valor);
           setEnvironment(datos.config.environment.valor);
+          setModalidad(datos.config.llm.modalidad);
+          setProveedorLlm(datos.config.llm.proveedor ?? "");
+          setModeloLlm(datos.config.llm.modelo ?? "");
           setMaxIterations(datos.config.limits.maxIterations.valor);
           setMaxScreens(datos.config.limits.maxScreens.valor);
           setMaxCostUsd(datos.config.limits.maxCostUsd.valor);
@@ -130,10 +136,16 @@ function SeccionProyecto() {
       setMensaje('La memoria del proyecto no es JSON válido: no se ha guardado nada.');
       return;
     }
+    const llm = construirCambiosLlm(modalidad, proveedorLlm, modeloLlm);
+    if ("error" in llm) {
+      setMensaje(llm.error);
+      return;
+    }
     setGuardando(true);
     void guardarConfigProyecto({
       appUrl,
       environment,
+      llm,
       limits: { maxIterations, maxScreens, maxCostUsd },
       credenciales: {
         ...(nuevoUsuario ? { usuario: nuevoUsuario } : {}),
@@ -151,7 +163,7 @@ function SeccionProyecto() {
         setMensaje(err instanceof Error ? err.message : String(err));
       })
       .finally(() => setGuardando(false));
-  }, [appUrl, environment, maxIterations, maxScreens, maxCostUsd, nuevoUsuario, nuevoPassword, memoriaTexto, recargar]);
+  }, [appUrl, environment, modalidad, proveedorLlm, modeloLlm, maxIterations, maxScreens, maxCostUsd, nuevoUsuario, nuevoPassword, memoriaTexto, recargar]);
 
   // "🧠 Memoria del proyecto" del mockup pinta filas de reglas ya escritas más "➕ Añadir
   // regla" — memory.json no tiene un esquema fijo en el contrato (`memoria: unknown`), así
@@ -214,6 +226,52 @@ function SeccionProyecto() {
           })}
         </div>
       </div>
+
+      {/* Modalidad de LLM (Spec B, Bloque 1): una sola activa, nunca perfiles ni roles. Vive en
+          `llm` de config.json, siempre editable desde aquí — no tiene capa "entorno". */}
+      <p className="mb-0.5 mt-3 text-xs uppercase tracking-[.04em] text-text-faint">Modalidad de LLM</p>
+      <div className={CLASE_FILA}>
+        <span className="text-text-muted">Modalidad</span>
+        <div className="flex overflow-hidden rounded-6 border border-border-soft">
+          {MODALIDADES.map((valor) => {
+            const activo = modalidad === valor;
+            return (
+              <button
+                key={valor}
+                type="button"
+                onClick={() => setModalidad(valor)}
+                className={`px-2.5 py-1 text-sm ${activo ? "bg-bg-elev text-accent-soft" : "bg-bg-sunken text-text-muted"}`}
+              >
+                {valor}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      {modalidad === "api" && (
+        <>
+          <label className={CLASE_FILA}>
+            <span className="text-text-muted">Proveedor</span>
+            <select className={CLASE_CAMPO} value={proveedorLlm} onChange={(e) => setProveedorLlm(e.target.value as Proveedor)}>
+              <option value="">— elige uno —</option>
+              {PROVEEDORES.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={CLASE_FILA}>
+            <span className="text-text-muted">Modelo</span>
+            <input
+              className={`w-40 ${CLASE_CAMPO}`}
+              placeholder="modelo"
+              value={modeloLlm}
+              onChange={(e) => setModeloLlm(e.target.value)}
+            />
+          </label>
+        </>
+      )}
 
       {/* Límites de la corrida: no están en el mockup (su pantalla de Configuración no los
           enseña), pero son funcionalidad real ya en uso — se conservan (regla de fidelidad 4/6). */}
@@ -364,99 +422,20 @@ function CampoSecretoProyecto({
 }
 
 // --- Global ---------------------------------------------------------------------------------
+// La modalidad de LLM ya no vive aquí (Spec B, Bloque 1: es `llm` de `config.json` de cada
+// proyecto — ver "Este proyecto" arriba). Lo único global de verdad son las claves de API
+// (compartidas entre proyectos) y el diagnóstico del entorno.
 
-type CargaGlobal = { estado: "cargando" } | { estado: "error"; mensaje: string } | { estado: "listo"; datos: ConfigGlobal };
 type CargaClaves = { estado: "cargando" } | { estado: "error"; mensaje: string } | { estado: "listo"; datos: ClaveInfo[] };
 
-type EstadoPerfiles = Record<Perfil, { provider: Proveedor | null; model: string }>;
-type EstadoGlobalForm = { modoCoste: ModoCoste; perfiles: EstadoPerfiles; roles: Record<Rol, Perfil> };
-
-/**
- * Diff puro entre lo que hay en el formulario y lo cargado en el último GET: solo lo que el
- * usuario tocó de verdad viaja en el `PUT`. Nunca manda un `provider` que siga en `null` (sin
- * configurar) y nunca reescribe un campo bloqueado por entorno que nadie tocó.
- */
-export function calcularCambiosGlobal(actual: EstadoGlobalForm, inicial: EstadoGlobalForm): CambiosConfigGlobal {
-  const cambios: CambiosConfigGlobal = {};
-  if (actual.modoCoste !== inicial.modoCoste) cambios.modoCoste = actual.modoCoste;
-
-  const perfilesCambiados: NonNullable<CambiosConfigGlobal["perfiles"]> = {};
-  for (const perfil of PERFILES) {
-    const cambiosPerfil: { provider?: Proveedor; model?: string } = {};
-    if (actual.perfiles[perfil].provider !== inicial.perfiles[perfil].provider && actual.perfiles[perfil].provider !== null) {
-      cambiosPerfil.provider = actual.perfiles[perfil].provider;
-    }
-    if (actual.perfiles[perfil].model !== inicial.perfiles[perfil].model) cambiosPerfil.model = actual.perfiles[perfil].model;
-    if (Object.keys(cambiosPerfil).length > 0) perfilesCambiados[perfil] = cambiosPerfil;
-  }
-  if (Object.keys(perfilesCambiados).length > 0) cambios.perfiles = perfilesCambiados;
-
-  const rolesCambiados: NonNullable<CambiosConfigGlobal["roles"]> = {};
-  for (const rol of ROLES) {
-    if (actual.roles[rol.id] !== inicial.roles[rol.id]) rolesCambiados[rol.id] = actual.roles[rol.id];
-  }
-  if (Object.keys(rolesCambiados).length > 0) cambios.roles = rolesCambiados;
-
-  return cambios;
-}
-
 function SeccionGlobal() {
-  const [carga, setCarga] = useState<CargaGlobal>({ estado: "cargando" });
   const [claves, setClaves] = useState<CargaClaves>({ estado: "cargando" });
-  const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState<string | null>(null);
 
-  const [modoCoste, setModoCoste] = useState<ModoCoste>("equilibrado");
-  const [perfiles, setPerfiles] = useState<Record<Perfil, { provider: Proveedor | null; model: string }>>({
-    rapido: { provider: null, model: "" },
-    experto: { provider: null, model: "" },
-  });
-  const [roles, setRoles] = useState<Record<Rol, Perfil>>({
-    "map-loop": "experto",
-    "run-translate": "rapido",
-    "login-fallback": "experto",
-    "web-chat": "experto",
-    diagnosis: "experto",
-  });
-  // Instantánea de lo recibido en el último GET: `guardar` compara contra esto para mandar solo lo que cambió.
-  const [modoCosteInicial, setModoCosteInicial] = useState<ModoCoste>("equilibrado");
-  const [perfilesInicial, setPerfilesInicial] = useState<Record<Perfil, { provider: Proveedor | null; model: string }>>({
-    rapido: { provider: null, model: "" },
-    experto: { provider: null, model: "" },
-  });
-  const [rolesInicial, setRolesInicial] = useState<Record<Rol, Perfil>>({
-    "map-loop": "experto",
-    "run-translate": "rapido",
-    "login-fallback": "experto",
-    "web-chat": "experto",
-    diagnosis: "experto",
-  });
   const [clavesNuevas, setClavesNuevas] = useState<Record<Proveedor, string>>({ anthropic: "", openai: "", google: "", groq: "" });
   const [clavesVistas, setClavesVistas] = useState<Partial<Record<Proveedor, string>>>({});
 
   const recargar = useCallback(() => {
-    setCarga({ estado: "cargando" });
-    void obtenerConfigGlobal()
-      .then((datos) => {
-        setCarga({ estado: "listo", datos });
-        setModoCoste(datos.modoCoste.valor);
-        setModoCosteInicial(datos.modoCoste.valor);
-        const perfilesCargados = {} as Record<Perfil, { provider: Proveedor | null; model: string }>;
-        for (const perfil of PERFILES) {
-          perfilesCargados[perfil] = {
-            provider: datos.perfiles[perfil].provider.valor,
-            model: datos.perfiles[perfil].model.valor ?? "",
-          };
-        }
-        setPerfiles(perfilesCargados);
-        setPerfilesInicial(perfilesCargados);
-        const rolesCargados = {} as Record<Rol, Perfil>;
-        for (const rol of ROLES) rolesCargados[rol.id] = datos.roles[rol.id].valor;
-        setRoles(rolesCargados);
-        setRolesInicial(rolesCargados);
-      })
-      .catch((err: unknown) => setCarga({ estado: "error", mensaje: err instanceof Error ? err.message : String(err) }));
-
     setClavesVistas({});
     void obtenerClaves()
       .then((datos) => setClaves({ estado: "listo", datos }))
@@ -466,21 +445,6 @@ function SeccionGlobal() {
   useEffect(() => {
     recargar();
   }, [recargar]);
-
-  const guardar = useCallback(() => {
-    setGuardando(true);
-    setMensaje(null);
-
-    const cambios = calcularCambiosGlobal({ modoCoste, perfiles, roles }, { modoCoste: modoCosteInicial, perfiles: perfilesInicial, roles: rolesInicial });
-
-    void guardarConfigGlobal(cambios)
-      .then(() => {
-        setMensaje("Guardado.");
-        recargar();
-      })
-      .catch((err: unknown) => setMensaje(err instanceof Error ? err.message : String(err)))
-      .finally(() => setGuardando(false));
-  }, [modoCoste, modoCosteInicial, perfiles, perfilesInicial, roles, rolesInicial, recargar]);
 
   const guardarClaveDe = useCallback(
     (proveedor: Proveedor) => {
@@ -507,80 +471,9 @@ function SeccionGlobal() {
       .catch((err: unknown) => setMensaje(err instanceof Error ? err.message : String(err)));
   }, [clavesVistas]);
 
-  if (carga.estado === "cargando") return <p className="text-text-dim">Cargando…</p>;
-  if (carga.estado === "error") return <p className="text-accent">Error: {carga.mensaje}</p>;
-  const datos = carga.datos;
-
   return (
     <div className="flex flex-col gap-1">
       <p className="mb-1.5 text-xs text-text-faint">%APPDATA%/agente-qa-mcp/</p>
-
-      {/* El mockup enseña "Modalidad LLM" como un desplegable con dos opciones (API key /
-          claude-cli); hoy agente-qa-mcp solo implementa la de clave de API — la real manda
-          (regla de fidelidad 4/6), sin un selector que ofrecería una opción que no existe. */}
-      <div className={CLASE_FILA}>
-        <span className="text-text-muted">Modalidad LLM</span>
-        <span
-          className="text-xs text-text-dim"
-          title="La modalidad de suscripción no existe en agente-qa-mcp: hoy la única implementada es clave de API."
-        >
-          clave de API (única disponible)
-        </span>
-      </div>
-
-      <label className={CLASE_FILA}>
-        <span className="text-text-muted">
-          Modo de coste <EtiquetaCapa capa={datos.modoCoste.capa} />
-        </span>
-        <select
-          className={CLASE_CAMPO}
-          value={modoCoste}
-          disabled={!datos.modoCoste.editable}
-          onChange={(e) => setModoCoste(e.target.value as ModoCoste)}
-        >
-          {MODOS_COSTE.map((valor) => (
-            <option key={valor} value={valor}>
-              {valor}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <h2 className="mb-1 mt-3 text-md font-bold text-text-bright">Perfiles</h2>
-      {PERFILES.map((perfil) => (
-        <div key={perfil} className={CLASE_FILA}>
-          <span className="w-16 text-text-muted">{perfil}</span>
-          <div className="flex flex-1 items-center justify-end gap-2">
-            <select
-              className={CLASE_CAMPO}
-              value={perfiles[perfil].provider ?? ""}
-              disabled={!datos.perfiles[perfil].provider.editable}
-              onChange={(e) =>
-                setPerfiles((a) => ({
-                  ...a,
-                  [perfil]: { ...a[perfil], provider: e.target.value === "" ? null : (e.target.value as Proveedor) },
-                }))
-              }
-            >
-              <option value="">— sin configurar —</option>
-              {PROVEEDORES.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-            <EtiquetaCapa capa={datos.perfiles[perfil].provider.capa} />
-            <input
-              className={`w-40 ${CLASE_CAMPO}`}
-              placeholder="modelo"
-              value={perfiles[perfil].model}
-              disabled={!datos.perfiles[perfil].model.editable}
-              onChange={(e) => setPerfiles((a) => ({ ...a, [perfil]: { ...a[perfil], model: e.target.value } }))}
-            />
-            <EtiquetaCapa capa={datos.perfiles[perfil].model.capa} />
-          </div>
-        </div>
-      ))}
 
       <h2 className="mb-1 mt-3 text-md font-bold text-text-bright">Claves de API</h2>
       {claves.estado === "cargando" && <p className="text-text-dim">Cargando…</p>}
@@ -612,32 +505,7 @@ function SeccionGlobal() {
           </div>
         ))}
 
-      <h2 className="mb-1 mt-3 text-md font-bold text-text-bright">Rol → perfil</h2>
-      {ROLES.map((rol) => (
-        <div key={rol.id} className={CLASE_FILA}>
-          <span className="text-text-muted">{rol.etiqueta}</span>
-          <div className="flex items-center gap-2">
-            <select
-              className={CLASE_CAMPO}
-              value={roles[rol.id]}
-              disabled={!datos.roles[rol.id].editable}
-              onChange={(e) => setRoles((a) => ({ ...a, [rol.id]: e.target.value as Perfil }))}
-            >
-              {PERFILES.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-            <EtiquetaCapa capa={datos.roles[rol.id].capa} />
-          </div>
-        </div>
-      ))}
-
       {mensaje && <p className="mt-3 text-sm text-accent">{mensaje}</p>}
-      <button type="button" disabled={guardando} onClick={guardar} className={`mt-2 ${CLASE_BOTON_PRIMARIO}`}>
-        {guardando ? "guardando…" : "Guardar cambios globales"}
-      </button>
 
       <SeccionDiagnostico />
     </div>
@@ -650,7 +518,6 @@ function SeccionGlobal() {
 
 function SeccionDiagnostico() {
   const [cli, setCli] = useState<ResultadoCli | null>(null);
-  const [perfilPrueba, setPerfilPrueba] = useState<Perfil>("rapido");
   const [ejecutando, setEjecutando] = useState<"doctor" | "ping" | null>(null);
   const [resultado, setResultado] = useState<ResultadoSubproceso | null>(null);
 
@@ -665,12 +532,14 @@ function SeccionDiagnostico() {
       .finally(() => setEjecutando(null));
   }, []);
 
+  // Sin argumentos: prueba la modalidad ya configurada en el proyecto (Spec B, Bloque 1 —
+  // ya no hay perfiles que elegir, solo la modalidad activa de "Este proyecto").
   const lanzarPing = useCallback(() => {
     setEjecutando("ping");
-    void probarProveedor({ profile: perfilPrueba })
+    void probarProveedor({})
       .then(setResultado)
       .finally(() => setEjecutando(null));
-  }, [perfilPrueba]);
+  }, []);
 
   return (
     <div className="flex flex-col gap-2">
@@ -705,13 +574,6 @@ function SeccionDiagnostico() {
           doctor); se conserva porque ya funcionaba antes de este bloque — la real manda
           (regla de fidelidad 4/6), y quitarla habría sido perder funcionalidad sin motivo. */}
       <div className="flex items-center gap-2">
-        <select className={CLASE_CAMPO} value={perfilPrueba} onChange={(e) => setPerfilPrueba(e.target.value as Perfil)}>
-          {PERFILES.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
         <button type="button" disabled={ejecutando !== null} onClick={lanzarPing} className={CLASE_BOTON_SECUNDARIO}>
           {ejecutando === "ping" ? "probando…" : "Probar proveedor"}
         </button>

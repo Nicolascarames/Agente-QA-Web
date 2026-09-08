@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { catalogoResuelto } from "../catalogo/catalogo";
 import { analizarLinea } from "./analizarLinea";
 
-// Catálogo real (17 fichas, ya cruzadas con `cli.generado.json`): estos tests ejercitan comandos
+// Catálogo real (18 fichas, ya cruzadas con `cli.generado.json`): estos tests ejercitan comandos
 // reales del CLI, no una fábrica a mano, así que un cambio de forma en el generado los rompe a la
 // vez que al resto del catálogo — coherente con cómo se prueba `catalogo.test.ts`.
 const catalogo = catalogoResuelto();
@@ -21,7 +21,7 @@ describe("analizarLinea", () => {
     expect(analisis.sugerencias.map((sugerencia) => sugerencia.inserta)).toEqual(["ping"]);
   });
 
-  it("tipo flag: 'record --' ofrece las seis opciones reales de record más las dos globales", () => {
+  it("tipo flag: 'record --' ofrece las siete opciones reales de record más las dos globales", () => {
     const analisis = analizarLinea("record --", 9, catalogo);
     expect(analisis.tipo).toBe("flag");
     expect(analisis.comando).toEqual(["record"]);
@@ -32,6 +32,7 @@ describe("analizarLinea", () => {
       "--auto",
       "--allow-writes",
       "--no-writes",
+      "--verificar-todo",
       "--version",
       "--json",
     ]);

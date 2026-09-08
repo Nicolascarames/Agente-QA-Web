@@ -20,7 +20,7 @@ describe("filtrarFichas", () => {
 
   it("OR dentro del eje: coste facturado o cero suma browse, record y snapshot", () => {
     const criterio: CriterioFiltro = { ...criterioVacio(), coste: ["facturado", "cero"] };
-    expect(idsDe(filtrarFichas(explorar, criterio))).toEqual(["browse", "map", "record", "run", "snapshot"]);
+    expect(idsDe(filtrarFichas(explorar, criterio))).toEqual(["agarraderos", "browse", "map", "record", "run", "snapshot"]);
   });
 
   it("AND entre ejes: conductor llm-api + coste facturado sigue siendo solo map y run", () => {

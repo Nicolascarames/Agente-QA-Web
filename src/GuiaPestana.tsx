@@ -79,7 +79,7 @@ export function GuiaPestana({ pestana, onAbrirFicha }: GuiaPestanaProps) {
   // invalidaba de más el `useMemo` de `fichas` de abajo.
   const catalogoCompleto = useMemo(() => catalogoResuelto(), []);
 
-  // Universo sobre el que se filtra: solo la pestaña activa, o las 17 fichas del catálogo cuando
+  // Universo sobre el que se filtra: solo la pestaña activa, o las 18 fichas del catálogo cuando
   // el interruptor "todas las pestañas" está encendido.
   const universo = todasLasPestanas ? catalogoCompleto : fichasDePestana(pestana);
   const fichas = useMemo(() => filtrarFichas(universo, criterio), [universo, criterio]);

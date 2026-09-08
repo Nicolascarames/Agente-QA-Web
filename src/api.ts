@@ -1,8 +1,6 @@
 import type {
-  CambiosConfigGlobal,
   CambiosConfigProyecto,
   ClaveInfo,
-  ConfigGlobal,
   ConfigProyectoRespuesta,
   CuerpoCorreccionLocalizador,
   CuerpoExplorar,
@@ -109,18 +107,6 @@ export function verCredencialProyecto(campo: "usuario" | "password"): Promise<{ 
   return pedirJsonEstricto<{ valor: string }>(`/api/config/proyecto/credenciales/${campo}/ver`, { method: "POST" });
 }
 
-export function obtenerConfigGlobal(): Promise<ConfigGlobal> {
-  return pedirJson<ConfigGlobal>("/api/config/global");
-}
-
-export function guardarConfigGlobal(cambios: CambiosConfigGlobal): Promise<ConfigGlobal> {
-  return pedirJsonEstricto<ConfigGlobal>("/api/config/global", {
-    method: "PUT",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(cambios),
-  });
-}
-
 export function obtenerClaves(): Promise<ClaveInfo[]> {
   return pedirJson<ClaveInfo[]>("/api/claves");
 }
@@ -145,7 +131,7 @@ export function ejecutarDoctor(): Promise<ResultadoSubproceso> {
   return pedirResultado<ResultadoSubproceso>("/api/doctor", { method: "POST" });
 }
 
-export function probarProveedor(body: { provider?: string; model?: string; profile?: string }): Promise<ResultadoSubproceso> {
+export function probarProveedor(body: { provider?: string; model?: string }): Promise<ResultadoSubproceso> {
   return pedirResultado<ResultadoSubproceso>("/api/llm-ping", {
     method: "POST",
     headers: { "content-type": "application/json" },

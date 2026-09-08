@@ -69,6 +69,24 @@ export interface CampoSecreto {
   editable: boolean;
 }
 
+export type Proveedor = "anthropic" | "openai" | "google" | "groq";
+
+/**
+ * Modalidad de LLM del proyecto (Spec B, Bloque 1 de agente-qa-mcp: ya no hay perfiles `rapido`/
+ * `experto`, tabla rol→perfil ni modos de coste — una sola modalidad activa). `proveedor`/`modelo`
+ * solo tienen valor con `modalidad: "api"`; con `"suscripcion"` van a `null` porque no aplican
+ * (usa el binario `claude`, sin proveedor ni modelo que configurar). Vive en `llm` de
+ * `config.json` del proyecto, no en el `.env` global: por eso no lleva `CapaConfig` como el resto
+ * de campos de esta interfaz, siempre es editable desde este mismo proyecto.
+ */
+export interface LlmProyecto {
+  modalidad: Modalidad;
+  proveedor: Proveedor | null;
+  modelo: string | null;
+}
+
+export type Modalidad = "api" | "suscripcion";
+
 export interface ConfigProyecto {
   appUrl: CampoConfig<string>;
   environment: CampoConfig<EnvironmentApp>;
@@ -77,6 +95,7 @@ export interface ConfigProyecto {
     maxScreens: CampoConfig<number>;
     maxCostUsd: CampoConfig<number>;
   };
+  llm: LlmProyecto;
   credenciales: {
     usuario: CampoSecreto;
     password: CampoSecreto;
@@ -86,22 +105,6 @@ export interface ConfigProyecto {
 }
 
 export type ConfigProyectoRespuesta = { inicializado: false } | { inicializado: true; config: ConfigProyecto };
-
-export type Proveedor = "anthropic" | "openai" | "google" | "groq";
-export type Perfil = "rapido" | "experto";
-export type ModoCoste = "ahorro" | "equilibrado" | "calidad";
-export type Rol = "map-loop" | "run-translate" | "login-fallback" | "web-chat" | "diagnosis";
-
-export interface PerfilConfig {
-  provider: CampoConfigVacio<Proveedor>;
-  model: CampoConfigVacio<string>;
-}
-
-export interface ConfigGlobal {
-  perfiles: Record<Perfil, PerfilConfig>;
-  modoCoste: CampoConfig<ModoCoste>;
-  roles: Record<Rol, CampoConfig<Perfil>>;
-}
 
 export interface ClaveInfo {
   proveedor: Proveedor;
@@ -123,20 +126,19 @@ export interface ResultadoSubproceso {
   stderr: string;
 }
 
+/** `llm` dentro de `CambiosConfigProyecto`: o se cambia a `suscripcion` (nada más que decir), o a
+ *  `api` con proveedor y modelo completos — nunca a medias, para no dejar `config.json` con un
+ *  proveedor sin modelo o viceversa. */
+export type CambiosLlmProyecto = { modalidad: "suscripcion" } | { modalidad: "api"; proveedor: Proveedor; modelo: string };
+
 /** Cuerpo de `PUT /api/config/proyecto`: solo los campos que cambian, el resto se conserva. */
 export interface CambiosConfigProyecto {
   appUrl?: string;
   environment?: EnvironmentApp;
   limits?: Partial<{ maxIterations: number; maxScreens: number; maxCostUsd: number }>;
+  llm?: CambiosLlmProyecto;
   credenciales?: Partial<{ usuario: string; password: string }>;
   memoria?: unknown;
-}
-
-/** Cuerpo de `PUT /api/config/global`: solo los campos que cambian, el resto se conserva. */
-export interface CambiosConfigGlobal {
-  perfiles?: Partial<Record<Perfil, Partial<{ provider: Proveedor; model: string }>>>;
-  modoCoste?: ModoCoste;
-  roles?: Partial<Record<Rol, Perfil>>;
 }
 
 // --- Explorar (Bloque 5): las cuatro puertas al mapeador-mcp, en vivo -----------------

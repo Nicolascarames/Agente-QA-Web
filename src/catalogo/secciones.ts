@@ -29,23 +29,26 @@ export const SECCION_MOTOR: PaginaReferencia = {
     "Cómo decide el motor de `Agente-QA-MCP` quién conduce, cuánto cuesta y de dónde sale cada localizador. Las fichas de `mcp tools` y `catalog` están al pie, en la guía de esta pestaña.",
   secciones: [
     {
-      titulo: "Perfiles: rápido y experto",
+      titulo: 'Modalidad de LLM: "api" o "suscripcion"',
       elementos: [
         {
           tipo: "parrafo",
           texto:
-            "El motor no tiene «un modelo»: tiene dos perfiles con nombre, cada uno con su propio proveedor, modelo y clave de API. Se pueden mezclar entre sí (por ejemplo, rápido con Groq y experto con Anthropic).",
+            'Una sola modalidad activa por proyecto (Spec B, Bloque 1 — antes eran dos perfiles con nombre, un modo de coste y una tabla rol → perfil; todo eso se borró). Vive en `llm` de `config.json`, no en el `.env` global.',
         },
         {
           tipo: "lista",
           items: [
-            "rapido — pensado para lo barato y mecánico: hoy solo traduce la frase libre de run \"...\" al objetivo concreto que entiende map.",
-            "experto — el que de verdad decide: de fábrica es quien conduce el navegador (explorar con map/run, pasar el login). Si no está configurado, cae automáticamente en rapido, avisando una vez por proceso.",
+            '"api" — proveedor (Anthropic, OpenAI, Google o Groq) + modelo + clave propios, pagados por llamada.',
+            '"suscripcion" — usa el binario `claude` (Claude Code) de la máquina, con su sesión de pago ya iniciada; sin proveedor ni modelo que declarar.',
           ],
         },
         {
           tipo: "nota",
-          nota: { tipo: "ok", texto: "Se configuran con `agente-qa-mcp config`; `config --show` enseña los dos sin preguntar nada, con la clave enmascarada." },
+          nota: {
+            tipo: "ok",
+            texto: "Se configura con `agente-qa-mcp config`; `config --show` la enseña sin preguntar nada (con \"api\", la clave enmascarada).",
+          },
         },
       ],
     },
@@ -55,7 +58,7 @@ export const SECCION_MOTOR: PaginaReferencia = {
         {
           tipo: "parrafo",
           texto:
-            "record --auto no pasa por ningún perfil ni por ningún rol: en vez de un proveedor de API, delega en el CLI claude (Claude Code) instalado en la máquina, con sesión iniciada de pago. Por eso sus ejes son distintos a los del resto: conductor «Claude Code», coste «tu suscripción» — frente a record a mano, que es «humano»/«0 tokens».",
+            "record --auto no pasa por la modalidad configurada del proyecto: en vez de un proveedor de API, delega siempre en el CLI claude (Claude Code) instalado en la máquina, con sesión iniciada de pago. Por eso sus ejes son distintos a los del resto: conductor «Claude Code», coste «tu suscripción» — frente a record a mano, que es «humano»/«0 tokens».",
         },
         {
           tipo: "lista",
@@ -63,87 +66,6 @@ export const SECCION_MOTOR: PaginaReferencia = {
             "Antes de que Claude Code pueda hacer clic, escribir o enviar un formulario, el programa pregunta una vez por consola si se lo autorizas (--allow-writes lo concede sin preguntar, --no-writes lo deniega siempre).",
             "En un proyecto marcado \"environment\": \"production\", se le permite escribir igual que a una grabación a mano —ni hace falta --allow-writes— pero avisa dos veces por consola de que está grabando contra el entorno real.",
             "Queda anotado en metrics con un coste teórico: no es un cargo real, porque corre contra la suscripción de Claude Code, no contra una clave de API.",
-          ],
-        },
-      ],
-    },
-    {
-      titulo: "Los tres modos de coste",
-      elementos: [
-        {
-          tipo: "parrafo",
-          texto:
-            "Modulan la tabla rol → perfil, no la sustituyen. Se cambian con `config --cost-mode` o la variable AGENTE_QA_MCP_COST_MODE; de fábrica está en equilibrado.",
-        },
-        {
-          tipo: "tabla",
-          encabezados: ["Modo", "Qué hace"],
-          filas: [
-            ["ahorro", "Fuerza rapido en todos los roles, sin excepción — solo suben a experto si el bucle escala de verdad."],
-            ["equilibrado (de fábrica)", "No fuerza nada: cada rol usa el perfil que le toque en la tabla rol → perfil."],
-            ["calidad", "Fuerza experto en todos los roles."],
-          ],
-        },
-      ],
-    },
-    {
-      titulo: "Quién gana cuando hay conflicto",
-      elementos: [
-        { tipo: "parrafo", texto: "Cuatro niveles de precedencia, de mayor a menor:" },
-        {
-          tipo: "lista",
-          items: [
-            "1. Un --profile explícito en esa invocación concreta: siempre gana, pase lo que pase en el modo de coste o la tabla de roles.",
-            "2. El modo de coste, si no es equilibrado: ahorro fuerza rapido, calidad fuerza experto.",
-            "3. La tabla rol → perfil vigente (de fábrica o con el override de --role-<rol>), si el modo de coste es equilibrado.",
-            "4. Si no hay ni perfil explícito ni rol conocido: rapido por defecto.",
-          ],
-        },
-      ],
-    },
-    {
-      titulo: "La tabla rol → perfil, de fábrica",
-      elementos: [
-        {
-          tipo: "parrafo",
-          texto:
-            "Qué perfil arranca cada tarea que llama al LLM; se reasigna por rol con --role-<rol> o la variable AGENTE_QA_MCP_ROLE_<ROL>, sin tocar código. Todo lo que toca el navegador arranca en experto; la única conversión trivial (traducir una frase) arranca en rapido.",
-        },
-        {
-          tipo: "tabla",
-          encabezados: ["Rol", "Perfil de fábrica", "Qué hace"],
-          filas: [
-            ["map-loop", "experto", "El bucle de mapeo (map/run): decide qué explorar y cómo."],
-            ["run-translate", "rapido", "Traduce la frase libre de run \"...\" al objetivo concreto de map."],
-            ["login-fallback", "experto", "Pasar un login cuando no hay receta declarada."],
-            ["web-chat", "experto", "Chat de esta web (sin uso real todavía)."],
-            ["diagnosis", "experto", "Diagnóstico, futuro Reparar (sin uso real todavía)."],
-          ],
-        },
-        {
-          tipo: "nota",
-          nota: {
-            tipo: "aviso",
-            texto: "El proveedor y el modelo concretos de cada perfil son los que hayas configurado tú: compara esta tabla, ya con los overrides aplicados, en `agente-qa-mcp config --show`.",
-          },
-        },
-      ],
-    },
-    {
-      titulo: "Escalar en vez de rendirse",
-      elementos: [
-        {
-          tipo: "parrafo",
-          texto:
-            "El bucle de mapeo no se rinde ni repite ciegamente: si detecta una de cuatro señales, escala de rapido a experto para ese turno, y vuelve al perfil de partida en el primer turno limpio.",
-        },
-        {
-          tipo: "lista",
-          items: [
-            "Fallos consecutivos repetidos.",
-            "El propio modelo declara alta complejidad.",
-            "El propio modelo declara confianza baja.",
-            "Bucle detectado: repetir la misma acción sin avanzar.",
           ],
         },
       ],
@@ -272,9 +194,9 @@ export const SECCION_INSTALAR: PaginaReferencia = {
           items: [
             "npm install",
             "npm run build",
-            "node dist/cli/index.js config — configura los perfiles rápido y experto (proveedor, modelo, clave).",
+            "node dist/cli/index.js config — configura la modalidad de LLM (\"api\": proveedor, modelo, clave; o \"suscripcion\").",
             "node dist/cli/index.js init — prepara la carpeta del proyecto (.agente-qa/).",
-            "node dist/cli/index.js doctor — comprueba que los dos perfiles están listos para usarse.",
+            "node dist/cli/index.js doctor — comprueba que la modalidad configurada está lista para usarse.",
             "npx playwright install chromium (una sola vez) — el navegador que usa Playwright.",
           ],
         },

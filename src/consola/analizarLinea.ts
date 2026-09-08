@@ -36,21 +36,13 @@ export interface AnalisisLinea {
 // puede quedarse corta: p.ej. varias dicen "anthropic, openai o google" pero el código de
 // `resolve.ts` también acepta "groq"):
 // - `--env`: `ENVIRONMENTS` en `init.ts`.
-// - `--profile`, `--role-*`: `PROFILE_NAMES` en `config/profiles.ts` (rapido/experto).
-// - `--provider`, `--rapido-provider`, `--experto-provider`: `PROVIDERS` en `config/resolve.ts`.
-// - `--cost-mode`: `COST_MODES` en `config/costMode.ts`.
+// - `--modalidad`: `MODALIDADES` en `config.ts` (Spec B, Bloque 1 — ya no hay perfiles).
+// - `--proveedor` (`config`) y `--provider` (`llm ping`): `PROVIDERS` en `config/resolve.ts`.
 export const VALORES_CERRADOS: Record<string, readonly string[]> = {
   "--env": ["dev", "test", "staging", "production"],
-  "--profile": ["rapido", "experto"],
+  "--modalidad": ["api", "suscripcion"],
+  "--proveedor": ["anthropic", "openai", "google", "groq"],
   "--provider": ["anthropic", "openai", "google", "groq"],
-  "--rapido-provider": ["anthropic", "openai", "google", "groq"],
-  "--experto-provider": ["anthropic", "openai", "google", "groq"],
-  "--cost-mode": ["ahorro", "equilibrado", "calidad"],
-  "--role-map-loop": ["rapido", "experto"],
-  "--role-run-translate": ["rapido", "experto"],
-  "--role-login-fallback": ["rapido", "experto"],
-  "--role-web-chat": ["rapido", "experto"],
-  "--role-diagnosis": ["rapido", "experto"],
 };
 
 function coincidePrefijo(valor: string, prefijo: string): boolean {

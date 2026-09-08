@@ -59,7 +59,7 @@ export type FichaResuelta =
   | { tipo: "pendiente"; ficha: FichaComando };
 
 /**
- * Las 17 fichas ya cruzadas: las 13 con comando real llevan su nodo de `cli.generado.json`
+ * Las 18 fichas ya cruzadas: las 14 con comando real llevan su nodo de `cli.generado.json`
  * (`tipo: "comando"`), las 4 operaciones sin comando todavía van sueltas (`tipo: "pendiente"`).
  */
 export function catalogoResuelto(): FichaResuelta[] {

@@ -8,8 +8,8 @@ import { buscarFicha, comandosHoja, incompatiblesInvalidos } from "./catalogo";
 import { COMANDOS } from "./comandos";
 
 describe("catálogo editorial — guard determinista contra cli.generado.json", () => {
-  it("hay exactamente 17 fichas (13 comandos + 4 operaciones pendientes)", () => {
-    expect(COMANDOS.length).toBe(17);
+  it("hay exactamente 18 fichas (14 comandos + 4 operaciones pendientes)", () => {
+    expect(COMANDOS.length).toBe(18);
   });
 
   it("toda ruta de comando del generado tiene ficha", () => {

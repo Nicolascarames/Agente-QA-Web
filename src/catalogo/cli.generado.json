@@ -45,7 +45,7 @@
         "config"
       ],
       "nombre": "config",
-      "descripcion": "Configura los perfiles rapido y experto, el modo de coste y qué perfil usa cada rol",
+      "descripcion": "Configura la modalidad de LLM del proyecto: \"api\" (proveedor+modelo+clave) o \"suscripcion\" (Claude Code)",
       "argumentos": [],
       "opciones": [
         {
@@ -56,127 +56,47 @@
           "valorObligatorio": false,
           "negable": false,
           "porDefecto": null,
-          "descripcion": "muestra la configuración resuelta de los dos perfiles, sin preguntar nada"
+          "descripcion": "muestra la modalidad resuelta del proyecto, sin preguntar nada"
         },
         {
-          "flags": "--rapido-provider <provider>",
+          "flags": "--modalidad <modalidad>",
           "corta": null,
-          "larga": "--rapido-provider",
-          "valor": "provider",
+          "larga": "--modalidad",
+          "valor": "modalidad",
           "valorObligatorio": true,
           "negable": false,
           "porDefecto": null,
-          "descripcion": "proveedor del perfil rapido: anthropic, openai o google"
+          "descripcion": "modalidad: api o suscripcion"
         },
         {
-          "flags": "--rapido-model <model>",
+          "flags": "--proveedor <proveedor>",
           "corta": null,
-          "larga": "--rapido-model",
-          "valor": "model",
+          "larga": "--proveedor",
+          "valor": "proveedor",
           "valorObligatorio": true,
           "negable": false,
           "porDefecto": null,
-          "descripcion": "modelo del perfil rapido"
+          "descripcion": "proveedor (solo con modalidad api): anthropic, openai, google o groq"
         },
         {
-          "flags": "--rapido-api-key <apiKey>",
+          "flags": "--modelo <modelo>",
           "corta": null,
-          "larga": "--rapido-api-key",
+          "larga": "--modelo",
+          "valor": "modelo",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "modelo (solo con modalidad api)"
+        },
+        {
+          "flags": "--api-key <apiKey>",
+          "corta": null,
+          "larga": "--api-key",
           "valor": "apiKey",
           "valorObligatorio": true,
           "negable": false,
           "porDefecto": null,
-          "descripcion": "clave de API del perfil rapido"
-        },
-        {
-          "flags": "--experto-provider <provider>",
-          "corta": null,
-          "larga": "--experto-provider",
-          "valor": "provider",
-          "valorObligatorio": true,
-          "negable": false,
-          "porDefecto": null,
-          "descripcion": "proveedor del perfil experto: anthropic, openai o google"
-        },
-        {
-          "flags": "--experto-model <model>",
-          "corta": null,
-          "larga": "--experto-model",
-          "valor": "model",
-          "valorObligatorio": true,
-          "negable": false,
-          "porDefecto": null,
-          "descripcion": "modelo del perfil experto"
-        },
-        {
-          "flags": "--experto-api-key <apiKey>",
-          "corta": null,
-          "larga": "--experto-api-key",
-          "valor": "apiKey",
-          "valorObligatorio": true,
-          "negable": false,
-          "porDefecto": null,
-          "descripcion": "clave de API del perfil experto"
-        },
-        {
-          "flags": "--cost-mode <modo>",
-          "corta": null,
-          "larga": "--cost-mode",
-          "valor": "modo",
-          "valorObligatorio": true,
-          "negable": false,
-          "porDefecto": null,
-          "descripcion": "modo de coste: ahorro, equilibrado o calidad"
-        },
-        {
-          "flags": "--role-map-loop <profile>",
-          "corta": null,
-          "larga": "--role-map-loop",
-          "valor": "profile",
-          "valorObligatorio": true,
-          "negable": false,
-          "porDefecto": null,
-          "descripcion": "perfil del bucle de mapeo, map/run (rapido o experto)"
-        },
-        {
-          "flags": "--role-run-translate <profile>",
-          "corta": null,
-          "larga": "--role-run-translate",
-          "valor": "profile",
-          "valorObligatorio": true,
-          "negable": false,
-          "porDefecto": null,
-          "descripcion": "perfil de la traducción de `run \"...\"` a ámbito (rapido o experto)"
-        },
-        {
-          "flags": "--role-login-fallback <profile>",
-          "corta": null,
-          "larga": "--role-login-fallback",
-          "valor": "profile",
-          "valorObligatorio": true,
-          "negable": false,
-          "porDefecto": null,
-          "descripcion": "perfil del sub-objetivo de login sin receta, Vía B (rapido o experto)"
-        },
-        {
-          "flags": "--role-web-chat <profile>",
-          "corta": null,
-          "larga": "--role-web-chat",
-          "valor": "profile",
-          "valorObligatorio": true,
-          "negable": false,
-          "porDefecto": null,
-          "descripcion": "perfil del chat de la futura interfaz web (rapido o experto; aún sin uso real)"
-        },
-        {
-          "flags": "--role-diagnosis <profile>",
-          "corta": null,
-          "larga": "--role-diagnosis",
-          "valor": "profile",
-          "valorObligatorio": true,
-          "negable": false,
-          "porDefecto": null,
-          "descripcion": "perfil de diagnóstico y planificación, futuro Reparar (rapido o experto; aún sin uso real)"
+          "descripcion": "clave de API (solo con modalidad api)"
         }
       ],
       "subcomandos": []
@@ -258,16 +178,6 @@
           "argumentos": [],
           "opciones": [
             {
-              "flags": "--profile <profile>",
-              "corta": null,
-              "larga": "--profile",
-              "valor": "profile",
-              "valorObligatorio": true,
-              "negable": false,
-              "porDefecto": null,
-              "descripcion": "perfil base: rapido o experto (por defecto rapido)"
-            },
-            {
               "flags": "--provider <provider>",
               "corta": null,
               "larga": "--provider",
@@ -275,7 +185,7 @@
               "valorObligatorio": true,
               "negable": false,
               "porDefecto": null,
-              "descripcion": "fuerza el proveedor por encima del perfil: anthropic, openai o google"
+              "descripcion": "fuerza el proveedor por encima de la modalidad configurada: anthropic, openai, google o groq"
             },
             {
               "flags": "--model <model>",
@@ -415,6 +325,16 @@
           "negable": false,
           "porDefecto": null,
           "descripcion": "muestra la ventana del navegador en vez de correr sin cabeza"
+        },
+        {
+          "flags": "--verificar-todo",
+          "corta": null,
+          "larga": "--verificar-todo",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "verifica todos los elementos de la pantalla contra la cascada de localizadores, en vez de dejarlos como \"vistos\" (equivale a \"verificar todo\", más lento)"
         }
       ],
       "subcomandos": []
@@ -518,6 +438,16 @@
           "descripcion": "tope de iteraciones del bucle para esta corrida"
         },
         {
+          "flags": "--max-repeated-action <n>",
+          "corta": null,
+          "larga": "--max-repeated-action",
+          "valor": "n",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "veces que se tolera la misma acción sin cambiar de pantalla antes de parar la corrida (por defecto 3)"
+        },
+        {
           "flags": "--no-metrics",
           "corta": null,
           "larga": "--no-metrics",
@@ -578,14 +508,14 @@
           "descripcion": "no envía ningún formulario ni pregunta: los denegados quedan igual en writeActions[]"
         },
         {
-          "flags": "--profile <profile>",
+          "flags": "--verificar-todo",
           "corta": null,
-          "larga": "--profile",
-          "valor": "profile",
-          "valorObligatorio": true,
+          "larga": "--verificar-todo",
+          "valor": null,
+          "valorObligatorio": false,
           "negable": false,
           "porDefecto": null,
-          "descripcion": "fuerza el perfil de arranque del bucle de mapeo (rapido o experto), por encima de la tabla rol→perfil"
+          "descripcion": "verifica todos los elementos de cada pantalla explorada, en vez de dejarlos como \"vistos\" (equivale a \"verificar todo\", más lento)"
         }
       ],
       "subcomandos": []
@@ -646,6 +576,16 @@
           "descripcion": "tope de iteraciones del bucle para esta corrida"
         },
         {
+          "flags": "--max-repeated-action <n>",
+          "corta": null,
+          "larga": "--max-repeated-action",
+          "valor": "n",
+          "valorObligatorio": true,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "veces que se tolera la misma acción sin cambiar de pantalla antes de parar la corrida (por defecto 3)"
+        },
+        {
           "flags": "--no-metrics",
           "corta": null,
           "larga": "--no-metrics",
@@ -704,16 +644,6 @@
           "negable": true,
           "porDefecto": null,
           "descripcion": "no envía ningún formulario ni pregunta"
-        },
-        {
-          "flags": "--profile <profile>",
-          "corta": null,
-          "larga": "--profile",
-          "valor": "profile",
-          "valorObligatorio": true,
-          "negable": false,
-          "porDefecto": null,
-          "descripcion": "fuerza el perfil de arranque del bucle de mapeo (rapido o experto), por encima de la tabla rol→perfil"
         }
       ],
       "subcomandos": []
@@ -825,8 +755,35 @@
           "negable": true,
           "porDefecto": null,
           "descripcion": "con --auto: Claude Code solo navega y lee, nunca hace clic ni escribe"
+        },
+        {
+          "flags": "--verificar-todo",
+          "corta": null,
+          "larga": "--verificar-todo",
+          "valor": null,
+          "valorObligatorio": false,
+          "negable": false,
+          "porDefecto": null,
+          "descripcion": "verifica todos los elementos de cada pantalla, no solo los que tocaste durante la grabación (equivale a \"verificar todo\", más lento)"
         }
       ],
+      "subcomandos": []
+    },
+    {
+      "ruta": [
+        "agarraderos"
+      ],
+      "nombre": "agarraderos",
+      "descripcion": "Lee un map.json y lista los elementos sin buen localizador estable, agrupados por pantalla, con la sugerencia para el equipo de desarrollo",
+      "argumentos": [
+        {
+          "nombre": "file",
+          "obligatorio": true,
+          "variadico": false,
+          "descripcion": "ruta al fichero map.json"
+        }
+      ],
+      "opciones": [],
       "subcomandos": []
     },
     {

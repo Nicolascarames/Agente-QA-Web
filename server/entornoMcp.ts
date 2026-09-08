@@ -1,10 +1,11 @@
 // Replica (sin importar) las convenciones de configuración de `agente-qa-mcp` que no viven en
 // el contrato: la carpeta de config global y el `.env` que hay dentro
-// (`src/config/{paths,env}.ts`), el orden de capas entorno > proyecto > global
-// (`src/config/resolve.ts`), los nombres de variable por perfil (`src/config/profiles.ts`), la
-// tabla rol → perfil (`src/config/roles.ts`) y el modo de coste (`src/config/costMode.ts`). Son
-// fórmulas de pocas líneas, no lógica de negocio: se copian a propósito para que el `.env` que
-// edita esta web sea el mismo fichero que lee el CLI cuando se lanza como subproceso.
+// (`src/config/{paths,env}.ts`) y el orden de capas entorno > proyecto > global
+// (`src/config/resolve.ts`). Son fórmulas de pocas líneas, no lógica de negocio: se copian a
+// propósito para que el `.env` que edita esta web sea el mismo fichero que lee el CLI cuando se
+// lanza como subproceso. La modalidad de LLM (`api`/`suscripcion`) y, con `api`, el proveedor y
+// el modelo NO viven aquí (Spec B, Bloque 1: ya no son variables de entorno) — viven en `llm` de
+// `config.json` del proyecto, y los lee/escribe `config.ts` directamente vía el contrato.
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir, platform } from "node:os";
 import { dirname, join } from "node:path";
@@ -93,47 +94,6 @@ export function nombreVarClave(proveedor: Proveedor): string {
     case "groq":
       return "GROQ_API_KEY";
   }
-}
-
-// --- Perfiles (`src/config/profiles.ts`) ---------------------------------------------------------
-
-export type Perfil = "rapido" | "experto";
-export const PERFILES: readonly Perfil[] = ["rapido", "experto"];
-
-export function nombreVarPerfilProveedor(perfil: Perfil): string {
-  return `AGENTE_QA_MCP_${perfil.toUpperCase()}_PROVIDER`;
-}
-
-export function nombreVarPerfilModelo(perfil: Perfil): string {
-  return `AGENTE_QA_MCP_${perfil.toUpperCase()}_MODEL`;
-}
-
-// --- Modo de coste (`src/config/costMode.ts`) -----------------------------------------------------
-
-export type ModoCoste = "ahorro" | "equilibrado" | "calidad";
-export const MODOS_COSTE: readonly ModoCoste[] = ["ahorro", "equilibrado", "calidad"];
-export const VAR_MODO_COSTE = "AGENTE_QA_MCP_COST_MODE";
-export const MODO_COSTE_POR_DEFECTO: ModoCoste = "equilibrado";
-
-export function esModoCoste(value: string): value is ModoCoste {
-  return (MODOS_COSTE as readonly string[]).includes(value);
-}
-
-// --- Rol → perfil (`src/config/roles.ts`) ---------------------------------------------------------
-
-export type Rol = "map-loop" | "run-translate" | "login-fallback" | "web-chat" | "diagnosis";
-export const ROLES: readonly Rol[] = ["map-loop", "run-translate", "login-fallback", "web-chat", "diagnosis"];
-
-export const PERFIL_POR_DEFECTO_ROL: Readonly<Record<Rol, Perfil>> = {
-  "map-loop": "experto",
-  "run-translate": "rapido",
-  "login-fallback": "experto",
-  "web-chat": "experto",
-  diagnosis: "experto",
-};
-
-export function nombreVarRol(rol: Rol): string {
-  return `AGENTE_QA_MCP_ROLE_${rol.toUpperCase().replace(/-/g, "_")}`;
 }
 
 // --- Credenciales de la app bajo test (`src/agent/credentials.ts`) ---------------------------------

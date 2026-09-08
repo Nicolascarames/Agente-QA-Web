@@ -3,8 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { projectPaths } from "agente-qa-contract/project";
-import { escribirConfigGlobal, escribirConfigProyecto, leerConfigGlobal, leerConfigProyecto } from "./config.js";
-import { nombreVarPerfilProveedor } from "./entornoMcp.js";
+import { escribirConfigProyecto, leerConfigProyecto } from "./config.js";
 
 const CONFIG_JSON_VALIDO = {
   schemaVersion: 1,
@@ -66,61 +65,60 @@ describe("config de proyecto", () => {
     const resultado = await escribirConfigProyecto(proyecto, { appUrl: "https://otra.test" });
     expect(resultado.ok).toBe(false);
   });
-});
 
-describe("config global — precedencia de capas", () => {
-  let proyecto: string;
-  let appDataTmp: string;
+  // --- `llm` (Spec B, Bloque 1: una sola modalidad activa, ya no perfiles/roles/modo de coste) ---
 
-  beforeEach(async () => {
-    proyecto = await mkdtemp(path.join(tmpdir(), "agente-qa-web-config-global-"));
-    appDataTmp = await mkdtemp(path.join(tmpdir(), "agente-qa-web-config-global-appdata-"));
-    process.env.APPDATA = appDataTmp;
-    delete process.env.AGENTE_QA_MCP_RAPIDO_PROVIDER;
-  });
-
-  afterEach(async () => {
-    await rm(proyecto, { recursive: true, force: true });
-    await rm(appDataTmp, { recursive: true, force: true });
-    delete process.env.AGENTE_QA_MCP_RAPIDO_PROVIDER;
-  });
-
-  it("sin nada configurado, el modo de coste y la tabla de roles caen a su valor de fábrica en capa global", async () => {
-    const global = await leerConfigGlobal(proyecto);
-    expect(global.modoCoste).toEqual({ valor: "equilibrado", capa: "global", editable: true });
-    expect(global.roles["run-translate"]).toEqual({ valor: "rapido", capa: "global", editable: true });
-    expect(global.perfiles.rapido.provider).toEqual({ valor: null, capa: null, editable: true });
-  });
-
-  it("la capa proyecto gana a la global para el proveedor de un perfil", async () => {
-    await escribirConfigGlobal(proyecto, { perfiles: { rapido: { provider: "openai" } } });
+  it("sin `llm` en config.json, cae a modalidad api sin proveedor ni modelo (a la espera de que se configure)", async () => {
     const paths = projectPaths(proyecto);
     await mkdir(paths.dir, { recursive: true });
-    await writeFile(paths.envPath, `${nombreVarPerfilProveedor("rapido")}=anthropic\n`, "utf8");
+    await writeFile(paths.configPath, JSON.stringify(CONFIG_JSON_VALIDO, null, 2), "utf8");
 
-    const global = await leerConfigGlobal(proyecto);
-    expect(global.perfiles.rapido.provider).toEqual({ valor: "anthropic", capa: "proyecto", editable: true });
+    const respuesta = await leerConfigProyecto(proyecto);
+    expect(respuesta.inicializado).toBe(true);
+    if (!respuesta.inicializado) return;
+    expect(respuesta.config.llm).toEqual({ modalidad: "api", proveedor: null, modelo: null });
   });
 
-  it("el entorno gana a proyecto y global, y queda marcado como no editable", async () => {
-    process.env.AGENTE_QA_MCP_RAPIDO_PROVIDER = "groq";
-    const global = await leerConfigGlobal(proyecto);
-    expect(global.perfiles.rapido.provider).toEqual({ valor: "groq", capa: "entorno", editable: false });
+  it("lee la modalidad api con proveedor y modelo ya guardados en config.json", async () => {
+    const paths = projectPaths(proyecto);
+    await mkdir(paths.dir, { recursive: true });
+    await writeFile(
+      paths.configPath,
+      JSON.stringify({ ...CONFIG_JSON_VALIDO, llm: { modalidad: "api", proveedor: "anthropic", modelo: "claude-3-5-sonnet" } }, null, 2),
+      "utf8"
+    );
+
+    const respuesta = await leerConfigProyecto(proyecto);
+    expect(respuesta.inicializado).toBe(true);
+    if (!respuesta.inicializado) return;
+    expect(respuesta.config.llm).toEqual({ modalidad: "api", proveedor: "anthropic", modelo: "claude-3-5-sonnet" });
   });
 
-  it("escribirConfigGlobal rechaza tocar un perfil cuyo proveedor viene del entorno", async () => {
-    process.env.AGENTE_QA_MCP_RAPIDO_PROVIDER = "groq";
-    const resultado = await escribirConfigGlobal(proyecto, { perfiles: { rapido: { provider: "openai" } } });
-    expect(resultado.ok).toBe(false);
-  });
+  it("escribirConfigProyecto guarda la modalidad suscripcion sin proveedor ni modelo", async () => {
+    const paths = projectPaths(proyecto);
+    await mkdir(paths.dir, { recursive: true });
+    await writeFile(paths.configPath, JSON.stringify(CONFIG_JSON_VALIDO, null, 2), "utf8");
 
-  it("escribirConfigGlobal con solo modoCoste no toca un perfil bloqueado por entorno", async () => {
-    process.env.AGENTE_QA_MCP_RAPIDO_PROVIDER = "groq";
-    const resultado = await escribirConfigGlobal(proyecto, { modoCoste: "ahorro" });
+    const resultado = await escribirConfigProyecto(proyecto, { llm: { modalidad: "suscripcion" } });
     expect(resultado.ok).toBe(true);
 
-    const global = await leerConfigGlobal(proyecto);
-    expect(global.modoCoste).toEqual({ valor: "ahorro", capa: "global", editable: true });
-    expect(global.perfiles.rapido.provider).toEqual({ valor: "groq", capa: "entorno", editable: false });
+    const respuesta = await leerConfigProyecto(proyecto);
+    expect(respuesta.inicializado).toBe(true);
+    if (!respuesta.inicializado) return;
+    expect(respuesta.config.llm).toEqual({ modalidad: "suscripcion", proveedor: null, modelo: null });
+  });
+
+  it("escribirConfigProyecto guarda la modalidad api con proveedor y modelo completos", async () => {
+    const paths = projectPaths(proyecto);
+    await mkdir(paths.dir, { recursive: true });
+    await writeFile(paths.configPath, JSON.stringify(CONFIG_JSON_VALIDO, null, 2), "utf8");
+
+    const resultado = await escribirConfigProyecto(proyecto, { llm: { modalidad: "api", proveedor: "openai", modelo: "gpt-4o" } });
+    expect(resultado.ok).toBe(true);
+
+    const respuesta = await leerConfigProyecto(proyecto);
+    expect(respuesta.inicializado).toBe(true);
+    if (!respuesta.inicializado) return;
+    expect(respuesta.config.llm).toEqual({ modalidad: "api", proveedor: "openai", modelo: "gpt-4o" });
   });
 });
