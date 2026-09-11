@@ -1,6 +1,6 @@
 # PRÓXIMOS PASOS — Agente-QA-Web
 
-Actualizado: 2026-09-11 (replanteo completo; spec nueva escrita, sin empezar)
+Actualizado: 2026-09-11
 
 Cola priorizada. **Una tarea = una línea.** El detalle vive en la spec.
 
@@ -13,12 +13,10 @@ Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`]
 - [ ] **Bloque 1 — La skill y un test verde.** Sin web, sin comando, sin interfaz. Escribir
       `skill/SKILL.md` y sus dos referencias, montar `pruebas/sauce/`, y conseguir desde la terminal
       que tres peticiones distintas den tres tests en verde contra SauceDemo.
-      **Es una puerta, no un primer paso**: si no sale, se itera aquí y no se avanza. Si la skill no
-      consigue un test verde, los ocho bloques siguientes no valen nada.
-- [ ] **Bloque 2 — Vaciar la web.** Borrar `src/catalogo/`, `diffMapa`, `DetalleLocalizador`,
-      `Explorar`, `server/mapa.ts`, `server/corridas.ts`, `server/cli.ts`, los tipos de mapa, el
-      selector de proyecto y la dependencia del contrato. Crear `shared/eventos.ts` con la constante
-      única. Al cerrar: la web arranca y navega con siete pestañas honestas y vacías.
+      **Es una puerta, no un primer paso**: si no sale, se itera aquí y no se avanza.
+- [ ] **Bloque 2 — Vaciar la web.** Borrar todo lo que no aparece en la lista de «se conserva» de
+      `ESTADO.md`. Crear `shared/eventos.ts` con la constante única de tipos de evento. Al cerrar: la
+      web arranca y navega con siete pestañas honestas y vacías.
 - [ ] **Bloque 3 — `npx agente-qa` sobre el repo actual.** `bin/agente-qa.mjs`, `server/doctor.ts`,
       lectura de `agente-qa.config.json`. Sin argumentos, sin selector: `cwd` es el proyecto.
 - [ ] **Bloque 4 — La consola habla con el agente.** `server/agente.ts` envuelve `query()` del SDK.
@@ -40,57 +38,36 @@ el 4.
 
 ---
 
-## Lo que NO entra
+## Después del plan
 
-Anotado para que no se cuele por la puerta de atrás:
-
-- **Cucumber real.** El Gherkin es documento más `test.step`.
-- **Multi-proyecto.** Una instancia por repo. Sin lista, sin selector, sin recientes.
-- **Otros proveedores de LLM.** Solo Claude. El hueco queda hecho en `agente.ts`.
-- **Codex y Copilot desde la consola de la web.** Se usan en su entorno.
-- **Publicar en npm.** Mientras tanto se instala desde GitHub por SHA.
-- **Cualquier mapa persistente de la aplicación.** Si se demuestra que el agente pierde tiempo
-  reexplorando, se abre una spec para eso con el dato delante. No antes.
+- [ ] **Publicar en npm** — cuando los nueve bloques estén implementados y validados contra webs
+      reales. Hasta entonces se instala desde GitHub por SHA. Reservar `agente-qa` al publicar.
 
 ---
 
-## Trámites
+## Lo que NO entra
 
-- [ ] **Este repo no tiene remote.** `git remote -v` sale vacío: hay que crear el repositorio en
-      GitHub y enlazarlo antes de poder hacer push.
-- [ ] **Este repo no tiene `CLAUDE.md` propio.** El que gobernaba este trabajo vivía en
-      `AGENTE-QA-MCP`, que se borra. Hay que escribir uno aquí antes de empezar el Bloque 1 — o
-      instalarlo con `/iniciar-claude`.
-- [ ] **Borrar los tres repos retirados**: `AGENTE-QA-MCP`, `Agente_QA`, `agente-qa-contract`.
-      Nada de esta spec los necesita.
+- **Cucumber.** El Gherkin es documento `.feature` más `test.step`. No se quiere, ni ahora ni después.
+- **Multi-proyecto.** Una instancia por repo. Sin lista, sin selector, sin recientes.
+- **Otros proveedores de LLM.** Solo Claude. El hueco para añadir otro queda hecho en `agente.ts`.
+- **Codex y Copilot desde la consola de la web.** Se usan en su entorno; sus resultados sí aparecen
+  en la interfaz, porque la web lee la carpeta del repo.
 
 ---
 
 ## Deuda anotada
 
-Solo lo que sobrevive al Bloque 2. Todo lo demás muere con el código que lo contenía.
+**Ninguna.** Todo lo que había apuntado en este repo pertenecía a código que se borra en el Bloque 2
+o que reescribe el Bloque 3.
 
-- [ ] **El indicador «● en curso» se queda encendido al terminar una ejecución** — efecto de React que
-      no limpia al desmontar. Se arregla al rellenar las pestañas.
-- [ ] **`operation.completed/stopped/error` escrito a mano en tres sitios** (`server/corridas.ts:73`,
-      `src/Explorar.tsx:11`, `src/useCorridaGlobal.ts:6`) — deriva silenciosa esperando a ocurrir. Lo
-      cierra el Bloque 2 con `shared/eventos.ts`.
-- [ ] **`npm start` roto** — `package.json` apunta a `dist-server/index.js` y `tsc` compila a
-      `dist-server/server/index.js`. Lo resuelve el Bloque 3, que reescribe el arranque como `bin`.
+Esta sección arranca vacía a propósito y se llena solo con lo que encontremos construyendo el plan
+nuevo.
 
 ---
 
-## Hechas
+## Trámites
 
-- [x] **Replanteo completo y spec nueva** (2026-09-11) — diagnóstico de por qué quince specs no dieron
-      un solo test, arquitectura de tres capas (código / agente / skill), auditoría de acoplamiento de
-      este repo fichero a fichero, y verificación contra documentación oficial de las capacidades del
-      Agent SDK (MCP propio, system prompt, permisos, hooks, streaming, suscripción, `plugins`,
-      `abortController`). Resultado: la spec de nueve bloques enlazada arriba.
-- [x] **Catálogo editorial y guía integrada**, 9 bloques (2026-09-08) — *se retira entero en el
-      Bloque 2: estaba atado 1:1 a los subcomandos del CLI que desaparece.*
-- [x] **La interfaz web, fiel al standalone** (2026-09-06) — tokens, tipografía y layout, con guard de
-      estilos en build. *Es de lo poco que se conserva tal cual.*
-- [x] **La interfaz web, primera versión**, 7 bloques (2026-09-05) — cáscara de 8 pestañas,
-      Configuración funcional, Explorar en vivo, chat, corrección manual de localizador. *Solo
-      sobreviven la cáscara y el estilo.*
+- [ ] **Reescribir `CLAUDE.md`** — el que hay describe este repo como la interfaz de un CLI que
+      desaparece. Lo lleva el usuario.
+- [ ] **Borrar los tres repos retirados**: `AGENTE-QA-MCP`, `Agente_QA`, `agente-qa-contract`. Nada
+      de esta spec los necesita.

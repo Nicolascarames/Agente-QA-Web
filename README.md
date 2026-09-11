@@ -1,52 +1,74 @@
 # Agente-QA-Web
 
-Una página que abres en tu ordenador, dentro de la carpeta de un proyecto de `Agente-QA-MCP`, para ver
-de un vistazo qué sabe ya de tu aplicación y (más adelante) lanzar la exploración sin tocar la
-consola.
+Escribes en castellano lo que quieres probar. Sale un test de Playwright que **ya se ha ejecutado y
+está verde**.
 
-## Qué hace hoy
+> **Todavía no funciona.** El plan está escrito y aprobado, la implementación no ha empezado. Lo que
+> hay hoy es una cáscara de interfaz. Ver `ESTADO.md`.
 
-- Se abre dentro de la carpeta de tu proyecto y te enseña de verdad cuántas pantallas y localizadores
-  tiene el mapa que ya conoce, si tiene tests generados, y si le falta algo para empezar (`init`).
-- **Configuración**: cambia el proveedor de IA, el modelo de cada perfil, el modo de coste y las
-  claves de API sin salir de la web — cada campo dice de dónde viene (variable de entorno, `.env` del
-  proyecto o global) y las claves se ven enmascaradas hasta que pulsas el botón de ver. También puedes
-  probar el proveedor y ejecutar el diagnóstico (`doctor`) desde aquí.
-- **Explorar**: lanza el explorador por cualquiera de sus cuatro puertas (instantánea, grabación a
-  mano, grabación conducida por Claude Code, o el bucle agéntico con un objetivo) y ve la corrida
-  ocurrir: el árbol del mapa creciendo, el coste subiendo, y "Detener" siempre a mano. Puedes
-  escribirle al agente a mitad de corrida para redirigirlo, o lanzar una exploración nueva
-  simplemente escribiendo lo que quieres en lenguaje normal. Si un localizador quedó marcado como
-  ambiguo, lo corriges desde el propio árbol, sin tocar `map.json` a mano.
-- Las otras 4 secciones (Redactar, Generar, Ejecutar, Reparar) y Reports se pueden abrir y cada una te
-  dice, con claridad, qué necesita para funcionar — todavía no existen los agentes que las llenarían,
-  y la web nunca te enseña datos inventados mientras tanto.
-- Los paneles de cada pantalla se pueden mover y redimensionar a tu gusto; la próxima vez que abras
-  esa pestaña, siguen donde los dejaste.
-- **Guía integrada**: bajo cada pestaña hay una ficha por cada comando que se puede usar ahí — qué
-  hace, sus opciones reales y ejemplos que se insertan solos en la consola con los huecos ya
-  marcados para rellenar. Se filtra por quién lo conduce, lo que cuesta o si ya está construido, y
-  se busca por texto. En la barra lateral, "Referencia" (Motor/Instalar) explica todo lo que no es un
-  comando en sí: perfiles, modos de coste, cómo se eligen los localizadores, cómo instalar los dos
-  repos.
-- **Consola global asistida**: la caja de comandos autocompleta mientras escribes (comandos, flags y
-  sus valores válidos) y te avisa antes de que pulses Enter si algo de la línea está mal, en vez de
-  dejarte descubrirlo al fallar.
+## Qué va a hacer
 
-## Qué le falta
-
-- Las 4 secciones sin agente (Redactar, Generar, Ejecutar, Reparar) y Reports — necesitan agentes que
-  todavía no existen en el resto del ecosistema.
-- Resolver desde la web los candidatos de localizador que el sistema no pudo distinguir solo (hoy solo
-  se corrige un localizador ya resuelto, no los que quedaron sin decidir).
-
-## Cómo se arranca
-
-Necesitas Node.js instalado y haber hecho `npm install` una vez en esta carpeta.
+Te pones en cualquier repo tuyo y escribes:
 
 ```
-npm run dev -- --project c:\ruta\a\tu\proyecto
+npx agente-qa
 ```
 
-Se abre en `http://localhost:5173`. Si no le das ninguna carpeta, usa la carpeta desde la que
-lanzaste el comando.
+Se abre una página en tu navegador, trabajando sobre **ese** repo. Escribes lo que quieres probar:
+
+> quiero probar que se puede añadir un producto al carrito
+
+Y entonces:
+
+1. **Mira tu web de verdad.** Abre el navegador y lee la pantalla.
+2. **Te pregunta lo que sea ambiguo**, con botones. *«He encontrado 6 productos. ¿Un producto
+   concreto o cualquiera?»*
+3. **Te enseña lo que ha entendido**, en lenguaje llano, antes de escribir nada:
+
+   > Dado que he iniciado sesión y estoy en el catálogo
+   > Cuando añado "Sauce Labs Backpack" al carrito
+   > Entonces el carrito muestra 1 artículo
+
+   Lo lees en diez segundos. Si se ha equivocado, lo corriges ahí mismo. **Este es el momento de
+   corregir barato.**
+4. **Escribe el código**: el Page Object y el test.
+5. **Lo ejecuta.** Si falla, lee el error, lo corrige y vuelve a ejecutar.
+6. **Te enseña el diff.** Aceptas o descartas. Si aceptas, se commitea.
+
+Los ficheros se generan en `tests/` de tu repo, así que se versionan junto a la aplicación que
+prueban.
+
+## Qué necesitas
+
+- **Node.js 18 o superior.**
+- **Claude Code instalado y con tu sesión iniciada** en ese ordenador. Se usa tu suscripción: no hace
+  falta ninguna clave de API ni configurar nada en el repo.
+- **Playwright** en el repo donde vayas a generar los tests.
+
+`npx agente-qa doctor` comprueba las tres cosas y te dice el comando exacto que falta.
+
+Un `claude login` por ordenador y todos tus repos de esa máquina funcionan.
+
+## También desde la terminal
+
+La misma inteligencia se puede usar sin la web, con Claude Code, Codex o Copilot:
+
+```
+npx agente-qa instalar
+```
+
+Deja las instrucciones donde cada uno las busca. A partir de ahí le pides el test directamente en tu
+terminal o en VS Code. Los tests que generes así **también aparecen en la web**, porque la interfaz
+lee la carpeta del repo.
+
+## Trabajando contra una aplicación real
+
+Explorar significa pulsar botones de verdad: crear pedidos, mandar correos, borrar cosas. Por eso hay
+un interruptor por repo:
+
+- **Apagado** (por defecto en entornos de prueba): barra libre.
+- **Encendido**: cualquier envío que no esté en tu lista blanca se detiene y te pregunta, diciéndote a
+  qué entorno apunta.
+
+Las credenciales salen siempre de variables de entorno y nunca aparecen en un log ni viajan al
+modelo.
