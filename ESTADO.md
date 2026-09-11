@@ -1,136 +1,136 @@
 # ESTADO — Agente-QA-Web
 
-Actualizado: 2026-09-08
+Actualizado: 2026-09-11
 
 ## Qué es esto
 
-Interfaz web local para `Agente-QA-MCP`: se abre dentro de la carpeta de un proyecto QA, lee su estado
-del disco y lanza el CLI como subproceso. Repo hermano nuevo, nace con el Bloque 3 de
-`Agente-QA-MCP/docs/superpowers/specs/2026-09-05-interfaz-web-v1.md`.
+**El repo del proyecto entero.** Hasta el 2026-09-10 era la interfaz de un CLI hermano
+(`AGENTE-QA-MCP`); desde el replanteo del 2026-09-11 ese repo desaparece y este pasa a contener todo:
+la skill, el lanzador del agente y la interfaz.
 
-La spec de la interfaz web (`Agente-QA-MCP/docs/superpowers/specs/2026-09-05-interfaz-web-v1.md`) está
-**cerrada entera**: sus 7 bloques, más la revisión final de rama que encontró y corrigió 3 fallos de
-interacción entre bloques.
+El objetivo: te pones en cualquier repo, escribes `npx agente-qa`, pides un test en castellano y
+obtienes un `.feature`, un `.page.ts` y un `.spec.ts` **ejecutados y en verde**.
 
-## Qué funciona hoy
+- Diseño de referencia: el documento «De la frase al test verde»
+- Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`](docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md)
+- Cola de trabajo: `PROXIMOS-PASOS.md`
 
-### La cáscara (Bloque 3)
+---
 
-- Servidor Fastify en `127.0.0.1:3939`, resuelve el proyecto activo por `--project <ruta>` (argv) →
-  `AGENTE_QA_PROJECT` (env, lo usa `npm run dev`) → `cwd`.
-- `GET /api/estado` lee el disco del proyecto activo con los tipos/parser de `agente-qa-contract`:
-  cuenta pantallas, localizadores y candidatos de escenario de `map.json`, y el estado
-  (`no existe`/`borrador`/`listo`) de `.agente-qa/features/`, `e2e/` y `playwright-report/`. Si no hay
-  `.agente-qa/` en absoluto, lo dice explícitamente (`agenteQaInicializado: false`).
-- `POST /api/init` lanza `agente-qa-mcp init` en la carpeta del proyecto y devuelve su salida.
-- `GET/POST /api/proyecto` — lee/cambia el proyecto activo, mantiene recientes en
-  `%APPDATA%/agente-qa-web/recientes.json`.
-- Frontend con 8 pestañas navegables (Dashboard, Configuración, Explorar, Redactar, Generar, Ejecutar,
-  Reparar, Reports), paneles arrastrables/redimensionables con memoria en `localStorage`
-  (`Panel.tsx`, sobre `react-rnd`), paleta y tipografía portadas del standalone
-  (`Agente-QA-MCP/inspiraciones/QA Agent (standalone).html`) en `src/tokens.css` + Tailwind.
-- Dashboard lee `/api/estado` y `/api/actividad` de verdad; ofrece "ejecutar init" si falta
-  `.agente-qa/`. Redactar/Generar/Ejecutar/Reparar muestran su precondición y el botón principal
-  deshabilitado con el motivo. Reports está vacío con su motivo.
+## El replanteo del 2026-09-11
 
-### Configuración funcional (Bloque 4)
+Quince specs y cero tests generados. El diagnóstico, en una línea: **se convirtió al modelo en una
+función** — el programa conducía y le hacía preguntas cerradas por localizador, validaba la respuesta
+con `count === 1` y la descartaba si no pasaba. El agente entero, que es lo que funciona, nunca
+condujo.
 
-- `GET/PUT /api/config/{proyecto,global}` leen y escriben las dos capas de configuración por las rutas
-  canónicas (proyecto: `projectPaths()` del contrato; global: réplica propia, sin importar código de
-  `Agente-QA-MCP`, de la fórmula de su carpeta de config). Cada valor viaja marcado con su capa
-  (entorno/proyecto/global); lo que viene del entorno no se puede editar desde la web.
-- `GET /api/claves`, `PUT /api/claves/:proveedor`, `POST /api/claves/:proveedor/ver` — claves de los 4
-  proveedores enmascaradas (solo 4 últimos caracteres) en el listado; la clave completa solo viaja por
-  la ruta `/ver`, explícita, nunca a un log.
-- `server/cli.ts` localiza el binario `agente-qa-mcp` (PATH → repo hermano compilado al lado → ruta
-  guardada en `%APPDATA%/agente-qa-web/`), usado por `POST /api/doctor` y `POST /api/llm-ping`.
-- `src/Configuracion.tsx`: dos secciones ("Este proyecto" / "Global"), credenciales de la app bajo test
-  con el mismo enmascarado que las claves, guardado que solo manda los campos que el usuario tocó (no
-  inventa valores ni pisa campos bloqueados por entorno).
+Las tres inversiones del diseño nuevo:
 
-### Explorar en vivo, las cuatro puertas (Bloque 5)
+| Antes | Ahora |
+|---|---|
+| El programa conduce y el modelo contesta | El agente conduce de principio a fin |
+| El código juzga el localizador antes de escribirlo | Playwright juzga el test ejecutándolo |
+| Hace falta un mapa antes de generar nada | Hace falta una URL |
 
-- `server/corridas.ts` lanza `snapshot`/`record`/`record --auto`/`map` como subproceso con `--json`
-  (canal NDJSON del Bloque 1 de `Agente-QA-MCP`), una corrida activa por proyecto, historial en
-  memoria para quien se conecte tarde por `GET /api/eventos` (SSE).
-- `POST /api/explorar` (puerta + ámbito + objetivo/URL), `POST /api/detener` (manda `control.stop` por
-  el canal del Bloque 2, con 5s de gracia antes de matar el proceso).
-- `src/Explorar.tsx`: árbol del mapa (pantallas + candidatos de escenario, de solo lectura) + detalle
-  de la selección + registro en vivo, en paneles arrastrables. `src/BarraLanzamiento.tsx`: las cuatro
-  puertas siempre visibles con su coste declarado en texto claro.
-- `GET /api/mapa` expone localizadores/transiciones reales (vía `parseAppMap` del contrato) para el
-  panel de detalle.
+**Principio que ordena todo**: el código nunca juzga lo que produce el agente. Lo ejecuta, lo enseña,
+y el usuario acepta o rechaza.
 
-### Hablarle al agente (Bloque 6)
+### Tres repos desaparecen
 
-- `POST /api/mensaje`: con corrida activa, manda `user.message` por el canal del Bloque 2; sin
-  corrida, lanza `run "<texto>"` como una corrida nueva (misma vía que `POST /api/explorar`).
-- `src/Chat.tsx`: caja de texto siempre activa, integrada en `Explorar.tsx`, reutiliza el mismo SSE del
-  registro (nunca una segunda conexión). El mensaje propio del usuario nunca se duplica en el
-  registro.
+`AGENTE-QA-MCP`, `Agente_QA` y `agente-qa-contract`. **De ellos no se copia ni una línea.** La
+barrera de escrituras y la redacción de secretos se reescriben aquí desde cero (Bloque 5): la barrera
+cambia de punto de anclaje, así que copiarla no serviría.
 
-### Corregir un localizador (Bloque 7)
+---
 
-- `PUT /api/mapa/localizador` corrige `kind`/`ts`/`disambiguatedBy` de un localizador ya resuelto
-  (referenciado por `screenId`+`locatorName`), revalida el `AppMap` completo antes de escribir (sin
-  escritura parcial si queda inválido), y estampa `producedBy: {agent: "web-manual", ...}` — agente
-  nuevo añadido a `agente-qa-contract` (0.1.0 → 0.2.0) específicamente para esto.
-- `src/DetalleLocalizador.tsx`: editor estructurado (desplegable de `kind`, campo de `ts`,
-  `disambiguatedBy`), resto de campos de solo lectura, deshabilitado con motivo mientras hay una
-  corrida activa (evita pisarse con una fusión en marcha).
-- Los candidatos **sin resolver** de `screen.ambiguous[]` quedan fuera de este bloque; su resolución es
-  la Spec 6 de `Agente-QA-MCP` ("Localizadores que no se rinden"), todavía sin construir.
+## Qué hay en este repo hoy
 
-### Correcciones de la revisión final de rama
+Nada de la spec nueva está implementado todavía. Esto es el inventario de lo que existe y qué le pasa
+a cada pieza.
 
-- Si el subproceso del CLI termina sin emitir un evento terminal real (p. ej. "Detener" sobre la
-  puerta Instantánea, que no atiende `control.stop`; o cualquier crash), `corridas.ts` sintetiza y
-  difunde `operation.stopped`/`operation.error` antes de limpiar su estado, para que la web nunca se
-  quede "corriendo" para siempre.
-- Al terminar una corrida, sus conexiones SSE se cierran explícitamente para que un observador en otra
-  pestaña reconecte solo y enganche con la corrida siguiente.
+### Se conserva (verificado fichero a fichero)
 
-### Catálogo editorial y guía integrada (spec `2026-09-07-guia-integrada-y-consola-asistida.md`, Bloques 2-9)
+| Pieza | Fichero |
+|---|---|
+| Tokens de color y tipografía, autocontenidos, fuente propia sin CDN | `src/tokens.css` |
+| Guard de estilos en build — falla si el CSS usa una variable no definida | `scripts/comprobar-estilos.mjs` |
+| Estructura Fastify + SSE (las rutas, no su contenido) | `server/app.ts` |
+| Canal de eventos: `EventoNdjson`, declarado en local, `type` como texto libre a propósito | `shared/tipos.ts:191` |
+| Resolución del proyecto por `cwd` | `server/proyecto.ts:24-33` |
+| La caja de texto de la consola y el pintado de líneas | `src/ConsolaGlobal.tsx` |
+| La maqueta y el estilo de siete pestañas | — |
 
-- `src/catalogo/` — 17 fichas editoriales escritas a mano (`comandos.ts`) cruzadas con
-  `cli.generado.json` (generado por `npm run catalogo:sync` desde `agente-qa-mcp catalog --pretty`)
-  en `catalogo.ts`. Un test guard vivo (`catalogo.cli-vivo.test.ts`) ejecuta el binario real de
-  `agente-qa-mcp` y falla si el JSON se desincroniza del código; se salta con aviso si el binario no
-  está localizable en esta máquina (`catalogo.test.ts` es el guard que corre siempre).
-- Bajo cada pestaña, `<main>` apila tres bandas de la misma altura con scroll de rueda entre ellas
-  (Bloque 3): la pestaña activa, la consola global, y `GuiaPestana` con la ficha plegada de cada
-  comando de esa pestaña. Botones "↓ Consola y guía" / "↑ Arriba" saltan directamente entre bandas.
-- `CajonFicha.tsx` (Bloque 4): cajón de detalle por la derecha con la plantilla completa de una
-  ficha (una línea, "Qué hace"/"Qué deja"/"Cuándo usarlo"/"Cuándo NO", opciones reales con su matiz
-  editorial, ejemplos, notas). Los ejes de cabecera cambian si el foco (ratón o teclado) está sobre
-  una opción con efecto propio (`catalogo/ejesConOpcion.ts`). Foco atrapado, Escape cierra, el foco
-  vuelve a quien abrió el cajón.
-- `FiltrosGuia.tsx` (Bloque 5): chips por conductor/coste/estado (OR dentro del eje, AND entre ejes,
-  semántica en `catalogo/filtrar.ts`) más un buscador de texto y el interruptor "todas las pestañas",
-  que amplía el universo de búsqueda a las 17 fichas del catálogo en vez de solo las de la pestaña
-  activa.
-- Sección "Referencia" en la barra lateral (Bloque 6): `Motor.tsx` (perfiles rápido/experto, `record
-  --auto`, modos de coste, precedencia, tabla rol→perfil, escalado, herramientas que ve el modelo, la
-  escalera de localizadores, qué se guarda de cada elemento del mapa, la sesión, los frenos en
-  producción) e `Instalar.tsx` (cómo instalar y lanzar los dos repos), sobre datos puros de
-  `src/catalogo/secciones.ts` — sustituyen a `Agente-QA-MCP/docs/esquema-flujo.html`, archivado.
-- `src/consola/analizarLinea.ts` + `Autocompletado.tsx` (Bloque 7): autocompletado de la consola
-  global (comandos, subcomandos, flags y valores cerrados como `--env`/`--profile`/`--provider`/
-  `--cost-mode`, verificados a mano contra el código de `agente-qa-mcp`), con los ejes de cada
-  sugerencia visibles antes de aceptarla.
-- `src/consola/validarLinea.ts` + `plantillas.ts` (Bloque 8): valida la línea ya escrita contra el
-  catálogo real antes de dejar enviarla (opciones que no existen, con "¿querías decir...?" por
-  distancia de Levenshtein); los ejemplos marcados `plantilla: true` se insertan con huecos `<...>`
-  que se seleccionan y se van saltando con Tab.
+El guard de estilos existe porque la web salió una vez literalmente sin estilos y nadie lo vio. Es de
+lo poco que merece heredarse tal cual.
 
-## Qué está a medias
+### Se borra en el Bloque 2
 
-- **Las 4 pestañas sin agente** (Redactar, Generar, Ejecutar, Reparar) y **Reports** siguen honestas
-  pero vacías: dependen de agentes que todavía no existen (`redactor`, `generador`, Ejecutor).
-- **La resolución de candidatos ambiguos sin resolver** (`screen.ambiguous[]`) — Spec 6 de
-  `Agente-QA-MCP`, contingente, con la premisa caducada (revisar antes de retomarla).
+| Pieza | Motivo |
+|---|---|
+| `src/catalogo/` entero + `scripts/sincronizar-catalogo.mjs` | Atado 1:1 a los subcomandos del CLI que desaparece |
+| `src/diffMapa.ts`, `src/DetalleLocalizador.tsx`, `server/mapa.ts` | Trabajan sobre `map.json` |
+| `src/Explorar.tsx` | Es el árbol del mapa y las cuatro puertas |
+| `server/corridas.ts`, `server/cli.ts` | Lanzan y localizan el CLI |
+| `TarjetaResumen` en la consola | Cuenta pantallas y localizadores |
+| Tipos de mapa de `shared/tipos.ts` | — |
+| Selector de proyecto y recientes en `%APPDATA%` | Lo sustituye la instancia por repo |
+| Dependencia `agente-qa-contract` | Son cuatro símbolos y los cuatro son de `map.json` |
+
+### Hay que arreglar a propósito
+
+Casi toda la deuda documentada muere sola con lo anterior. **Dos cosas sobreviven:**
+
+- El indicador «● en curso» se queda encendido al terminar — efecto de React sin limpieza al
+  desmontar.
+- `operation.completed/stopped/error` escrito a mano en tres sitios (`server/corridas.ts:73`,
+  `src/Explorar.tsx:11`, `src/useCorridaGlobal.ts:6`). Pasa a ser una constante compartida en
+  `shared/eventos.ts`.
+
+---
+
+## Decisiones cerradas
+
+| Cuestión | Decisión |
+|---|---|
+| Vocabulario | **Ejecución**, nunca «corrida» |
+| Orden de localizadores | Trece niveles con `getByRole` primero. Detalle en la spec |
+| Elementos repetidos | `ENTIDAD → PADRE/CONTEXTO → ACCIÓN`. Nunca por índice |
+| Gherkin | Documento `.feature` + `test.step` con las mismas frases. Sin Cucumber |
+| Alcance | Una instancia por repo. Sin lista de proyectos |
+| El fichero ya existe | Ampliar sin pisar métodos. Preguntar solo si hay conflicto real |
+| El test no llega a verde | Tres intentos, luego se entrega en rojo con la explicación. Nunca se borra el trabajo |
+| Fallo de la aplicación | No se toca nada. Se informa. Es un bug encontrado |
+| Proveedor | Solo Claude, por la suscripción del usuario. El hueco para otro queda hecho |
+| Convenciones de la skill | Buenas prácticas estándar, afinadas con lo que se rechace |
+
+---
+
+## Hechos verificados que condicionan la arquitectura
+
+Comprobados contra documentación oficial, no de memoria:
+
+- El SDK trae un **binario nativo propio** como dependencia opcional: no hace falta instalar Claude
+  Code aparte. Salvo con `npm ci --omit=optional`, que el `doctor` detecta.
+- Sin `ANTHROPIC_API_KEY` en el entorno, usa **las credenciales de la suscripción** del usuario
+  (`%USERPROFILE%\.claude\.credentials.json` en Windows, llavero en macOS, `~/.claude/` en Linux).
+- **No usar `--bare`**: es el modo que la documentación recomienda para scripts y es precisamente el
+  que nunca lee esas credenciales.
+- **No existe función documentada** para comprobar credenciales antes de lanzar. Hay que construir el
+  `doctor`.
+- La opción `plugins` carga skills **desde una ruta arbitraria**: para la consola de la web no hay que
+  copiar nada al repo del usuario.
+- `abortController` para parar. Los mensajes escritos a media ejecución **se encolan** hasta el final
+  del turno; para que lleguen ya hay que interrumpir. No hay «háblale mientras trabaja» concurrente.
+- Si esto se distribuye o se vende algún día, **hay que preguntar a Anthropic**: la documentación
+  prohíbe a terceros ofrecer login de claude.ai en su producto y no distingue el caso de una
+  herramienta local. Para uso propio no hay nada que discutir.
+
+---
 
 ## Verificación
 
-`npm run lint` / `typecheck` / `test`. Último estado conocido al cerrar la spec: 67/67 tests en
-verde, lint y typecheck limpios (ver el histórico de commits para el detalle bloque a bloque).
+`npm run lint` / `typecheck` / `test` / `build`. El guard `comprobar-estilos.mjs` corre tras
+`vite build` y no se toca.
+
+Último estado conocido (2026-09-05, antes del replanteo): 67/67 tests en verde, lint y typecheck
+limpios. **Ese número va a bajar mucho en el Bloque 2**, que borra código y sus tests con él.
