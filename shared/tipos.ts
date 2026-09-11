@@ -91,3 +91,32 @@ export type Sugerencia = "fallo-test" | "fallo-aplicacion" | "desconocido";
 export interface ResultadoTestRojo extends ResultadoTest {
   sugerencia: Sugerencia;
 }
+
+// --- Reports, Dashboard y trazabilidad (Bloque 8) -----------------------------------------------
+
+/** Resultado de cruzar un escenario del `.feature` contra los `test.step` del `.spec.ts` homónimo. */
+export type EstadoCobertura = "cubierto" | "no-cubierto" | "desincronizado";
+
+export interface CoberturaEscenario {
+  featureFichero: string; // p.ej. "anadir-al-carrito.feature"
+  escenario: string; // nombre tras "Escenario:"
+  estado: EstadoCobertura;
+  specFichero?: string; // presente si existe el .spec.ts homónimo
+  resultado?: ResultadoTest["estado"]; // último resultado de ejecución si lo hay, si no undefined
+}
+
+/** Una entrada de `agente-qa.historial.json`: lo que el SDK reportó al cerrar una ejecución. */
+export interface RegistroEjecucion {
+  timestamp: string; // ISO 8601
+  costeUsd: number;
+  duracionMs: number;
+  numTurnos: number;
+  resultados: { nombre: string; ficheroSpec: string; estado: ResultadoTest["estado"] }[];
+}
+
+/** Un comentario `// FRÁGIL: <motivo>` real encontrado en el código generado. */
+export interface ElementoFragil {
+  fichero: string; // ruta relativa a la raíz del repo destino
+  linea: number; // 1-indexed
+  motivo: string; // lo que sigue a "// FRÁGIL:" en esa línea
+}

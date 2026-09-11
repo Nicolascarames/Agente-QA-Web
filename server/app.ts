@@ -9,12 +9,18 @@ import { lanzar, type SesionAgente } from "./agente.js";
 import { leerConfigRaiz, escribirConfigRaiz } from "./proyecto.js";
 import * as git from "./git.js";
 import { leerReporte, sugerirVeredicto } from "./reporter.js";
+import { cruzarTrazabilidad } from "./trazabilidad.js";
+import { leerHistorial } from "./costes.js";
+import { listarFragiles } from "./fragiles.js";
 import { esEventoTerminal } from "../shared/eventos.js";
 import type {
   ConfigRaiz,
+  CoberturaEscenario,
+  ElementoFragil,
   EstadoCorridaActiva,
   EstadoProyectoActivo,
   EventoNdjson,
+  RegistroEjecucion,
   RespuestaComando,
   ResultadoTest,
   ResultadoTestRojo,
@@ -82,6 +88,14 @@ export function buildApp(opts: AppOptions): FastifyInstance {
       .filter((resultado) => resultado.estado !== "passed")
       .map((resultado) => ({ ...resultado, sugerencia: sugerirVeredicto(resultado) }));
   });
+
+  // --- Reports, Dashboard y trazabilidad (Bloque 8) -----------------------------------------------
+
+  app.get("/api/trazabilidad", async (): Promise<CoberturaEscenario[]> => cruzarTrazabilidad(proyectoActivo));
+
+  app.get("/api/historial", async (): Promise<RegistroEjecucion[]> => leerHistorial(proyectoActivo));
+
+  app.get("/api/fragiles", async (): Promise<ElementoFragil[]> => listarFragiles(proyectoActivo));
 
   // --- Consola global (Bloque 4: conectada al agente real vía el SDK) --------------------
 
@@ -184,19 +198,7 @@ export function buildApp(opts: AppOptions): FastifyInstance {
   const pagesDir = path.join(proyectoActivo, "tests", "pages");
   const specsDir = path.join(proyectoActivo, "tests", "specs");
 
-  // Directorio inexistente (proyecto sin ningún `.feature`/`.spec.ts` generado todavía) → lista
-  // vacía, nunca se crea aquí: solo escribir crea carpetas.
-  async function listarFicheros(dir: string, extension: string): Promise<string[]> {
-    let entradas;
-    try {
-      entradas = await fs.readdir(dir, { withFileTypes: true });
-    } catch {
-      return [];
-    }
-    return entradas.filter((entrada) => entrada.isFile() && entrada.name.endsWith(extension)).map((entrada) => entrada.name);
-  }
-
-  app.get("/api/escenarios", async () => listarFicheros(featuresDir, ".feature"));
+  app.get("/api/escenarios", async () => git.listarFicheros(featuresDir, ".feature"));
 
   // `nombre` llega de la URL: sin esta validación, un `..%2f..` se sale de `featuresDir` y permite
   // leer/escribir cualquier fichero del sistema (hallazgo de la revisión del Bloque 6).
@@ -238,7 +240,7 @@ export function buildApp(opts: AppOptions): FastifyInstance {
   });
 
   app.get("/api/generados", async () => {
-    const [pages, specs] = await Promise.all([listarFicheros(pagesDir, ".page.ts"), listarFicheros(specsDir, ".spec.ts")]);
+    const [pages, specs] = await Promise.all([git.listarFicheros(pagesDir, ".page.ts"), git.listarFicheros(specsDir, ".spec.ts")]);
     return { pages, specs };
   });
 

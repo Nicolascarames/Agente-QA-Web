@@ -64,3 +64,16 @@ export async function descartar(rootDir: string, rutas: string[]): Promise<void>
     }
   }
 }
+
+/** Directorio inexistente (proyecto sin ningún fichero de ese tipo generado todavía) → lista vacía,
+ *  nunca se crea aquí: solo escribir crea carpetas. Compartida por `app.ts`, `trazabilidad.ts` y
+ *  `fragiles.ts` (Bloque 8). */
+export async function listarFicheros(dir: string, extension: string): Promise<string[]> {
+  let entradas;
+  try {
+    entradas = await fs.readdir(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  return entradas.filter((entrada) => entrada.isFile() && entrada.name.endsWith(extension)).map((entrada) => entrada.name);
+}

@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 import { query as queryReal } from "@anthropic-ai/claude-agent-sdk";
 import type { CanUseTool, PermissionResult, Query, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import { redactarSecretosProfundo, verificarLlamada } from "./barrera.js";
+import { leerReporte } from "./reporter.js";
+import { registrarEjecucion } from "./costes.js";
 
 const dirActual = path.dirname(fileURLToPath(import.meta.url));
 // tsconfig.server.json no fija rootDir: este fichero compila a dist-server/server/agente.js (conserva
@@ -243,6 +245,19 @@ export function lanzar(peticionInicial: string, opciones: OpcionesLanzar): Sesio
             continue;
           }
           emitirSeguro({ type: mensaje.is_error ? "operation.error" : "operation.completed", data: mensaje });
+          // Bloque 8: acumula lo que el SDK reportó al cerrar, sin base de datos. Nunca debe tumbar
+          // la ejecución: un historial no escrito es peor, pero no tan malo como perder el resultado.
+          try {
+            const resultados = await leerReporte(opciones.cwd);
+            await registrarEjecucion(opciones.cwd, {
+              costeUsd: mensaje.total_cost_usd ?? 0,
+              duracionMs: mensaje.duration_ms ?? 0,
+              numTurnos: mensaje.num_turns ?? 0,
+              resultados: resultados.map((r) => ({ nombre: r.nombre, ficheroSpec: r.ficheroSpec, estado: r.estado })),
+            });
+          } catch (error) {
+            console.error("no se pudo registrar el historial de la ejecución", error);
+          }
           terminada = true;
           break;
         }

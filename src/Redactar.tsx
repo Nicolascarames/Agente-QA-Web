@@ -1,7 +1,45 @@
 import { useEffect, useState } from "react";
 import { Panel } from "./Panel";
-import { enviarComando, guardarEscenario, interrumpirCorrida, obtenerEscenario, obtenerEscenarios, pararCorrida, responderPregunta } from "./api";
-import type { EventoNdjson } from "../shared/tipos";
+import {
+  enviarComando,
+  guardarEscenario,
+  interrumpirCorrida,
+  obtenerEscenario,
+  obtenerEscenarios,
+  obtenerTrazabilidad,
+  pararCorrida,
+  responderPregunta,
+} from "./api";
+import type { CoberturaEscenario, EventoNdjson } from "../shared/tipos";
+
+// Badge de cobertura por fichero .feature (Bloque 8), junto al nombre en la lista de la izquierda:
+// resume todos los `Escenario:` de ese fichero en un único estado, por prioridad — un fichero con
+// algo sin cubrir importa más que uno cubierto pero en rojo, y un rojo importa más que uno verde.
+type BadgeCobertura = "no-cubierto" | "desincronizado" | "rojo" | "verde" | "pendiente";
+
+const ETIQUETA_COBERTURA: Record<BadgeCobertura, string> = {
+  "no-cubierto": "no cubierto",
+  desincronizado: "desincronizado",
+  rojo: "rojo",
+  verde: "verde",
+  pendiente: "pendiente",
+};
+
+const COLOR_COBERTURA: Record<BadgeCobertura, string> = {
+  "no-cubierto": "text-danger",
+  desincronizado: "text-accent-soft",
+  rojo: "text-danger",
+  verde: "text-ok",
+  pendiente: "text-text-dim",
+};
+
+function badgeDeFichero(escenarios: CoberturaEscenario[]): BadgeCobertura {
+  if (escenarios.some((e) => e.estado === "no-cubierto")) return "no-cubierto";
+  if (escenarios.some((e) => e.estado === "desincronizado")) return "desincronizado";
+  if (escenarios.some((e) => e.resultado === "failed" || e.resultado === "timedOut")) return "rojo";
+  if (escenarios.every((e) => e.resultado === "passed")) return "verde";
+  return "pendiente";
+}
 
 // Bloque 6: misma geometría que `panels.redactar` del mockup (design/mockup-design.js) —
 // izquierda 25 %, centro 46 % (arranca en 26.5 %), derecha 26 % (arranca en 74 %), los tres a
@@ -195,12 +233,29 @@ export function Redactar({ corridaActiva, eventos, marcarCorridaActiva }: Redact
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [coberturaPorFichero, setCoberturaPorFichero] = useState<Map<string, CoberturaEscenario[]> | null>(null);
 
   useEffect(() => {
     void obtenerEscenarios()
       .then(setEscenarios)
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : String(err));
+      });
+  }, []);
+
+  useEffect(() => {
+    void obtenerTrazabilidad()
+      .then((datos) => {
+        const mapa = new Map<string, CoberturaEscenario[]>();
+        for (const cobertura of datos) {
+          const lista = mapa.get(cobertura.featureFichero) ?? [];
+          lista.push(cobertura);
+          mapa.set(cobertura.featureFichero, lista);
+        }
+        setCoberturaPorFichero(mapa);
+      })
+      .catch(() => {
+        setCoberturaPorFichero(null);
       });
   }, []);
 
@@ -240,21 +295,26 @@ export function Redactar({ corridaActiva, eventos, marcarCorridaActiva }: Redact
             <p className="p-3 text-xs text-text-dim">Sin ficheros .feature todavía en tests/features/.</p>
           ) : (
             <ul className="flex flex-col gap-0.5 overflow-auto p-1.5">
-              {escenarios.map((nombre) => (
-                <li key={nombre}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSeleccionado(nombre);
-                    }}
-                    className={`w-full rounded-6 px-2 py-1.5 text-left text-xs ${
-                      nombre === seleccionado ? "bg-accent-bg font-semibold text-accent-soft" : "text-text-muted hover:text-text"
-                    }`}
-                  >
-                    {nombre}
-                  </button>
-                </li>
-              ))}
+              {escenarios.map((nombre) => {
+                const cobertura = coberturaPorFichero?.get(nombre);
+                const badge = cobertura ? badgeDeFichero(cobertura) : undefined;
+                return (
+                  <li key={nombre}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSeleccionado(nombre);
+                      }}
+                      className={`flex w-full items-center justify-between gap-2 rounded-6 px-2 py-1.5 text-left text-xs ${
+                        nombre === seleccionado ? "bg-accent-bg font-semibold text-accent-soft" : "text-text-muted hover:text-text"
+                      }`}
+                    >
+                      <span className="truncate">{nombre}</span>
+                      {badge && <span className={`shrink-0 text-2xs ${COLOR_COBERTURA[badge]}`}>{ETIQUETA_COBERTURA[badge]}</span>}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Panel>

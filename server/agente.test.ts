@@ -1,9 +1,13 @@
 // Mismo patrón de inyección de dependencias que `doctor.test.ts`: un `queryFn` falso construido a
 // mano en vez de lanzar un CLI de verdad — lento y no determinista.
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { CanUseTool, Query, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { lanzar, type EventoAgente } from "./agente.js";
+import { leerHistorial } from "./costes.js";
 
 function generadorDe(mensajes: SDKMessage[]): AsyncGenerator<SDKMessage, void> {
   return (async function* () {
@@ -158,5 +162,33 @@ describe("lanzar", () => {
 
     expect(eventosA.map((e) => e.type)).toEqual(["agente.assistant", "operation.completed"]);
     expect(eventosB.map((e) => e.type)).toEqual(["agente.assistant", "operation.completed"]);
+  });
+
+  it("al cerrar en operation.completed, registra coste/duración/turnos del result en el historial (Bloque 8)", async () => {
+    const proyecto = await mkdtemp(path.join(tmpdir(), "agente-qa-web-agente-"));
+    try {
+      const mensajeResultado = {
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        queued_turn_count: 0,
+        result: "ok",
+        total_cost_usd: 0.05,
+        duration_ms: 1234,
+        num_turns: 3,
+      } as unknown as SDKMessage;
+
+      const sesion = lanzar("hazme el page object del login", { cwd: proyecto, queryFn: queryFnFalsa([mensajeResultado]) });
+
+      const eventos: EventoAgente[] = [];
+      for await (const evento of sesion.suscribirse()) eventos.push(evento);
+      expect(eventos.map((e) => e.type)).toEqual(["operation.completed"]);
+
+      const historial = await leerHistorial(proyecto);
+      expect(historial).toHaveLength(1);
+      expect(historial[0]).toMatchObject({ costeUsd: 0.05, duracionMs: 1234, numTurnos: 3, resultados: [] });
+    } finally {
+      await rm(proyecto, { recursive: true, force: true });
+    }
   });
 });

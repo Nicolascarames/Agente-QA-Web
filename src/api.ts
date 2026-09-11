@@ -1,8 +1,11 @@
 import type {
+  CoberturaEscenario,
   ConfigRaiz,
+  ElementoFragil,
   EstadoCorridaActiva,
   EstadoProyecto,
   EstadoProyectoActivo,
+  RegistroEjecucion,
   RespuestaComando,
   ResultadoTest,
   ResultadoTestRojo,
@@ -158,4 +161,18 @@ export function obtenerTests(): Promise<ResultadoTest[]> {
 
 export function obtenerTestsRojos(): Promise<ResultadoTestRojo[]> {
   return pedirJson<ResultadoTestRojo[]>("/api/tests/rojos");
+}
+
+// --- Reports, Dashboard y trazabilidad (Bloque 8) -----------------------------------------------
+
+export function obtenerTrazabilidad(): Promise<CoberturaEscenario[]> {
+  return pedirJson<CoberturaEscenario[]>("/api/trazabilidad");
+}
+
+export function obtenerHistorial(): Promise<RegistroEjecucion[]> {
+  return pedirJson<RegistroEjecucion[]>("/api/historial");
+}
+
+export function obtenerFragiles(): Promise<ElementoFragil[]> {
+  return pedirJson<ElementoFragil[]>("/api/fragiles");
 }

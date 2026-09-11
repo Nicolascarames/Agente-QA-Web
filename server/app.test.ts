@@ -321,4 +321,49 @@ describe("buildApp", () => {
     await expect(readFile(ruta, "utf8")).rejects.toThrow();
     await app.close();
   });
+
+  // --- Reports, Dashboard y trazabilidad (Bloque 8) ---------------------------------------------
+
+  it("GET /api/trazabilidad cruza los .feature con sus .spec.ts homónimos", async () => {
+    await mkdir(path.join(proyecto, "tests", "features"), { recursive: true });
+    await writeFile(
+      path.join(proyecto, "tests", "features", "login.feature"),
+      "Característica: login\n\nEscenario: entra con credenciales válidas\n  Dado que estoy en la página de login\n",
+      "utf8",
+    );
+
+    const app = buildApp({ proyectoInicial: proyecto });
+    const respuesta = await app.inject({ method: "GET", url: "/api/trazabilidad" });
+    expect(respuesta.statusCode).toBe(200);
+    expect(respuesta.json<{ featureFichero: string; escenario: string; estado: string }[]>()).toEqual([
+      { featureFichero: "login.feature", escenario: "entra con credenciales válidas", estado: "no-cubierto" },
+    ]);
+    await app.close();
+  });
+
+  it("GET /api/historial devuelve [] sin agente-qa.historial.json todavía", async () => {
+    const app = buildApp({ proyectoInicial: proyecto });
+    const respuesta = await app.inject({ method: "GET", url: "/api/historial" });
+    expect(respuesta.statusCode).toBe(200);
+    expect(respuesta.json<unknown[]>()).toEqual([]);
+    await app.close();
+  });
+
+  it("GET /api/fragiles devuelve [] sin tests/pages ni tests/specs, y las marcas si las hay", async () => {
+    const app = buildApp({ proyectoInicial: proyecto });
+    const vacio = await app.inject({ method: "GET", url: "/api/fragiles" });
+    expect(vacio.json<unknown[]>()).toEqual([]);
+
+    await mkdir(path.join(proyecto, "tests", "pages"), { recursive: true });
+    await writeFile(
+      path.join(proyecto, "tests", "pages", "login.page.ts"),
+      'boton = this.page.locator("button").nth(0); // FRÁGIL: sin atributo estable\n',
+      "utf8",
+    );
+    const conMarca = await app.inject({ method: "GET", url: "/api/fragiles" });
+    expect(conMarca.json<{ fichero: string; linea: number; motivo: string }[]>()).toEqual([
+      { fichero: "tests/pages/login.page.ts", linea: 1, motivo: "sin atributo estable" },
+    ]);
+    await app.close();
+  });
 });
