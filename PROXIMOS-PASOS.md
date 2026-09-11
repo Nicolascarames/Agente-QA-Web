@@ -1,6 +1,6 @@
 # PRÓXIMOS PASOS — Agente-QA-Web
 
-Actualizado: 2026-09-11 (Bloques 5, 6 y 7 cerrados)
+Actualizado: 2026-09-12 (Bloques 8 y 9 cerrados — plan de nueve bloques completo)
 
 Cola priorizada. **Una tarea = una línea.** El detalle vive en la spec.
 
@@ -47,10 +47,22 @@ Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`]
       lee `test-results/results.json` (convención asumida, sin `playwright.config.ts` de referencia
       en este repo — **verificar contra un proyecto real la primera vez que se use en serio**).
       `sugerirVeredicto` es solo la etiqueta del badge en Reparar, nunca un juez. Detalle en `ESTADO.md`.
-- [ ] **Bloque 8 — Reports, Dashboard y trazabilidad.** Cruce de pasos del `.feature` con los
-      `test.step`. Escenarios no cubiertos y desincronizados. Coste leído del SDK, sin base de datos.
-- [ ] **Bloque 9 — El comando `instalar`.** Genera los envoltorios para Claude Code en terminal,
-      Codex y Copilot desde el mismo `SKILL.md`. Para la consola de la web no hace falta.
+- [x] **Bloque 8 — Reports, Dashboard y trazabilidad.** Cerrado 2026-09-12. `server/trazabilidad.ts`
+      cruza cada `Escenario:` del `.feature` con los `test.step` del `.spec.ts` homónimo (mismo nombre
+      base) por igualdad exacta de secuencia; `no-cubierto` si falta el spec, `desincronizado` si
+      existe pero ningún bloque calza. `server/costes.ts` acumula coste/duración/turnos por ejecución
+      en `agente-qa.historial.json` (recorte a 200 entradas), enganchado en `server/agente.ts` tras
+      cada `operation.completed`/`operation.error`. `server/fragiles.ts` cuenta los comentarios
+      `// FRÁGIL:` reales que ya escribe la skill. Dashboard con seis cajas nuevas, Reports con datos
+      reales (pass rate, flaky, fallos agrupados, historial), Redactar con badge de cobertura por
+      fichero. Detalle en `ESTADO.md`.
+- [x] **Bloque 9 — El comando `instalar`.** Cerrado 2026-09-12. `npx agente-qa instalar` genera desde
+      `skill/skills/qa/SKILL.md`: `.claude/skills/qa/` (con sus referencias), `AGENTS.md` y
+      `.github/copilot-instructions.md`. Pregunta antes de sobrescribir un fichero ajeno (detectado
+      por un marcador de propiedad), y no pregunta si no hay terminal interactiva (evita colgarse en
+      CI). `--solo claude|codex|copilot` para escribir solo uno. Detalle en `ESTADO.md`.
+
+**Plan de nueve bloques completo.** Queda lo de después del plan y los trámites, más abajo.
 
 ---
 
@@ -77,12 +89,18 @@ Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`]
       implementó `security find-generic-password` porque no hay máquina macOS a mano para verificar
       el nombre exacto del servicio, y adivinarlo daría falsos negativos silenciosos. Verificar y
       completar cuando haya acceso a macOS.
-- [ ] **Bloque 9 (`instalar`) copiará desde la ruta nueva de la skill.** El Bloque 4 movió
-      `skill/SKILL.md` a `skill/skills/qa/SKILL.md` (formato de plugin). Cuando se implemente el
-      Bloque 9, usar esa ruta, no la antigua.
 - [ ] **`server/reporter.ts` asume `test-results/results.json`** sin haberlo confirmado contra un
       `playwright.config.ts` real generado por la skill. Verificar la primera vez que se ejecute un
       test de verdad y ajustar la ruta si hace falta.
+- [ ] **`server/trazabilidad.ts` asume que un `.feature` y su `.spec.ts` comparten nombre base**
+      (`anadir-al-carrito.feature` ↔ `anadir-al-carrito.spec.ts`), inferido del único ejemplo de
+      `plantillas.md`, no de una regla escrita explícita. Si el agente llega a generar specs con otro
+      nombre, todos los escenarios de ese feature saldrían como "no cubierto" aunque el test exista.
+      Verificar contra proyectos reales.
+- [ ] **`npm run build` falla con `TS5055` si `dist-server/` ya existe de un build anterior**
+      (tsconfig del server sin limpieza previa). No es un bug del código, solo falta un paso de
+      `rm -rf dist-server` (o un script `clean`) antes de `tsc`. Molestó a tres agentes distintos en
+      esta sesión sin ser suyo — mejorarlo cuando se toque el pipeline de build.
 
 ---
 

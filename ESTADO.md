@@ -1,6 +1,6 @@
 # ESTADO — Agente-QA-Web
 
-Actualizado: 2026-09-11 (Bloques 5, 6 y 7 cerrados)
+Actualizado: 2026-09-12 (Bloques 8 y 9 cerrados — plan de nueve bloques completo)
 
 ## Qué es esto
 
@@ -27,7 +27,8 @@ y el usuario acepta o rechaza. Quien juzga es Playwright, ejecutando el test.
 
 ## Qué funciona hoy
 
-**Bloques 1 a 7 cerrados.** Quedan el 8 (Reports/Dashboard/trazabilidad) y el 9 (`instalar`).
+**Los nueve bloques del plan están cerrados.** Queda lo de después del plan (publicar en npm,
+gated a validar contra webs reales) y la deuda anotada en `PROXIMOS-PASOS.md`.
 `npx agente-qa` (o `node bin/agente-qa.mjs` en local) arranca sobre `process.cwd()`, crea
 `agente-qa.config.json` en la raíz preguntando solo la URL base si no existe, y levanta la web
 mostrando ese repo. El subcomando `doctor` comprueba sesión/SDK/Node/Playwright y sale con el
@@ -65,6 +66,11 @@ redacta antes de salir por el canal de eventos.
 | Redactar (lista+edición de `.feature`) y Generar (lista+diff con Aceptar/Descartar de `.page.ts`/`.spec.ts`), cada una con un chat propio (`ChatAgente`) que comparte el estado de la consola global | `src/Redactar.tsx`, `src/Generar.tsx` |
 | Lector fiel del último reporte JSON de Playwright (`test-results/results.json`, por confirmar contra un proyecto real); `sugerirVeredicto` es solo una etiqueta de badge, nunca un juez — la clasificación real la da el agente | `server/reporter.ts` |
 | Ejecutar (lista+pasos+error de cada test) y Reparar (solo los rojos, badge de sugerencia, diff con Aplicar/Rechazar), cada una con su chat (`ChatCorrida`) | `src/Ejecutar.tsx`, `src/Reparar.tsx` |
+| Trazabilidad: cruza cada `Escenario:` del `.feature` con los `test.step` del `.spec.ts` homónimo (mismo nombre base), por igualdad exacta de secuencia de frases; cruce con `leerReporte` para el color; ruta `GET /api/trazabilidad` | `server/trazabilidad.ts` |
+| Historial de ejecuciones: coste/duración/turnos + resultados por test, acumulado en `agente-qa.historial.json` (recorte a 200), enganchado tras cada `operation.completed`/`operation.error`; ruta `GET /api/historial` | `server/costes.ts`, uso en `server/agente.ts` |
+| Elementos frágiles: cuenta los comentarios `// FRÁGIL: <motivo>` reales de la skill en `tests/pages/` y `tests/specs/`; ruta `GET /api/fragiles` | `server/fragiles.ts` |
+| Dashboard con seis cajas (escenarios cubiertos, verdes, rojos, última ejecución, coste acumulado, frágiles); Reports con datos reales (pass rate, flaky de las últimas 5 ejecuciones, fallos agrupados por `mensajeError`, historial); badge de cobertura por fichero en Redactar | `src/Dashboard.tsx`, `src/Reports.tsx`, `src/Redactar.tsx` |
+| `agente-qa instalar`: genera `.claude/skills/qa/` (con referencias), `AGENTS.md` y `.github/copilot-instructions.md` desde `skill/skills/qa/SKILL.md`; marcador de propiedad para no pisar ficheros ajenos sin confirmar; `--solo claude\|codex\|copilot` | `server/instalar.ts`, subcomando en `bin/agente-qa.mjs` |
 
 Nada de esto se toca por debajo del alcance real necesario para los bloques siguientes.
 
@@ -82,18 +88,19 @@ dieron tres tests verdes a la primera y estables en dos ejecuciones seguidas:
 - Quitar un producto del carrito tras añadir dos, comprobando que el contador baja.
 
 `skill/` se copia (no symlink, por Windows) a `pruebas/sauce/.claude/skills/qa/` para que un
-`claude` lanzado ahí la descubra solo — mecanismo que reutilizará el Bloque 9 (`instalar`).
+`claude` lanzado ahí la descubra solo — el mismo mecanismo que generaliza `agente-qa instalar`
+(Bloque 9) para cualquier repo destino.
 
-### Las siete pestañas y qué será cada una
+### Las siete pestañas — qué muestra cada una hoy
 
-| Pestaña | Qué mostrará |
+| Pestaña | Qué muestra |
 |---|---|
-| **Redactar** | Los `.feature`, editables. La primera puerta: corriges el escenario antes de que se escriba código |
+| **Redactar** | Los `.feature`, editables, con badge de cobertura por fichero. La primera puerta: corriges el escenario antes de que se escriba código |
 | **Generar** | Los `.page.ts` y `.spec.ts`, y el visor de diff con aceptar/descartar |
 | **Ejecutar** | Tests con su estado y el detalle paso a paso, con las frases del Gherkin |
 | **Reparar** | Solo los rojos, con el veredicto: fallo del test o fallo de la aplicación |
-| **Reports** | Historial, fallos agrupados, tests inestables, coste |
-| **Dashboard** | Escenarios cubiertos, verdes, rojos, última ejecución, coste, elementos frágiles |
+| **Reports** | Historial de ejecuciones, fallos agrupados por causa, tests inestables, pass rate, fallos abiertos |
+| **Dashboard** | Escenarios cubiertos, verdes, rojos, última ejecución, coste acumulado, elementos frágiles |
 | **Configuración** | URL base, entornos, credenciales y el interruptor de la barrera de escrituras |
 
 El chat es el mismo desde las cuatro primeras: una sola conversación, cuatro vistas.
@@ -124,6 +131,11 @@ El chat es el mismo desde las cuatro primeras: una sola conversación, cuatro vi
 | Fallo del test vs fallo de la aplicación (Bloque 7) | `server/reporter.ts` nunca judge: `sugerirVeredicto` es una heurística de badge (patrones de error típicos de localizador vs de aserción de valor), marcada en la UI como sugerencia. La clasificación real la hace el agente en el chat, coherente con el principio de ESTADO.md de que el código nunca juzga lo que produce el agente |
 | Chat propio por pestaña (Bloques 6 y 7) | `<ConsolaGlobal>` monta su propio `<Panel tabId="global" panelId="consola">` con key fija: no se puede anidar dentro de otro panel sin duplicarla. Redactar/Generar/Ejecutar/Reparar montan un componente de chat ligero propio (`ChatAgente`/`ChatCorrida`) que reutiliza el mismo estado (`corridaActiva`/`eventos`/`marcarCorridaActiva`) que `App.tsx` ya pasa a la consola global — no hay dos sesiones ni dos suscripciones SSE, solo dos vistas del mismo estado |
 | Contrato `/api/generados/diff\|commit\|descartar` (Bloques 6 y 7) | Fijado por el Bloque 6 (`?ruta=` en el diff, `{rutas: string[], mensaje}` en el commit, `{rutas: string[]}` en el descarte) porque ahí vive `server/git.ts`. El Bloque 7 se implementó en paralelo sin verlo y asumió nombres distintos (`?fichero=`, `{fichero}`) — se corrigió al integrar; si se vuelve a tocar este contrato, `Reparar.tsx` es el único consumidor a revisar |
+| Emparejamiento feature↔spec para trazabilidad (Bloque 8) | Por nombre base igual (`X.feature` ↔ `X.spec.ts`), inferido del único ejemplo de `plantillas.md` (`anadir-al-carrito.feature`/`anadir-al-carrito.spec.ts`) — no hay una regla escrita en la spec que lo exija. Si se genera un spec con otro nombre, saldría "no cubierto" pese a existir el test. Anotado en `PROXIMOS-PASOS.md` para verificar contra un proyecto real |
+| "Elementos frágiles" del Dashboard (Bloque 8) | Cuenta comentarios `// FRÁGIL: <motivo>` reales (convención ya escrita en `skill/skills/qa/referencias/localizadores.md` desde antes del Bloque 8), no una señal inventada — coherente con el principio de que el código nunca juzga, solo cuenta lo que el agente ya marcó |
+| "Tests inestables" en Reports (Bloque 8) | Un test es flaky si, entre las últimas 5 entradas de `agente-qa.historial.json`, aparece tanto en verde como en rojo. El historial se guarda de más antiguo a más nuevo (`server/costes.ts`) — el primer intento del frontend cogió `slice(0, 5)` (las 5 más antiguas de siempre) en vez de `slice(-5)`; corregido en revisión antes de cerrar el bloque |
+| Ruta a `skill/` en `instalar.ts` (Bloque 9) | Prueba primero la resolución a dos niveles (`../..`, válida para el código compilado en `dist-server/server/instalar.js`, el caso real de `npx agente-qa instalar`) y cae a un nivel (`..`) solo si esa carpeta no existe — necesario porque los tests de Vitest importan el `.ts` fuente directamente desde `server/`, un nivel menos que el compilado. `server/agente.ts` no necesita este fallback porque solo pasa la ruta a `plugins` del SDK, nunca lee ficheros de ahí él mismo |
+| Confirmación antes de sobrescribir en `instalar` (Bloque 9) | Un marcador de propiedad (cadena fija en un comentario HTML) en el fichero generado decide si es "nuestro" (se sobrescribe sin preguntar) o ajeno (pide confirmación). Sin terminal interactiva (`process.stdin.isTTY` falso, p.ej. CI) nunca pregunta: asume que no hay que tocarlo y sigue, para no colgar el proceso |
 
 ---
 
