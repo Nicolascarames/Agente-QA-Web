@@ -64,3 +64,19 @@ export function enviarComando(texto: string): Promise<RespuestaComando> {
     body: JSON.stringify({ texto }),
   });
 }
+
+export function pararCorrida(): Promise<void> {
+  return pedirJsonEstricto<void>("/api/parar", { method: "POST" });
+}
+
+export function interrumpirCorrida(): Promise<void> {
+  return pedirJsonEstricto<void>("/api/interrumpir", { method: "POST" });
+}
+
+export function responderPregunta(respuesta: { textoLibre?: string; opcionesElegidas?: string[] }): Promise<void> {
+  return pedirJsonEstricto<void>("/api/pregunta/responder", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(respuesta),
+  });
+}

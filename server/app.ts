@@ -1,13 +1,18 @@
 import { existsSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Fastify, { type FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
 import { leerEstadoProyecto } from "./estado.js";
-import type { EstadoCorridaActiva, EstadoProyectoActivo } from "../shared/tipos.js";
+import { lanzar, type SesionAgente } from "./agente.js";
+import { esEventoTerminal } from "../shared/eventos.js";
+import type { EstadoCorridaActiva, EstadoProyectoActivo, EventoNdjson, RespuestaComando } from "../shared/tipos.js";
 
 export interface AppOptions {
   proyectoInicial: string;
+  /** Inyectable para test — por defecto `lanzar()` real de `agente.ts`. */
+  lanzarFn?: typeof lanzar;
 }
 
 const dirActual = path.dirname(fileURLToPath(import.meta.url));
@@ -19,6 +24,12 @@ const distClient = path.resolve(dirActual, "..", "dist-client");
 export function buildApp(opts: AppOptions): FastifyInstance {
   const app = Fastify({ logger: true });
   const proyectoActivo = opts.proyectoInicial;
+  const lanzarFn = opts.lanzarFn ?? lanzar;
+
+  // Estado en memoria del módulo: una corrida activa como mucho, sin base de datos (una instancia
+  // por repo, igual que `proyectoActivo`). `sesion` y `runId` van juntos para que TypeScript sepa
+  // que uno no puede existir sin el otro.
+  let corridaActiva: { sesion: SesionAgente; runId: string } | null = null;
 
   // El estado no se guarda: se deriva del disco en cada petición.
   app.get("/api/estado", async () => leerEstadoProyecto(proyectoActivo));
@@ -32,25 +43,29 @@ export function buildApp(opts: AppOptions): FastifyInstance {
   // Alcance: una instancia por repo (decisión cerrada en ESTADO.md) — sin selector ni recientes.
   app.get("/api/proyecto", (): EstadoProyectoActivo => ({ actual: proyectoActivo }));
 
-  // --- Consola global (Bloque 2: vaciada) ------------------------------------------------
-  // El CLI/mapa antiguo que lanzaba corridas y las transmitía por SSE se borró entero en este
-  // bloque (`server/corridas.ts`, `server/mapa.ts`, `server/cli.ts`). Lo que queda es la
-  // ESTRUCTURA de rutas (Fastify + SSE), honesta sobre que todavía no hay nada detrás: el
-  // Bloque 4 la conecta al agente de verdad vía el SDK.
+  // --- Consola global (Bloque 4: conectada al agente real vía el SDK) --------------------
 
-  app.get("/api/corridas/activa", (): EstadoCorridaActiva => ({ activa: false, runId: null }));
+  app.get("/api/corridas/activa", (): EstadoCorridaActiva => ({ activa: corridaActiva !== null, runId: corridaActiva?.runId ?? null }));
 
-  app.post<{ Body: { texto?: string } }>("/api/comando", async (req, reply) => {
+  app.post<{ Body: { texto?: string } }>("/api/comando", async (req, reply): Promise<void> => {
     const texto = req.body?.texto?.trim();
     if (!texto) {
       await reply.status(400).send({ error: 'falta "texto"' });
       return;
     }
-    await reply.status(501).send({ error: "pendiente del Bloque 4: todavía no hay ningún agente que ejecute esto" });
+    if (corridaActiva) {
+      // Ya hay una corrida en marcha: no se bloquea, se encola en la misma sesión.
+      corridaActiva.sesion.enviarMensaje(texto);
+      await reply.send({ runId: corridaActiva.runId } satisfies RespuestaComando);
+      return;
+    }
+    const runId = randomUUID();
+    corridaActiva = { sesion: lanzarFn(texto, { cwd: proyectoActivo }), runId };
+    await reply.send({ runId } satisfies RespuestaComando);
   });
 
-  // Sin ninguna ejecución que pueda estar en marcha, esta conexión no tiene nada que reenviar:
-  // avisa y cierra en vez de dejar al cliente esperando eventos que nunca van a llegar.
+  // Sin ninguna ejecución en marcha, esta conexión no tiene nada que reenviar: avisa y cierra en
+  // vez de dejar al cliente esperando eventos que nunca van a llegar.
   app.get("/api/eventos", (_req, reply) => {
     reply.hijack();
     reply.raw.writeHead(200, {
@@ -58,8 +73,59 @@ export function buildApp(opts: AppOptions): FastifyInstance {
       "cache-control": "no-cache",
       connection: "keep-alive",
     });
-    reply.raw.write(`event: sin-corrida\ndata: ${JSON.stringify({ motivo: "No hay ninguna corrida activa para este proyecto." })}\n\n`);
-    reply.raw.end();
+
+    if (!corridaActiva) {
+      reply.raw.write(`event: sin-corrida\ndata: ${JSON.stringify({ motivo: "No hay ninguna corrida activa para este proyecto." })}\n\n`);
+      reply.raw.end();
+      return;
+    }
+
+    const { sesion, runId } = corridaActiva;
+    // Suscriptor propio de ESTA conexión (fan-out, no una cola compartida): así dos `GET
+    // /api/eventos` sobre la misma sesión —p.ej. tras la reconexión del `EventSource` nativo del
+    // cliente— ven cada uno el stream completo en vez de repartirse los eventos entre sí.
+    const suscripcion = sesion.suscribirse()[Symbol.asyncIterator]();
+    // Sin este listener, una conexión abandonada (red cortada, portátil suspendido) sigue suscrita
+    // e intentando escribir en un socket cerrado indefinidamente.
+    reply.raw.on("close", () => {
+      void suscripcion.return?.();
+    });
+    void (async () => {
+      for (let resultado = await suscripcion.next(); !resultado.done; resultado = await suscripcion.next()) {
+        const evento = resultado.value;
+        const envoltorio: EventoNdjson = { runId, ts: new Date().toISOString(), agent: "agente-qa", type: evento.type, data: evento.data };
+        reply.raw.write(`data: ${JSON.stringify(envoltorio)}\n\n`);
+        if (esEventoTerminal(evento.type)) {
+          await suscripcion.return?.();
+          break;
+        }
+      }
+      reply.raw.end();
+      corridaActiva = null;
+    })();
+  });
+
+  app.post("/api/parar", async (_req, reply) => {
+    corridaActiva?.sesion.parar();
+    await reply.status(200).send({ ok: true });
+  });
+
+  app.post("/api/interrumpir", async (_req, reply) => {
+    if (!corridaActiva) {
+      await reply.status(400).send({ error: "no hay ninguna corrida activa" });
+      return;
+    }
+    await corridaActiva.sesion.interrumpir();
+    await reply.status(200).send({ ok: true });
+  });
+
+  app.post<{ Body: { textoLibre?: string; opcionesElegidas?: string[] } }>("/api/pregunta/responder", async (req, reply) => {
+    if (!corridaActiva) {
+      await reply.status(400).send({ error: "no hay ninguna corrida activa" });
+      return;
+    }
+    corridaActiva.sesion.responderPregunta(req.body ?? {});
+    await reply.status(200).send({ ok: true });
   });
 
   if (existsSync(distClient)) {
