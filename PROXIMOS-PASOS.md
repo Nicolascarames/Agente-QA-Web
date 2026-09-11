@@ -1,6 +1,6 @@
 # PRÓXIMOS PASOS — Agente-QA-Web
 
-Actualizado: 2026-09-11 (Bloque 2 cerrado)
+Actualizado: 2026-09-11 (Bloque 3 cerrado)
 
 Cola priorizada. **Una tarea = una línea.** El detalle vive en la spec.
 
@@ -18,8 +18,13 @@ Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`]
       integrada" no listada en la spec, fuera; `agente-qa-contract` retirada del todo;
       `shared/eventos.ts` creado. Siete pestañas navegan vacías, incluida Configuración. Detalle en
       `ESTADO.md`.
-- [ ] **Bloque 3 — `npx agente-qa` sobre el repo actual.** `bin/agente-qa.mjs`, `server/doctor.ts`,
-      lectura de `agente-qa.config.json`. Sin argumentos, sin selector: `cwd` es el proyecto.
+- [x] **Bloque 3 — `npx agente-qa` sobre el repo actual.** Cerrado 2026-09-11. `bin/agente-qa.mjs`,
+      `server/doctor.ts` (cuatro comprobaciones), `agente-qa.config.json` en la raíz (`server/proyecto.ts`).
+      Probado a mano desde `pruebas/sauce/`: crea el config preguntando la URL, levanta la web
+      mostrando ese repo, no repregunta en la segunda ejecución, y `doctor` da el comando exacto
+      cuando falta Playwright. De paso se purgó entero el sistema de configuración anterior
+      (`server/config.ts`/`claves.ts`/`entornoMcp.ts`, rutas `/api/init|config/proyecto|claves`) —
+      decisión explícita del usuario de no heredar nada. Detalle en `ESTADO.md`.
 - [ ] **Bloque 4 — La consola habla con el agente.** `server/agente.ts` envuelve `query()` del SDK.
       Preguntas con botones vía `canUseTool`, caja de texto libre, y **dos botones distintos** para
       parar e interrumpir.
@@ -57,11 +62,11 @@ el 4.
 
 ## Deuda anotada
 
-**Ninguna.** Todo lo que había apuntado en este repo pertenecía a código que se borra en el Bloque 2
-o que reescribe el Bloque 3.
-
-Esta sección arranca vacía a propósito y se llena solo con lo que encontremos construyendo el plan
-nuevo.
+- [ ] **`doctor` no comprueba el llavero de macOS.** `comprobarCredenciales` (`server/doctor.ts`)
+      solo mira el fichero `.credentials.json`; en macOS la sesión puede vivir en el llavero. No se
+      implementó `security find-generic-password` porque no hay máquina macOS a mano para verificar
+      el nombre exacto del servicio, y adivinarlo daría falsos negativos silenciosos. Verificar y
+      completar cuando haya acceso a macOS.
 
 ---
 

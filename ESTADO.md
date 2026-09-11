@@ -1,6 +1,6 @@
 # ESTADO — Agente-QA-Web
 
-Actualizado: 2026-09-11
+Actualizado: 2026-09-11 (Bloque 3 cerrado)
 
 ## Qué es esto
 
@@ -27,11 +27,16 @@ y el usuario acepta o rechaza. Quien juzga es Playwright, ejecutando el test.
 
 ## Qué funciona hoy
 
-**Bloques 1 y 2 cerrados.** El resto del plan nuevo no está implementado. La web arranca y navega
-con siete pestañas honestas y vacías; no queda nada del catálogo/mapa/CLI antiguo.
+**Bloques 1, 2 y 3 cerrados.** El resto del plan nuevo no está implementado. `npx agente-qa` (o
+`node bin/agente-qa.mjs` en local) arranca sobre `process.cwd()`, crea `agente-qa.config.json` en
+la raíz preguntando solo la URL base si no existe, y levanta la web mostrando ese repo. El
+subcomando `doctor` comprueba sesión/SDK/Node/Playwright y sale con el código correspondiente.
 
 | Pieza | Fichero |
 |---|---|
+| Punto de entrada de `npx agente-qa`: arranca la web sobre `cwd`, subcomando `doctor` | `bin/agente-qa.mjs` |
+| Las cuatro comprobaciones del `doctor` (sesión, binario del SDK, Node, Playwright), cada una inyectable para test | `server/doctor.ts` |
+| Lectura/escritura de `agente-qa.config.json` en la raíz del repo (`ConfigRaiz`: solo `appUrl` por ahora) | `server/proyecto.ts` |
 | La skill de QA completa: rol, orden de trabajo, las tres puertas, definición de terminado | `skill/SKILL.md` |
 | Los trece niveles de localizadores y la regla de repetidos, con ejemplo NO/SÍ real | `skill/referencias/localizadores.md` |
 | Forma canónica de `.feature`/`.page.ts`/`.spec.ts`, verificada contra SauceDemo real | `skill/referencias/plantillas.md` |
@@ -41,7 +46,6 @@ con siete pestañas honestas y vacías; no queda nada del catálogo/mapa/CLI ant
 | Canal de eventos: `EventoNdjson`, `type` como texto libre a propósito | `shared/tipos.ts` |
 | Tipos de evento terminal centralizados, antes duplicados a mano en tres sitios | `shared/eventos.ts` |
 | Resolución del proyecto por `--project` → env → `cwd`, sin `agente-qa-contract` | `server/proyecto.ts` |
-| Parseo mínimo de `agente-qa.config.json` a mano, sin Zod ni la dependencia externa | `server/config.ts` |
 | La caja de texto de la consola y el pintado de líneas | `src/ConsolaGlobal.tsx` |
 | La maqueta y el estilo de siete pestañas, todas vacías (Configuración incluida) | `src/App.tsx` |
 
@@ -93,8 +97,9 @@ El chat es el mismo desde las cuatro primeras: una sola conversación, cuatro vi
 | Fallo de la aplicación | No se toca nada. Se informa. Es un bug encontrado |
 | Proveedor | Solo Claude, por la suscripción del usuario. El hueco para otro queda hecho |
 | Convenciones de la skill | Buenas prácticas estándar, afinadas con lo que se rechace |
-| Alcance real del Bloque 2 | Más amplio que la lista literal de la spec: se aplicó el criterio de ESTADO.md («todo lo que no está en "se conserva" se borra»). Se vació también Configuración (doctor/health-check, se reconstruye en el Bloque 3) y se borró entera una función de "guía integrada" no listada en la spec (`GuiaPestana`, `CajonFicha`, `FiltrosGuia`, `InsigniasEjes`, `Motor`, `Instalar.tsx`, `src/consola/*`) |
-| `agente-qa-contract` | Retirada del todo en el Bloque 2, no en el 3/5. Lo que daba (parseo de config, resolución de proyecto) se reescribió a mano y mínimo en `server/config.ts` y `server/proyecto.ts` |
+| Alcance real del Bloque 2 | Más amplio que la lista literal de la spec: se aplicó el criterio de ESTADO.md («todo lo que no está en "se conserva" se borra»). Se borró entera una función de "guía integrada" no listada en la spec (`GuiaPestana`, `CajonFicha`, `FiltrosGuia`, `InsigniasEjes`, `Motor`, `Instalar.tsx`, `src/consola/*`). **Corrección (Bloque 3)**: pese a lo que decía esta fila antes, `src/Configuracion.tsx`, `src/Dashboard.tsx` (botón "ejecutar init") y `/api/init` en `server/app.ts` seguían con lógica completa de un sistema anterior — no se vaciaron en el Bloque 2 pese a que este fichero decía que sí. Se ha corregido de verdad en el Bloque 3 |
+| `agente-qa-contract` | Retirada del todo en el Bloque 2, no en el 3/5. La resolución de proyecto se reescribió a mano y mínima en `server/proyecto.ts` |
+| Sistema de configuración de proyecto anterior (`server/config.ts`/`claves.ts`/`entornoMcp.ts`, `.agente-qa/config.json` con credenciales/LLM/claves de API) | Pertenecía a una "Spec B" anterior, no a la spec vigente. Decisión explícita del usuario en el Bloque 3: **borrado entero, sin heredar nada** — se reconstruye de cero sobre `agente-qa.config.json` en la raíz (`server/proyecto.ts`), mínimo (solo `appUrl` hoy) |
 
 ---
 
@@ -117,6 +122,20 @@ Comprobados contra documentación oficial, no de memoria:
 - Si esto se distribuye o se vende algún día, **hay que preguntar a Anthropic**: la documentación
   prohíbe a terceros ofrecer login de claude.ai en su producto y no distingue el caso de una
   herramienta local. Para uso propio no hay nada que discutir.
+
+### El `doctor` — cómo se implementó (Bloque 3)
+
+`server/doctor.ts` hace las cuatro comprobaciones de la spec, cada una con parámetros inyectables
+para poder testearlas sin depender de la máquina real. El binario nativo del SDK se localiza
+resolviendo el paquete opcional por plataforma (`@anthropic-ai/claude-agent-sdk-<plataforma>-<arco>`,
+con sufijo `-musl` en Linux) y comprobando que el ejecutable (`claude`/`claude.exe`) existe junto a
+su `package.json` — comprobado instalando el SDK de verdad e inspeccionando `node_modules/`.
+
+**Deuda conocida**: la comprobación de sesión solo mira el fichero (`.credentials.json`, con
+`CLAUDE_CONFIG_DIR` si está definida) en las tres plataformas. En macOS la sesión puede vivir en el
+llavero en vez de en ese fichero — no se implementa el `security find-generic-password` real porque
+no hay forma de verificar aquí el nombre exacto del servicio sin una máquina macOS a mano, y
+adivinarlo daría falsos negativos silenciosos. Queda en `PROXIMOS-PASOS.md`.
 
 ---
 
