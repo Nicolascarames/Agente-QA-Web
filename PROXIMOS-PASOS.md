@@ -67,7 +67,5 @@ nuevo.
 
 ## Trámites
 
-- [ ] **Reescribir `CLAUDE.md`** — el que hay describe este repo como la interfaz de un CLI que
-      desaparece. Lo lleva el usuario.
 - [ ] **Borrar los tres repos retirados**: `AGENTE-QA-MCP`, `Agente_QA`, `agente-qa-contract`. Nada
       de esta spec los necesita.
