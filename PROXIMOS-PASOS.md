@@ -71,13 +71,6 @@ el 4.
       implementó `security find-generic-password` porque no hay máquina macOS a mano para verificar
       el nombre exacto del servicio, y adivinarlo daría falsos negativos silenciosos. Verificar y
       completar cuando haya acceso a macOS.
-- [ ] **`server/app.ts` puede no servir el frontend en el build compilado.** `distClient` se calcula
-      con `path.resolve(dirActual, "..", "dist-client")` — un `..` de menos si `dist-server/app.js`
-      compila en realidad a `dist-server/server/app.js` (mismo bug que tenía `server/agente.ts` antes
-      de corregirse en el Bloque 4; `tsconfig.server.json` no fija `rootDir`). Si es real, `existsSync`
-      falla en silencio y `fastifyStatic` nunca se registra: `npx agente-qa` instalado como dependencia
-      no mostraría ninguna web. Comprobarlo con `npm run build` + inspección del `dist-server/`
-      compilado antes del próximo bloque que dependa de servir el frontend en producción.
 - [ ] **Bloque 9 (`instalar`) copiará desde la ruta nueva de la skill.** El Bloque 4 movió
       `skill/SKILL.md` a `skill/skills/qa/SKILL.md` (formato de plugin). Cuando se implemente el
       Bloque 9, usar esa ruta, no la antigua.

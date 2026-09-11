@@ -16,9 +16,10 @@ export interface AppOptions {
 }
 
 const dirActual = path.dirname(fileURLToPath(import.meta.url));
-// Este fichero compila a dist-server/app.js; dist-client/ es hermana de dist-server/
-// en la raíz del repo, no del proyecto que se está inspeccionando.
-const distClient = path.resolve(dirActual, "..", "dist-client");
+// tsconfig.server.json no fija rootDir: preserva la estructura de carpetas, así que este fichero
+// compila a dist-server/server/app.js (dos niveles bajo la raíz del repo, no uno). dist-client/ es
+// hermana de dist-server/ en la raíz del repo, no del proyecto que se está inspeccionando.
+const distClient = path.resolve(dirActual, "..", "..", "dist-client");
 
 /** Construye el servidor sin arrancarlo — separado de index.ts para poder probarlo con `.inject()`. */
 export function buildApp(opts: AppOptions): FastifyInstance {

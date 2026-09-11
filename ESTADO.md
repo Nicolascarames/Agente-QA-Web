@@ -151,11 +151,14 @@ corte de red y dos conexiones no pueden repartirse un único cursor compartido. 
 `dist-server/server/agente.js`, dos niveles bajo la raíz del repo — `tsconfig.server.json` no fija
 `rootDir` y preserva la estructura de carpetas).
 
-**Deuda conocida**: `server/app.ts` calcula `distClient` con un `..` de menos
-(`path.resolve(dirActual, "..", "dist-client")`), el mismo error que tenía `agente.ts` antes de
-corregirse en este bloque — visto durante la review del Bloque 4, fuera de su alcance, sin
-corregir. Si es real, el build compilado no sirve el frontend (`existsSync` falla en silencio y
-`fastifyStatic` nunca se registra). Queda en `PROXIMOS-PASOS.md`.
+**Corregido tras el cierre del bloque**: `server/app.ts` calculaba `distClient` con un `..` de
+menos (`path.resolve(dirActual, "..", "dist-client")`), el mismo error que tenía `agente.ts` antes
+de corregirse en este bloque. Confirmado real, no solo teórico: `bin/agente-qa.mjs` importa
+directamente de `dist-server/server/app.js` (el camino real de `npx agente-qa`, no solo de tests),
+así que en el build compilado `existsSync` fallaba en silencio, `fastifyStatic` nunca se registraba
+y la web no se servía. Arreglado a `path.resolve(dirActual, "..", "..", "dist-client")`, verificado
+levantando el servidor compilado de verdad (`node bin/agente-qa.mjs` desde `pruebas/sauce/`,
+`GET /` → 200).
 
 ### El `doctor` — cómo se implementó (Bloque 3)
 
