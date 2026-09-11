@@ -1,6 +1,6 @@
 # PRÓXIMOS PASOS — Agente-QA-Web
 
-Actualizado: 2026-09-11 (Bloque 3 cerrado)
+Actualizado: 2026-09-11 (Bloque 4 cerrado)
 
 Cola priorizada. **Una tarea = una línea.** El detalle vive en la spec.
 
@@ -25,9 +25,13 @@ Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`]
       cuando falta Playwright. De paso se purgó entero el sistema de configuración anterior
       (`server/config.ts`/`claves.ts`/`entornoMcp.ts`, rutas `/api/init|config/proyecto|claves`) —
       decisión explícita del usuario de no heredar nada. Detalle en `ESTADO.md`.
-- [ ] **Bloque 4 — La consola habla con el agente.** `server/agente.ts` envuelve `query()` del SDK.
-      Preguntas con botones vía `canUseTool`, caja de texto libre, y **dos botones distintos** para
-      parar e interrumpir.
+- [x] **Bloque 4 — La consola habla con el agente.** Cerrado 2026-09-11. `server/agente.ts` envuelve
+      `query()` en modo streaming-input; `canUseTool` da botones + texto libre para `AskUserQuestion`
+      (respondida vía `{behavior:"deny", message:...}`, único canal que funciona de verdad); botones
+      Parar/Interrumpir; SSE con un suscriptor independiente por conexión. `skill/` reestructurada
+      como plugin del SDK. Probado con dos peticiones reales contra `pruebas/sauce/` (una directa,
+      una ambigua con pregunta respondida y verificada en el siguiente turno) y 40 tests. Detalle y
+      hechos del SDK que no estaban documentados en ningún sitio, en `ESTADO.md`.
 - [ ] **Bloque 5 — La barrera de escrituras y los secretos.** Hook `PreToolUse`, escrito desde cero.
       Interruptor por repo. Lo que permite apuntar a una aplicación real.
 - [ ] **Bloque 6 — Gherkin editable y visor de diff.** Las dos puertas donde decide el usuario:
@@ -67,6 +71,16 @@ el 4.
       implementó `security find-generic-password` porque no hay máquina macOS a mano para verificar
       el nombre exacto del servicio, y adivinarlo daría falsos negativos silenciosos. Verificar y
       completar cuando haya acceso a macOS.
+- [ ] **`server/app.ts` puede no servir el frontend en el build compilado.** `distClient` se calcula
+      con `path.resolve(dirActual, "..", "dist-client")` — un `..` de menos si `dist-server/app.js`
+      compila en realidad a `dist-server/server/app.js` (mismo bug que tenía `server/agente.ts` antes
+      de corregirse en el Bloque 4; `tsconfig.server.json` no fija `rootDir`). Si es real, `existsSync`
+      falla en silencio y `fastifyStatic` nunca se registra: `npx agente-qa` instalado como dependencia
+      no mostraría ninguna web. Comprobarlo con `npm run build` + inspección del `dist-server/`
+      compilado antes del próximo bloque que dependa de servir el frontend en producción.
+- [ ] **Bloque 9 (`instalar`) copiará desde la ruta nueva de la skill.** El Bloque 4 movió
+      `skill/SKILL.md` a `skill/skills/qa/SKILL.md` (formato de plugin). Cuando se implemente el
+      Bloque 9, usar esa ruta, no la antigua.
 
 ---
 
