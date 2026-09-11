@@ -27,11 +27,14 @@ y el usuario acepta o rechaza. Quien juzga es Playwright, ejecutando el test.
 
 ## Qué funciona hoy
 
-**Nada del plan nuevo está implementado.** Lo que existe es una cáscara de interfaz de la que se
-aprovecha esto:
+**Bloque 1 cerrado — la puerta pasó.** El resto del plan nuevo no está implementado. Lo que
+existe además es una cáscara de interfaz de la que se aprovecha esto:
 
 | Pieza | Fichero |
 |---|---|
+| La skill de QA completa: rol, orden de trabajo, las tres puertas, definición de terminado | `skill/SKILL.md` |
+| Los trece niveles de localizadores y la regla de repetidos, con ejemplo NO/SÍ real | `skill/referencias/localizadores.md` |
+| Forma canónica de `.feature`/`.page.ts`/`.spec.ts`, verificada contra SauceDemo real | `skill/referencias/plantillas.md` |
 | Tokens de color y tipografía, autocontenidos, fuente propia sin CDN | `src/tokens.css` |
 | Guard de estilos en build — falla si el CSS usa una variable no definida | `scripts/comprobar-estilos.mjs` |
 | Estructura Fastify + SSE (las rutas, no su contenido) | `server/app.ts` |
@@ -41,6 +44,22 @@ aprovecha esto:
 | La maqueta y el estilo de siete pestañas | — |
 
 El resto se borra en el Bloque 2. La lista exacta está en la spec.
+
+### Bloque 1 — cómo se validó
+
+`pruebas/sauce/` (fuera de git, desechable) monta Playwright contra `https://www.saucedemo.com`
+con login único vía `storageState`. Tres peticiones distintas, siguiendo solo `skill/SKILL.md`,
+dieron tres tests verdes a la primera y estables en dos ejecuciones seguidas:
+
+- Añadir un producto al carrito (con pregunta real por `AskUserQuestion` sobre qué producto).
+- Login con `locked_out_user` — descubrimos mirando la página que esta versión de SauceDemo no
+  expone ningún mensaje de error accesible para este caso (ni texto ni `aria-invalid`); el test
+  se escribió contra lo que de verdad se puede comprobar (no se llega al inventario), no contra
+  un mensaje inventado. Queda anotado como comentario en el propio test.
+- Quitar un producto del carrito tras añadir dos, comprobando que el contador baja.
+
+`skill/` se copia (no symlink, por Windows) a `pruebas/sauce/.claude/skills/qa/` para que un
+`claude` lanzado ahí la descubra solo — mecanismo que reutilizará el Bloque 9 (`instalar`).
 
 ### Las siete pestañas y qué será cada una
 

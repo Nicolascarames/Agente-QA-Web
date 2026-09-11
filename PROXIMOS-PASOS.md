@@ -10,10 +10,10 @@ Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`]
 
 # EL PLAN — nueve bloques, en este orden
 
-- [ ] **Bloque 1 — La skill y un test verde.** Sin web, sin comando, sin interfaz. Escribir
-      `skill/SKILL.md` y sus dos referencias, montar `pruebas/sauce/`, y conseguir desde la terminal
-      que tres peticiones distintas den tres tests en verde contra SauceDemo.
-      **Es una puerta, no un primer paso**: si no sale, se itera aquí y no se avanza.
+- [x] **Bloque 1 — La skill y un test verde.** Cerrado 2026-09-11. `skill/SKILL.md` y sus dos
+      referencias escritos; `pruebas/sauce/` monta Playwright contra SauceDemo real. Tres
+      peticiones distintas, tres tests verdes a la primera, estables en dos ejecuciones. Detalle
+      en `ESTADO.md`.
 - [ ] **Bloque 2 — Vaciar la web.** Borrar todo lo que no aparece en la lista de «se conserva» de
       `ESTADO.md`. Crear `shared/eventos.ts` con la constante única de tipos de evento. Al cerrar: la
       web arranca y navega con siete pestañas honestas y vacías.
