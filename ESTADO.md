@@ -1,6 +1,6 @@
 # ESTADO — Agente-QA-Web
 
-Actualizado: 2026-09-11 (Bloque 4 cerrado)
+Actualizado: 2026-09-11 (Bloques 5, 6 y 7 cerrados)
 
 ## Qué es esto
 
@@ -27,12 +27,18 @@ y el usuario acepta o rechaza. Quien juzga es Playwright, ejecutando el test.
 
 ## Qué funciona hoy
 
-**Bloques 1, 2, 3 y 4 cerrados.** El resto del plan nuevo no está implementado. `npx agente-qa` (o
-`node bin/agente-qa.mjs` en local) arranca sobre `process.cwd()`, crea `agente-qa.config.json` en
-la raíz preguntando solo la URL base si no existe, y levanta la web mostrando ese repo. El
-subcomando `doctor` comprueba sesión/SDK/Node/Playwright y sale con el código correspondiente. La
-consola global lanza el agente de verdad (SDK de Claude Code) sobre el repo activo: escribes una
-petición, se ejecuta con Playwright MCP y la skill de QA, y los eventos llegan por SSE.
+**Bloques 1 a 7 cerrados.** Quedan el 8 (Reports/Dashboard/trazabilidad) y el 9 (`instalar`).
+`npx agente-qa` (o `node bin/agente-qa.mjs` en local) arranca sobre `process.cwd()`, crea
+`agente-qa.config.json` en la raíz preguntando solo la URL base si no existe, y levanta la web
+mostrando ese repo. El subcomando `doctor` comprueba sesión/SDK/Node/Playwright y sale con el
+código correspondiente. La consola global lanza el agente de verdad (SDK de Claude Code) sobre el
+repo activo: escribes una petición, se ejecuta con Playwright MCP y la skill de QA, y los eventos
+llegan por SSE. Redactar, Generar, Ejecutar y Reparar muestran datos reales del repo (Gherkin
+editable, diff con aceptar/descartar, resultados de Playwright), cada una con su propio chat que
+comparte la misma sesión de la consola global. Con la barrera de escrituras encendida en
+Configuración, toda llamada de escritura de Playwright contra una URL fuera de la lista blanca se
+deniega y cualquier secreto conocido (variables `PASSWORD`/`SECRET`/`TOKEN`/`KEY`/`CREDENCIAL`) se
+redacta antes de salir por el canal de eventos.
 
 | Pieza | Fichero |
 |---|---|
@@ -53,6 +59,12 @@ petición, se ejecuta con Playwright MCP y la skill de QA, y los eventos llegan 
 | Envuelve `query()` del SDK de Claude Code: cola de entrada en modo streaming, difusor de eventos a N suscriptores SSE, `canUseTool` para `AskUserQuestion`, mapeo a los tres eventos terminales | `server/agente.ts` |
 | Rutas `/api/comando` (lanza o encola), `/api/eventos` (SSE, un suscriptor por conexión), `/api/parar`, `/api/interrumpir`, `/api/pregunta/responder`; estado de la sesión activa en memoria del módulo | `server/app.ts` |
 | La skill de QA reestructurada como plugin del SDK (manifiesto + `skills/qa/`), para que `plugins` la cargue sin copiar nada al repo del usuario | `skill/.claude-plugin/plugin.json`, `skill/skills/qa/` |
+| Barrera de escrituras: compara cada llamada `mcp__playwright__*` de escritura contra la lista blanca del entorno activo (dentro de `canUseTool`, mismo canal `deny+message` del Bloque 4); redacción de secretos aplicada a toda emisión del difusor de eventos | `server/barrera.ts`, uso en `server/agente.ts` |
+| `ConfigRaiz` con `entorno`/`barrera`/`listaBlanca`; formulario real en el panel "proyecto" de Configuración; rutas `GET/POST /api/config` | `shared/tipos.ts`, `server/proyecto.ts`, `src/Configuracion.tsx`, `server/app.ts` |
+| `diff`/`commit`/`descartar` sobre `tests/{features,pages,specs}/` vía `git` del sistema (sin dependencias nuevas); rutas `/api/escenarios*` y `/api/generados*` | `server/git.ts`, `server/app.ts` |
+| Redactar (lista+edición de `.feature`) y Generar (lista+diff con Aceptar/Descartar de `.page.ts`/`.spec.ts`), cada una con un chat propio (`ChatAgente`) que comparte el estado de la consola global | `src/Redactar.tsx`, `src/Generar.tsx` |
+| Lector fiel del último reporte JSON de Playwright (`test-results/results.json`, por confirmar contra un proyecto real); `sugerirVeredicto` es solo una etiqueta de badge, nunca un juez — la clasificación real la da el agente | `server/reporter.ts` |
+| Ejecutar (lista+pasos+error de cada test) y Reparar (solo los rojos, badge de sugerencia, diff con Aplicar/Rechazar), cada una con su chat (`ChatCorrida`) | `src/Ejecutar.tsx`, `src/Reparar.tsx` |
 
 Nada de esto se toca por debajo del alcance real necesario para los bloques siguientes.
 
@@ -108,6 +120,10 @@ El chat es el mismo desde las cuatro primeras: una sola conversación, cuatro vi
 | `skill/` como plugin (Bloque 4) | `plugins` del SDK exige `.claude-plugin/plugin.json` + `skills/<nombre>/SKILL.md`, no un `SKILL.md` suelto — se movió (`git mv`) de `skill/SKILL.md` a `skill/skills/qa/SKILL.md`. Afecta al Bloque 9 (`instalar`): las rutas de origen que copie ya no son las del Bloque 1 |
 | Respuesta a `AskUserQuestion` (Bloque 4) | No hay canal documentado que funcione con `{behavior:"allow", updatedInput:{questions,answers}}` (verificado: el modelo nunca ve la respuesta). Funciona `{behavior:"deny", message:<respuesta formateada>}` — verificado en vivo contra `pruebas/sauce/` |
 | Una corrida = una sesión `query()`, no una petición (Bloque 4) | Mensajes escritos mientras hay una corrida activa se encolan en la misma sesión (modo streaming-input) en vez de lanzar una `query()` nueva — necesario porque `Query.interrupt()` solo existe en ese modo y porque Playwright MCP no soporta dos sesiones concurrentes sobre el mismo navegador |
+| Barrera de escrituras (Bloque 5): `canUseTool`, no un hook nativo del SDK | El SDK expone `hooks.PreToolUse` pero su interacción con `permissionDecision:"ask"` en modo headless (sin terminal) no está probada en este repo. Se reutilizó `canUseTool` — ya validado en el Bloque 4 para `AskUserQuestion` — añadiendo la comprobación de lista blanca antes de esa rama, con el mismo canal `{behavior:"deny", message}` |
+| Fallo del test vs fallo de la aplicación (Bloque 7) | `server/reporter.ts` nunca judge: `sugerirVeredicto` es una heurística de badge (patrones de error típicos de localizador vs de aserción de valor), marcada en la UI como sugerencia. La clasificación real la hace el agente en el chat, coherente con el principio de ESTADO.md de que el código nunca juzga lo que produce el agente |
+| Chat propio por pestaña (Bloques 6 y 7) | `<ConsolaGlobal>` monta su propio `<Panel tabId="global" panelId="consola">` con key fija: no se puede anidar dentro de otro panel sin duplicarla. Redactar/Generar/Ejecutar/Reparar montan un componente de chat ligero propio (`ChatAgente`/`ChatCorrida`) que reutiliza el mismo estado (`corridaActiva`/`eventos`/`marcarCorridaActiva`) que `App.tsx` ya pasa a la consola global — no hay dos sesiones ni dos suscripciones SSE, solo dos vistas del mismo estado |
+| Contrato `/api/generados/diff\|commit\|descartar` (Bloques 6 y 7) | Fijado por el Bloque 6 (`?ruta=` en el diff, `{rutas: string[], mensaje}` en el commit, `{rutas: string[]}` en el descarte) porque ahí vive `server/git.ts`. El Bloque 7 se implementó en paralelo sin verlo y asumió nombres distintos (`?fichero=`, `{fichero}`) — se corrigió al integrar; si se vuelve a tocar este contrato, `Reparar.tsx` es el único consumidor a revisar |
 
 ---
 
@@ -137,6 +153,15 @@ Comprobados contra documentación oficial, no de memoria:
 - `abortController.abort()` hace que el `Query` real rechace con "Operation aborted": sin un `catch`
   alrededor de la iteración, esa promesa rechazada escapa como *unhandled rejection* y tumba el
   proceso Node entero del servidor, no solo la ejecución en curso.
+- **Los worktrees aislados (`isolation: "worktree"` del subagente) en esta máquina pueden crearse
+  anclados a un commit viejo de `main`, no a la punta actual** — pasó dos veces seguidas al
+  despachar los Bloques 5/6/7 en paralelo, con un worktree hasta 8 commits detrás (código de antes
+  del Bloque 2, con `agente-qa-contract`/`src/Explorar.tsx` que ya no existen). Cualquier trabajo
+  despachado a un worktree debe empezar comprobando `git log -1` contra el `main` real y haciendo
+  `git merge --ff-only main` si no coincide, antes de leer o tocar nada. Además, un worktree sin
+  commitear puede desaparecer solo (limpieza automática del harness) aunque el agente haya hecho
+  cambios reales: hay que commitear dentro del propio worktree en cuanto el trabajo esté verificado,
+  no confiar en que el directorio sobreviva hasta la fusión.
 
 ### El agente — cómo se implementó (Bloque 4)
 

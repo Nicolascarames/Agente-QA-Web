@@ -1,6 +1,6 @@
 # PRÓXIMOS PASOS — Agente-QA-Web
 
-Actualizado: 2026-09-11 (Bloque 4 cerrado)
+Actualizado: 2026-09-11 (Bloques 5, 6 y 7 cerrados)
 
 Cola priorizada. **Una tarea = una línea.** El detalle vive en la spec.
 
@@ -32,19 +32,25 @@ Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`]
       como plugin del SDK. Probado con dos peticiones reales contra `pruebas/sauce/` (una directa,
       una ambigua con pregunta respondida y verificada en el siguiente turno) y 40 tests. Detalle y
       hechos del SDK que no estaban documentados en ningún sitio, en `ESTADO.md`.
-- [ ] **Bloque 5 — La barrera de escrituras y los secretos.** Hook `PreToolUse`, escrito desde cero.
-      Interruptor por repo. Lo que permite apuntar a una aplicación real.
-- [ ] **Bloque 6 — Gherkin editable y visor de diff.** Las dos puertas donde decide el usuario:
-      corregir el escenario antes de que se escriba código, y aceptar o descartar el diff.
-- [ ] **Bloque 7 — Ejecutar y Reparar con datos reales.** Lector del reporter JSON de Playwright y la
-      distinción fallo-del-test / fallo-de-la-aplicación, esta última cubierta por test unitario.
+- [x] **Bloque 5 — La barrera de escrituras y los secretos.** Cerrado 2026-09-11. `server/barrera.ts`
+      (puro, testeado) más su uso en `canUseTool` (`server/agente.ts`) — no un hook `PreToolUse`
+      nativo del SDK, sin probar en modo headless; se reutilizó el canal ya validado en el Bloque 4.
+      Interruptor + lista blanca reales en Configuración (`GET/POST /api/config`). Redacción de
+      secretos en toda emisión del difusor. Detalle en `ESTADO.md`.
+- [x] **Bloque 6 — Gherkin editable y visor de diff.** Cerrado 2026-09-11. `server/git.ts` (diff/
+      commit/descartar vía `git` del sistema, sin dependencias nuevas); Redactar y Generar con datos
+      reales de `tests/{features,pages,specs}/`. Hallazgo de revisión corregido antes de integrar:
+      `GET/PUT /api/escenarios/:nombre` no saneaba el parámetro de ruta (path traversal, lectura/
+      escritura de fichero arbitrario) — ahora rechaza cualquier `nombre` que no sea un fichero
+      `.feature` suelto, con test de regresión. Detalle en `ESTADO.md`.
+- [x] **Bloque 7 — Ejecutar y Reparar con datos reales.** Cerrado 2026-09-11. `server/reporter.ts`
+      lee `test-results/results.json` (convención asumida, sin `playwright.config.ts` de referencia
+      en este repo — **verificar contra un proyecto real la primera vez que se use en serio**).
+      `sugerirVeredicto` es solo la etiqueta del badge en Reparar, nunca un juez. Detalle en `ESTADO.md`.
 - [ ] **Bloque 8 — Reports, Dashboard y trazabilidad.** Cruce de pasos del `.feature` con los
       `test.step`. Escenarios no cubiertos y desincronizados. Coste leído del SDK, sin base de datos.
 - [ ] **Bloque 9 — El comando `instalar`.** Genera los envoltorios para Claude Code en terminal,
       Codex y Copilot desde el mismo `SKILL.md`. Para la consola de la web no hace falta.
-
-Los bloques 5, 6 y 7 son independientes entre sí: se pueden despachar en paralelo una vez cerrado
-el 4.
 
 ---
 
@@ -74,6 +80,9 @@ el 4.
 - [ ] **Bloque 9 (`instalar`) copiará desde la ruta nueva de la skill.** El Bloque 4 movió
       `skill/SKILL.md` a `skill/skills/qa/SKILL.md` (formato de plugin). Cuando se implemente el
       Bloque 9, usar esa ruta, no la antigua.
+- [ ] **`server/reporter.ts` asume `test-results/results.json`** sin haberlo confirmado contra un
+      `playwright.config.ts` real generado por la skill. Verificar la primera vez que se ejecute un
+      test de verdad y ajustar la ruta si hace falta.
 
 ---
 
