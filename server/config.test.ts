@@ -2,8 +2,8 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { projectPaths } from "agente-qa-contract/project";
 import { escribirConfigProyecto, leerConfigProyecto } from "./config.js";
+import { projectPaths } from "./proyecto.js";
 
 const CONFIG_JSON_VALIDO = {
   schemaVersion: 1,

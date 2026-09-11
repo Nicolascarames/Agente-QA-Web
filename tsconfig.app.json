@@ -9,9 +9,5 @@
     "noEmit": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "shared"],
-  // Estos dos cruzan a propósito hacia `server/` (ver `tsconfig.catalogo-guard.json`, que sí los
-  // typechecka): un proyecto "composite" exige que cualquier fichero alcanzado por import esté
-  // también en su propio "include", y ninguno quiere arrastrar medio `server/` al bundle de cliente.
-  "exclude": ["src/catalogo/catalogo.test.ts", "src/catalogo/catalogo.cli-vivo.test.ts"]
+  "include": ["src", "shared"]
 }

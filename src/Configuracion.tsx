@@ -1,16 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Panel } from "./Panel";
-import {
-  ejecutarDoctor,
-  guardarClave,
-  guardarConfigProyecto,
-  obtenerCli,
-  obtenerClaves,
-  obtenerConfigProyecto,
-  probarProveedor,
-  verClaveCompleta,
-  verCredencialProyecto,
-} from "./api";
+import { guardarClave, guardarConfigProyecto, obtenerClaves, obtenerConfigProyecto, verClaveCompleta, verCredencialProyecto } from "./api";
 import type {
   CambiosLlmProyecto,
   CapaConfig,
@@ -19,8 +9,6 @@ import type {
   EnvironmentApp,
   Modalidad,
   Proveedor,
-  ResultadoCli,
-  ResultadoSubproceso,
 } from "../shared/tipos";
 
 const ENTORNOS: EnvironmentApp[] = ["dev", "test", "staging", "production"];
@@ -47,9 +35,9 @@ function motivoNoEditable(capa: CapaConfig | null): string | undefined {
 export function Configuracion() {
   return (
     // Geometría EXACTA de `panels.config` en design/mockup-design.js: mk(0,0,48,100) y
-    // mk(51,0,49,100), los dos a 100% de alto — el mockup no tiene una tercera fila aquí,
-    // así que "Diagnóstico" (antes un tercer panel, parche del Bloque 2) se funde dentro del
-    // panel Global como su bloque "🩺 Estado del entorno" (ver SeccionDiagnostico más abajo).
+    // mk(51,0,49,100), los dos a 100% de alto. El bloque "🩺 Estado del entorno" (CLI/doctor del
+    // agente-qa-mcp antiguo) se borró en el Bloque 2 junto con `server/cli.ts`: el doctor real
+    // llega en el Bloque 3, atado al agente vía SDK, no a un binario externo.
     <div className="flex h-full w-full flex-col overflow-auto p-4">
       <div className="relative flex-1" data-canvas="true">
         <Panel tabId="configuracion" panelId="proyecto" titulo="📁 Este proyecto" disposicionPorDefecto={{ x: 0, y: 0, w: 48, h: 100, z: 1 }}>
@@ -266,8 +254,8 @@ function SeccionProyecto() {
       </div>
       {modalidad === "suscripcion" && (
         <p className="mb-1 rounded-6 border-l-2 border-accent pl-2 text-xs text-accent">
-          Con "suscripcion" solo funciona la grabación conducida (<code>record --auto</code>). Explorar (mapear/ejecutar) necesita
-          modalidad "api": si lanzas una corrida ahí, morirá con un error en cuanto arranque.
+          Con "suscripcion" no hace falta proveedor ni modelo: usa el binario <code>claude</code> de tu sesión. Con "api" sí hacen
+          falta los dos — el agente que use esta modalidad se conecta en el Bloque 4.
         </p>
       )}
       {modalidad === "api" && (
@@ -528,84 +516,6 @@ function SeccionGlobal() {
         ))}
 
       {mensaje && <p className="mt-3 text-sm text-accent">{mensaje}</p>}
-
-      <SeccionDiagnostico />
-    </div>
-  );
-}
-
-// --- Diagnóstico: CLI localizado, doctor, prueba de proveedor -------------------------------
-// Antes un tercer panel aparte (parche del Bloque 2); en la geometría real de
-// `panels.config` es el bloque "🩺 Estado del entorno" dentro del panel Global.
-
-function SeccionDiagnostico() {
-  const [cli, setCli] = useState<ResultadoCli | null>(null);
-  const [ejecutando, setEjecutando] = useState<"doctor" | "ping" | null>(null);
-  const [resultado, setResultado] = useState<ResultadoSubproceso | null>(null);
-
-  useEffect(() => {
-    void obtenerCli().then(setCli);
-  }, []);
-
-  const lanzarDoctor = useCallback(() => {
-    setEjecutando("doctor");
-    void ejecutarDoctor()
-      .then(setResultado)
-      .finally(() => setEjecutando(null));
-  }, []);
-
-  // Sin argumentos: prueba la modalidad ya configurada en el proyecto (Spec B, Bloque 1 —
-  // ya no hay perfiles que elegir, solo la modalidad activa de "Este proyecto").
-  const lanzarPing = useCallback(() => {
-    setEjecutando("ping");
-    void probarProveedor({})
-      .then(setResultado)
-      .finally(() => setEjecutando(null));
-  }, []);
-
-  return (
-    <div className="flex flex-col gap-2">
-      <h2 className="mb-1 mt-3 flex items-center justify-between text-md font-bold text-text-bright">
-        <span>🩺 Estado del entorno</span>
-        <button
-          type="button"
-          disabled={ejecutando !== null}
-          onClick={lanzarDoctor}
-          className={`${CLASE_BOTON_SECUNDARIO} text-9.5`}
-        >
-          {ejecutando === "doctor" ? "ejecutando…" : "Ejecutar doctor"}
-        </button>
-      </h2>
-
-      <div className="flex items-center gap-2 text-sm">
-        <span className="text-text-muted">CLI:</span>
-        {cli === null && <span className="text-text-dim">buscando…</span>}
-        {cli && cli.encontrado && (
-          <span className="text-text">
-            encontrado por <strong className="text-text-strong">{cli.origen}</strong> ({cli.ruta})
-          </span>
-        )}
-        {cli && !cli.encontrado && (
-          <span className="text-accent" title={cli.diagnostico.join("\n")}>
-            no encontrado — {cli.diagnostico[0]}
-          </span>
-        )}
-      </div>
-
-      {/* "Probar proveedor" no está en el mockup (su "Estado del entorno" solo trae el botón
-          doctor); se conserva porque ya funcionaba antes de este bloque — la real manda
-          (regla de fidelidad 4/6), y quitarla habría sido perder funcionalidad sin motivo. */}
-      <div className="flex items-center gap-2">
-        <button type="button" disabled={ejecutando !== null} onClick={lanzarPing} className={CLASE_BOTON_SECUNDARIO}>
-          {ejecutando === "ping" ? "probando…" : "Probar proveedor"}
-        </button>
-      </div>
-
-      {resultado && (
-        <pre className="max-h-40 overflow-auto rounded-7 border border-border-soft bg-bg-sunken p-2 text-xs text-text">
-          {`código: ${String(resultado.codigo)}\n\n${resultado.stdout}${resultado.stderr ? `\n--- stderr ---\n${resultado.stderr}` : ""}`}
-        </pre>
-      )}
     </div>
   );
 }

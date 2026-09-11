@@ -2,19 +2,11 @@ import type {
   CambiosConfigProyecto,
   ClaveInfo,
   ConfigProyectoRespuesta,
-  CuerpoCorreccionLocalizador,
-  CuerpoExplorar,
   EstadoCorridaActiva,
   EstadoProyecto,
   EstadoProyectoActivo,
-  MapaCompleto,
   Proveedor,
-  ResultadoCli,
-  ResultadoSubproceso,
   RespuestaComando,
-  RespuestaCorreccionLocalizador,
-  RespuestaExplorar,
-  RespuestaMensaje,
 } from "../shared/tipos";
 
 /** true si la respuesta es el 501 documentado de /api/actividad; false si es cualquier otro fallo. */
@@ -53,16 +45,9 @@ export async function obtenerActividad(): Promise<ActividadDisponible | Activida
   return { disponible: true, eventos };
 }
 
+/** Alcance: una instancia por repo (decisión cerrada en ESTADO.md) — sin selector ni recientes. */
 export function obtenerProyecto(): Promise<EstadoProyectoActivo> {
   return pedirJson<EstadoProyectoActivo>("/api/proyecto");
-}
-
-export function cambiarProyecto(ruta: string): Promise<EstadoProyectoActivo> {
-  return pedirJson<EstadoProyectoActivo>("/api/proyecto", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ ruta }),
-  });
 }
 
 export interface ResultadoInit {
@@ -83,12 +68,6 @@ async function pedirJsonEstricto<T>(url: string, init?: RequestInit): Promise<T>
     throw new Error(cuerpo.error ?? `${url} respondió ${String(respuesta.status)}`);
   }
   return cuerpo;
-}
-
-/** Para `/api/doctor` y `/api/llm-ping`: el código de salida es parte del resultado a mostrar, no un fallo HTTP a ocultar. */
-async function pedirResultado<T>(url: string, init?: RequestInit): Promise<T> {
-  const respuesta = await fetch(url, init);
-  return (await respuesta.json()) as T;
 }
 
 export function obtenerConfigProyecto(): Promise<ConfigProyectoRespuesta> {
@@ -123,61 +102,10 @@ export function verClaveCompleta(proveedor: Proveedor): Promise<{ valor: string 
   return pedirJsonEstricto<{ valor: string }>(`/api/claves/${proveedor}/ver`, { method: "POST" });
 }
 
-export function obtenerCli(): Promise<ResultadoCli> {
-  return pedirJson<ResultadoCli>("/api/cli");
-}
-
-export function ejecutarDoctor(): Promise<ResultadoSubproceso> {
-  return pedirResultado<ResultadoSubproceso>("/api/doctor", { method: "POST" });
-}
-
-export function probarProveedor(body: { provider?: string; model?: string }): Promise<ResultadoSubproceso> {
-  return pedirResultado<ResultadoSubproceso>("/api/llm-ping", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
-
-// --- Explorar (Bloque 5): las cuatro puertas al mapeador-mcp, en vivo -----------------
-
-export function obtenerMapa(): Promise<MapaCompleto> {
-  return pedirJson<MapaCompleto>("/api/mapa");
-}
+// --- Consola global (Bloque 2: vaciada) — la caja de texto sigue viva, el agente llega en el Bloque 4 --
 
 export function obtenerCorridaActiva(): Promise<EstadoCorridaActiva> {
   return pedirJson<EstadoCorridaActiva>("/api/corridas/activa");
-}
-
-// Bloque 7: la única edición inline de toda la web, sobre datos estructurados de map.json.
-export function corregirLocalizador(cuerpo: CuerpoCorreccionLocalizador): Promise<RespuestaCorreccionLocalizador> {
-  return pedirJsonEstricto<RespuestaCorreccionLocalizador>("/api/mapa/localizador", {
-    method: "PUT",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(cuerpo),
-  });
-}
-
-export function lanzarExploracion(cuerpo: CuerpoExplorar): Promise<RespuestaExplorar> {
-  return pedirJsonEstricto<RespuestaExplorar>("/api/explorar", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(cuerpo),
-  });
-}
-
-export function detenerExploracion(): Promise<{ ok: true }> {
-  return pedirJsonEstricto<{ ok: true }>("/api/detener", { method: "POST" });
-}
-
-// --- Chat (Bloque 6): hablarle al agente mientras trabaja, o lanzar en lenguaje libre ---------
-
-export function enviarMensaje(texto: string): Promise<RespuestaMensaje> {
-  return pedirJsonEstricto<RespuestaMensaje>("/api/mensaje", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ texto }),
-  });
 }
 
 export function enviarComando(texto: string): Promise<RespuestaComando> {

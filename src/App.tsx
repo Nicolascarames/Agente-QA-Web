@@ -1,42 +1,25 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { cambiarProyecto, obtenerConfigProyecto, obtenerProyecto } from "./api";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { obtenerConfigProyecto, obtenerProyecto } from "./api";
 import { Dashboard } from "./Dashboard";
 import { Configuracion } from "./Configuracion";
-import { Explorar } from "./Explorar";
 import { Redactar } from "./Redactar";
 import { Generar } from "./Generar";
 import { Ejecutar } from "./Ejecutar";
 import { Reparar } from "./Reparar";
 import { Reports } from "./Reports";
-import { Motor } from "./Motor";
-import { Instalar } from "./Instalar";
 import { useCorridaGlobal } from "./useCorridaGlobal";
 import { ConsolaGlobal } from "./ConsolaGlobal";
-import { GuiaPestana } from "./GuiaPestana";
-import { CajonFicha } from "./CajonFicha";
-import { catalogoResuelto } from "./catalogo/catalogo";
-import { idFicha } from "./catalogo/porPestana";
 
-type Pestana =
-  | "Dashboard"
-  | "Configuración"
-  | "Explorar"
-  | "Redactar"
-  | "Generar"
-  | "Ejecutar"
-  | "Reparar"
-  | "Reports"
-  | "Motor"
-  | "Instalar";
+// Las siete pestañas de ESTADO.md — nada más. Bloque 2: fuera Explorar (el mapeador antiguo) y
+// fuera Motor/Instalar (la guía integrada, atada al mismo catálogo del CLI que se borró con él).
+type Pestana = "Dashboard" | "Configuración" | "Redactar" | "Generar" | "Ejecutar" | "Reparar" | "Reports";
 
-function contenidoPestana(pestana: Pestana, onCorridaActivaCambiada: (descripcion: string | null) => void) {
+function contenidoPestana(pestana: Pestana) {
   switch (pestana) {
     case "Dashboard":
       return <Dashboard />;
     case "Configuración":
       return <Configuracion />;
-    case "Explorar":
-      return <Explorar onCorridaActivaCambiada={onCorridaActivaCambiada} />;
     case "Redactar":
       return <Redactar />;
     case "Generar":
@@ -47,21 +30,13 @@ function contenidoPestana(pestana: Pestana, onCorridaActivaCambiada: (descripcio
       return <Reparar />;
     case "Reports":
       return <Reports />;
-    case "Motor":
-      return <Motor />;
-    case "Instalar":
-      return <Instalar />;
   }
 }
 
-// Grupos e iconos de la barra lateral, calcados de `navMeta` en
-// design/mockup-design.js. "Operaciones" son las seis puertas de trabajo;
+// Grupos e iconos de la barra lateral. "Operaciones" son las cinco puertas de trabajo;
 // "Proyecto" son las dos pantallas de lectura/ajuste del proyecto activo.
-// "Referencia" (Bloque 6 de la spec de guía integrada) es la sección nueva que sustituye a
-// `docs/esquema-flujo.html`: material de consulta, no trabajo sobre un proyecto concreto.
 const NAV_OPERACIONES: { pestana: Pestana; icon: string }[] = [
   { pestana: "Dashboard", icon: "📊" },
-  { pestana: "Explorar", icon: "🗺️" },
   { pestana: "Redactar", icon: "✍️" },
   { pestana: "Generar", icon: "🧪" },
   { pestana: "Ejecutar", icon: "▶️" },
@@ -71,61 +46,18 @@ const NAV_PROYECTO: { pestana: Pestana; icon: string }[] = [
   { pestana: "Reports", icon: "📈" },
   { pestana: "Configuración", icon: "⚙️" },
 ];
-const NAV_REFERENCIA: { pestana: Pestana; icon: string }[] = [
-  { pestana: "Motor", icon: "🧠" },
-  { pestana: "Instalar", icon: "📦" },
-];
 
 export default function App() {
   const [pestana, setPestana] = useState<Pestana>("Dashboard");
   const [proyectoActual, setProyectoActual] = useState<string>("");
-  const [recientes, setRecientes] = useState<string[]>([]);
-  const [rutaCampo, setRutaCampo] = useState("");
   const [sidebarAbierta, setSidebarAbierta] = useState(false);
   const [appUrl, setAppUrl] = useState<string | null>(null);
 
-  // Id de la ficha con el cajón de detalle abierto (Bloque 4), o `null` si está cerrado. Vive
-  // aquí (no en GuiaPestana) porque el cajón se pinta por encima de todo el árbol y lo abrirán
-  // también el buscador y la consola asistida de bloques futuros.
-  const [fichaAbierta, setFichaAbierta] = useState<string | null>(null);
-  // Opción (`--auto`, etc.) que debe aparecer ya resaltada al abrir el cajón (Bloque 7 de la spec
-  // de guía integrada): la pone `?` sobre una sugerencia de flag del autocompletado, vía
-  // `abrirFicha` más abajo. `null` para cualquier otra vía de apertura (guía, buscador).
-  const [opcionResaltada, setOpcionResaltada] = useState<string | null>(null);
-  // Memoizado por identidad: `CajonFicha` reinicia efectos internos (mostrada/flagFoco) cuando
-  // `resuelta` cambia de identidad, y `catalogoResuelto()` construye un array/objetos nuevos en
-  // cada llamada — sin este `useMemo`, cualquier re-render de `App` con el cajón abierto (p. ej.
-  // los que dispara `useCorridaGlobal` en cada evento SSE) los reiniciaría de más.
-  const resueltaAbierta = useMemo(
-    () => (fichaAbierta ? (catalogoResuelto().find((resuelta) => idFicha(resuelta.ficha) === fichaAbierta) ?? null) : null),
-    [fichaAbierta],
-  );
-  const abrirFicha = useCallback((id: string, opcion?: string) => {
-    setFichaAbierta(id);
-    setOpcionResaltada(opcion ?? null);
-  }, []);
-  const cerrarFicha = useCallback(() => {
-    setFichaAbierta(null);
-    setOpcionResaltada(null);
-  }, []);
-
-  // Ejemplo elegido en el cajón de detalle (Bloque 8 de la spec de guía integrada): vive aquí,
-  // no en `ConsolaGlobal` ni en `CajonFicha`, porque son ramas hermanas del árbol — el clic sale
-  // de una y tiene que llegar a la otra. `version` fuerza el efecto de `ConsolaGlobal` a disparar
-  // aunque se repita el mismo ejemplo dos veces seguidas.
-  const [ejemploParaConsola, setEjemploParaConsola] = useState<{ texto: string; version: number } | null>(null);
-  const insertarEjemploEnConsola = useCallback((texto: string) => {
-    setEjemploParaConsola({ texto, version: Date.now() });
-    setFichaAbierta(null);
-    setOpcionResaltada(null);
-  }, []);
-
   // El indicador "● en curso" y el panel de consola global comparten el mismo hook: vive aquí
-  // (nunca se desmonta al cambiar de pestaña), a diferencia del antiguo estado que solo subía
-  // desde Explorar.
-  const { corridaActiva, eventos, resumenFinal, marcarCorridaActiva } = useCorridaGlobal();
+  // (nunca se desmonta al cambiar de pestaña).
+  const { corridaActiva, eventos, marcarCorridaActiva } = useCorridaGlobal();
 
-  // Tres bandas apiladas dentro de `<main>` (Bloque 3): cada una es su propio `[data-canvas]` de
+  // Dos bandas apiladas dentro de `<main>` (Bloque 3): cada una es su propio `[data-canvas]` de
   // un viewport de alto menos la topbar, así los paneles flotantes de cada banda quedan acotados a
   // ella. La altura de la topbar se mide en runtime (no se adivina) porque su contenido (el aviso
   // "en curso") puede cambiar su alto real entre pestañas.
@@ -146,37 +78,19 @@ export default function App() {
 
   const alturaBanda = `calc(100vh - ${String(alturaTopbar)}px)`;
 
-  const cargarAppUrl = useCallback(() => {
+  useEffect(() => {
+    void obtenerProyecto().then((datos) => {
+      setProyectoActual(datos.actual);
+    });
     void obtenerConfigProyecto().then((datos) => {
       setAppUrl(datos.inicializado ? datos.config.appUrl.valor : null);
     });
   }, []);
 
-  useEffect(() => {
-    void obtenerProyecto().then((datos) => {
-      setProyectoActual(datos.actual);
-      setRutaCampo(datos.actual);
-      setRecientes(datos.recientes);
-    });
-    cargarAppUrl();
-  }, [cargarAppUrl]);
-
-  const cambiarA = useCallback(
-    (ruta: string) => {
-      void cambiarProyecto(ruta).then((datos) => {
-        setProyectoActual(datos.actual);
-        setRutaCampo(datos.actual);
-        setRecientes(datos.recientes);
-      });
-      cargarAppUrl();
-    },
-    [cargarAppUrl]
-  );
-
-  const ir = useCallback((p: Pestana) => {
+  const ir = (p: Pestana) => {
     setPestana(p);
     setSidebarAbierta(false);
-  }, []);
+  };
 
   const claseItemNav = (p: Pestana) =>
     `flex w-full items-center gap-1.5 rounded-8 border-0 bg-transparent px-2.5 py-2 text-left text-md font-normal text-text-muted transition-colors ${
@@ -207,44 +121,10 @@ export default function App() {
           <div className="mt-1 text-2xs text-text-faint">Agente-QA-Web · tema oscuro</div>
         </div>
 
+        {/* Alcance: una instancia por repo (decisión cerrada en ESTADO.md) — sin selector ni recientes. */}
         <div className="mx-3 mb-3.5 rounded-8 border border-border-soft bg-bg-panel p-2.5">
           <div className="text-2xs uppercase tracking-[.05em] text-text-faint">📁 Proyecto</div>
-          <form
-            className="mt-1 flex items-center gap-1.5"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (rutaCampo.trim()) cambiarA(rutaCampo.trim());
-            }}
-          >
-            <input
-              value={rutaCampo}
-              onChange={(e) => {
-                setRutaCampo(e.target.value);
-              }}
-              placeholder="Carpeta del proyecto"
-              className="min-w-0 flex-1 rounded-4 border border-border bg-bg-sunken px-1.5 py-1 text-2xs text-text"
-            />
-            <button type="submit" className="rounded-4 border border-border-strong px-1.5 py-1 text-2xs text-accent-soft">
-              Ir
-            </button>
-          </form>
-          {recientes.length > 0 && (
-            <select
-              className="mt-1.5 w-full rounded-4 border border-border bg-bg-sunken px-1.5 py-1 text-2xs text-text"
-              value=""
-              onChange={(e) => {
-                if (e.target.value) cambiarA(e.target.value);
-              }}
-            >
-              <option value="">Recientes…</option>
-              {recientes.map((ruta) => (
-                <option key={ruta} value={ruta}>
-                  {ruta}
-                </option>
-              ))}
-            </select>
-          )}
-          <p className="mt-1.5 truncate text-2xs text-text-faint" title={proyectoActual}>
+          <p className="mt-1 truncate text-2xs text-text-faint" title={proyectoActual}>
             {proyectoActual || "sin proyecto"}
           </p>
           <p className="mt-1 text-2xs text-text-ghost">URL objetivo: {appUrl && appUrl.trim() ? appUrl : "sin configurar"}</p>
@@ -270,23 +150,6 @@ export default function App() {
         <div className="px-3 pb-1.5 pt-3.5 text-2xs uppercase tracking-[.05em] text-text-faint">Proyecto</div>
         <div className="flex flex-col gap-1 px-2">
           {NAV_PROYECTO.map((n) => (
-            <button
-              key={n.pestana}
-              type="button"
-              onClick={() => {
-                ir(n.pestana);
-              }}
-              className={claseItemNav(n.pestana)}
-            >
-              <span>{n.icon}</span>
-              <span>{n.pestana}</span>
-            </button>
-          ))}
-        </div>
-
-        <div className="px-3 pb-1.5 pt-3.5 text-2xs uppercase tracking-[.05em] text-text-faint">Referencia</div>
-        <div className="flex flex-col gap-1 px-2">
-          {NAV_REFERENCIA.map((n) => (
             <button
               key={n.pestana}
               type="button"
@@ -328,11 +191,11 @@ export default function App() {
         </header>
 
         {/* Banda 1 — la pestaña activa. */}
-        {/* `scrollMarginTop: alturaTopbar` para que `scrollIntoView` (líneas ~328 y ~354) no deje
+        {/* `scrollMarginTop: alturaTopbar` para que `scrollIntoView` (línea ~205) no deje
             el borde superior de la banda tapado bajo la topbar `sticky top-0`. */}
         <div ref={banda1Ref} className="relative" data-canvas="true" style={{ height: alturaBanda, scrollMarginTop: alturaTopbar }}>
           <div key={pestana} className="relative h-full animate-page-fade overflow-hidden">
-            {contenidoPestana(pestana, marcarCorridaActiva)}
+            {contenidoPestana(pestana)}
           </div>
           <button
             type="button"
@@ -341,25 +204,13 @@ export default function App() {
             }}
             className="absolute bottom-3 right-3 z-10 rounded-6 border border-border-strong bg-bg-panel px-2.5 py-1 text-xs font-semibold text-text-strong shadow-[var(--sidebar-shadow)]"
           >
-            ↓ Consola y guía
+            ↓ Consola
           </button>
         </div>
 
-        {/* Banda 2 — la consola global, igual que antes pero acotada a su propio lienzo. */}
+        {/* Banda 2 — la consola global. */}
         <div ref={banda2Ref} className="relative" data-canvas="true" style={{ height: alturaBanda, scrollMarginTop: alturaTopbar }}>
-          <ConsolaGlobal
-            corridaActiva={corridaActiva}
-            eventos={eventos}
-            resumenFinal={resumenFinal}
-            marcarCorridaActiva={marcarCorridaActiva}
-            onAbrirFicha={abrirFicha}
-            ejemploAInsertar={ejemploParaConsola}
-          />
-        </div>
-
-        {/* Banda 3 — la guía de la pestaña activa. */}
-        <div className="relative" data-canvas="true" style={{ height: alturaBanda }}>
-          <GuiaPestana pestana={pestana} onAbrirFicha={abrirFicha} />
+          <ConsolaGlobal corridaActiva={corridaActiva} eventos={eventos} marcarCorridaActiva={marcarCorridaActiva} />
           <button
             type="button"
             onClick={() => {
@@ -372,11 +223,6 @@ export default function App() {
         </div>
       </main>
       </div>
-
-      {/* Fuera del `<main>`/`<aside>` a propósito: ningún panel (react-rnd usa `transform` para
-          posicionarse) debe quedar entre este cajón y el viewport, o su `position: fixed` dejaría
-          de calcularse contra la ventana. */}
-      <CajonFicha resuelta={resueltaAbierta} onCerrar={cerrarFicha} onInsertarEjemplo={insertarEjemploEnConsola} opcionInicial={opcionResaltada} />
     </div>
   );
 }

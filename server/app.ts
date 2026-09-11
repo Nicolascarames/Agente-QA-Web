@@ -1,59 +1,29 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Fastify, { type FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
 import spawn from "cross-spawn";
-import { leerEstadoProyecto, leerMapaCompleto } from "./estado.js";
-import { corregirLocalizador } from "./mapa.js";
-import { anadirReciente, leerRecientes } from "./proyecto.js";
+import { leerEstadoProyecto } from "./estado.js";
 import { escribirClave, listarClaves, verClave } from "./claves.js";
 import { escribirConfigProyecto, leerConfigProyecto, verCredencialProyecto } from "./config.js";
-import { aResultadoCli, ejecutarCli, localizarCli } from "./cli.js";
 import { esProveedor } from "./entornoMcp.js";
-import {
-  construirArgsCorrida,
-  detenerCorrida,
-  enviarMensaje,
-  hayCorridaActiva,
-  historialActivo,
-  lanzarCorrida,
-  runIdActivo,
-  suscribirseAEventos,
-  TIPOS_FIN_CORRIDA,
-  type OpcionesCorridas,
-} from "./corridas.js";
-import { construirArgsComandoLibre } from "./comandoLibre.js";
 import type {
   CambiosConfigProyecto,
   ClaveInfo,
   ConfigProyectoRespuesta,
-  CuerpoCorreccionLocalizador,
-  CuerpoExplorar,
   EstadoCorridaActiva,
   EstadoProyectoActivo,
-  MapaCompleto,
-  ResultadoCli,
-  RespuestaComando,
-  RespuestaCorreccionLocalizador,
-  RespuestaExplorar,
-  RespuestaMensaje,
 } from "../shared/tipos.js";
 
 export interface AppOptions {
   proyectoInicial: string;
-  /** Seam de test: evita spawnear el CLI real al lanzar una corrida (`/api/explorar`, `/api/mensaje`). */
-  opcionesCorridas?: OpcionesCorridas;
 }
 
 const dirActual = path.dirname(fileURLToPath(import.meta.url));
 // Este fichero compila a dist-server/app.js; dist-client/ es hermana de dist-server/
 // en la raíz del repo, no del proyecto que se está inspeccionando.
 const distClient = path.resolve(dirActual, "..", "dist-client");
-// La versión de este repo (no la del proyecto inspeccionado) estampa el `producedBy.version` de
-// cada corrección manual de localizador (Bloque 7). package.json es hermano de dist-server/ en la
-// raíz del repo, igual que dist-client/ arriba.
-const versionAgenteQaWeb = (JSON.parse(readFileSync(path.resolve(dirActual, "..", "package.json"), "utf8")) as { version: string }).version;
 
 interface ResultadoProceso {
   codigo: number | null;
@@ -78,8 +48,7 @@ function ejecutar(comando: string, args: string[], cwd: string): Promise<Resulta
 /** Construye el servidor sin arrancarlo — separado de index.ts para poder probarlo con `.inject()`. */
 export function buildApp(opts: AppOptions): FastifyInstance {
   const app = Fastify({ logger: true });
-  let proyectoActivo = opts.proyectoInicial;
-  const opcionesCorridas = opts.opcionesCorridas ?? {};
+  const proyectoActivo = opts.proyectoInicial;
 
   // El estado no se guarda: se deriva del disco en cada petición.
   app.get("/api/estado", async () => leerEstadoProyecto(proyectoActivo));
@@ -90,21 +59,8 @@ export function buildApp(opts: AppOptions): FastifyInstance {
     await reply.status(501).send({ error: "pendiente del Bloque 1: agente-qa-mcp metrics --last N --json" });
   });
 
-  app.get("/api/proyecto", async (): Promise<EstadoProyectoActivo> => {
-    return { actual: proyectoActivo, recientes: await leerRecientes() };
-  });
-
-  app.post<{ Body: { ruta?: string } }>("/api/proyecto", async (req, reply) => {
-    const ruta = req.body?.ruta;
-    if (!ruta) {
-      await reply.status(400).send({ error: "falta \"ruta\"" });
-      return;
-    }
-    proyectoActivo = path.resolve(ruta);
-    const recientes = await anadirReciente(proyectoActivo);
-    const respuesta: EstadoProyectoActivo = { actual: proyectoActivo, recientes };
-    await reply.send(respuesta);
-  });
+  // Alcance: una instancia por repo (decisión cerrada en ESTADO.md) — sin selector ni recientes.
+  app.get("/api/proyecto", (): EstadoProyectoActivo => ({ actual: proyectoActivo }));
 
   // Lanza `agente-qa-mcp init` en la carpeta del proyecto activo. cross-spawn ya
   // resuelve el binario buscando en PATH (incluidos los .cmd de Windows).
@@ -191,172 +147,34 @@ export function buildApp(opts: AppOptions): FastifyInstance {
     }
   );
 
-  // --- Localización del CLI, doctor y prueba de proveedor --------------------------------
+  // --- Consola global (Bloque 2: vaciada) ------------------------------------------------
+  // El CLI/mapa antiguo que lanzaba corridas y las transmitía por SSE se borró entero en este
+  // bloque (`server/corridas.ts`, `server/mapa.ts`, `server/cli.ts`). Lo que queda es la
+  // ESTRUCTURA de rutas (Fastify + SSE), honesta sobre que todavía no hay nada detrás: el
+  // Bloque 4 la conecta al agente de verdad vía el SDK.
 
-  app.get("/api/cli", async (): Promise<ResultadoCli> => aResultadoCli(await localizarCli()));
+  app.get("/api/corridas/activa", (): EstadoCorridaActiva => ({ activa: false, runId: null }));
 
-  app.post("/api/doctor", async (_req, reply) => {
-    const resultado = await ejecutarCli(["doctor"], proyectoActivo);
-    await reply.status(resultado.codigo === 0 ? 200 : 500).send(resultado);
-  });
-
-  app.post<{ Body: { provider?: string; model?: string } }>("/api/llm-ping", async (req, reply) => {
-    const args = ["llm", "ping"];
-    if (req.body?.provider) args.push("--provider", req.body.provider);
-    if (req.body?.model) args.push("--model", req.body.model);
-    const resultado = await ejecutarCli(args, proyectoActivo);
-    await reply.status(resultado.codigo === 0 ? 200 : 500).send(resultado);
-  });
-
-  // --- Explorar (Bloque 5): las cuatro puertas al mapeador-mcp, en vivo ------------------
-
-  app.get("/api/mapa", async (): Promise<MapaCompleto> => leerMapaCompleto(proyectoActivo));
-
-  // Bloque 7: la única edición inline de toda la web — corrige kind/ts/disambiguatedBy de un
-  // localizador ya existente y lo estampa como `web-manual`. Revalida el AppMap completo antes de
-  // escribir: si la corrección lo deja inválido, no se toca map.json.
-  app.put<{ Body: CuerpoCorreccionLocalizador }>("/api/mapa/localizador", async (req, reply) => {
-    const { screenId, locatorName, kind, ts, disambiguatedBy } = req.body ?? ({} as Partial<CuerpoCorreccionLocalizador>);
-    if (!screenId || !locatorName || !kind || ts === undefined) {
-      await reply.status(400).send({ error: 'faltan "screenId", "locatorName", "kind" o "ts"' });
-      return;
-    }
-    const resultado = await corregirLocalizador(proyectoActivo, { screenId, locatorName, kind, ts, disambiguatedBy }, versionAgenteQaWeb);
-    if (!resultado.ok) {
-      await reply.status(400).send({ error: resultado.motivo });
-      return;
-    }
-    const respuesta: RespuestaCorreccionLocalizador = resultado.locator;
-    await reply.send(respuesta);
-  });
-
-  app.get("/api/corridas/activa", (): EstadoCorridaActiva => ({
-    activa: hayCorridaActiva(proyectoActivo),
-    runId: runIdActivo(proyectoActivo),
-  }));
-
-  app.post<{ Body: CuerpoExplorar }>("/api/explorar", async (req, reply) => {
-    const args = construirArgsCorrida(req.body ?? { puerta: "instantanea" });
-    if (!args.ok) {
-      await reply.status(400).send({ error: args.motivo });
-      return;
-    }
-    const resultado = await lanzarCorrida(proyectoActivo, args.args, opcionesCorridas);
-    if (!resultado.ok) {
-      await reply.status(409).send({ error: resultado.motivo });
-      return;
-    }
-    const respuesta: RespuestaExplorar = { runId: resultado.runId };
-    await reply.send(respuesta);
-  });
-
-  app.post("/api/detener", async (_req, reply) => {
-    const resultado = detenerCorrida(proyectoActivo);
-    if (!resultado.ok) {
-      await reply.status(409).send({ error: resultado.motivo });
-      return;
-    }
-    await reply.send({ ok: true });
-  });
-
-  // POST /api/mensaje (Bloque 6): con corrida activa, redirige el turno en marcha; sin ella, es
-  // una puerta de lanzamiento más ("run" con el texto libre, misma vía que /api/explorar).
-  app.post<{ Body: { texto?: string } }>("/api/mensaje", async (req, reply) => {
-    const texto = req.body?.texto?.trim();
-    if (!texto) {
-      await reply.status(400).send({ error: 'falta "texto"' });
-      return;
-    }
-
-    // La comprobación se hace ANTES de escribir: si había corrida activa en este instante pero
-    // termina justo antes de que `enviarMensaje` llegue a escribir en su stdin (carrera rara pero
-    // posible), es un error a contar, no una señal de "lanza una corrida nueva" — el usuario
-    // quería hablarle a la que ya corría, no abrir otra en su lugar.
-    if (hayCorridaActiva(proyectoActivo)) {
-      const resultado = enviarMensaje(proyectoActivo, texto);
-      if (!resultado.ok) {
-        await reply.status(409).send({ error: `La corrida ya terminó, no se pudo enviar el mensaje: ${resultado.motivo}` });
-        return;
-      }
-      const respuesta: RespuestaMensaje = { enviado: true };
-      await reply.send(respuesta);
-      return;
-    }
-
-    const args = construirArgsCorrida({ puerta: "run", texto });
-    if (!args.ok) {
-      await reply.status(400).send({ error: args.motivo });
-      return;
-    }
-    const resultado = await lanzarCorrida(proyectoActivo, args.args, opcionesCorridas);
-    if (!resultado.ok) {
-      await reply.status(409).send({ error: resultado.motivo });
-      return;
-    }
-    const respuesta: RespuestaMensaje = { runId: resultado.runId };
-    await reply.send(respuesta);
-  });
-
-  // POST /api/comando: consola global — texto libre tipo `record --headed <url>`, tokenizado y
-  // validado contra la whitelist de `comandoLibre.ts` antes de llegar a lanzarCorrida.
   app.post<{ Body: { texto?: string } }>("/api/comando", async (req, reply) => {
     const texto = req.body?.texto?.trim();
     if (!texto) {
       await reply.status(400).send({ error: 'falta "texto"' });
       return;
     }
-
-    const args = construirArgsComandoLibre(texto);
-    if (!args.ok) {
-      await reply.status(400).send({ error: args.motivo });
-      return;
-    }
-
-    const resultado = await lanzarCorrida(proyectoActivo, args.args, opcionesCorridas);
-    if (!resultado.ok) {
-      await reply.status(409).send({ error: resultado.motivo });
-      return;
-    }
-
-    const respuesta: RespuestaComando = { runId: resultado.runId };
-    await reply.send(respuesta);
+    await reply.status(501).send({ error: "pendiente del Bloque 4: todavía no hay ningún agente que ejecute esto" });
   });
 
-  // SSE: reenvía el historial acumulado de la corrida activa y luego sigue en vivo — así
-  // recargar el navegador con una corrida en marcha no pierde lo anterior. Sin corrida activa,
-  // cierra la conexión con un mensaje claro en vez de dejarla colgada.
-  app.get("/api/eventos", (req, reply) => {
+  // Sin ninguna ejecución que pueda estar en marcha, esta conexión no tiene nada que reenviar:
+  // avisa y cierra en vez de dejar al cliente esperando eventos que nunca van a llegar.
+  app.get("/api/eventos", (_req, reply) => {
     reply.hijack();
     reply.raw.writeHead(200, {
       "content-type": "text/event-stream",
       "cache-control": "no-cache",
       connection: "keep-alive",
     });
-
-    if (!hayCorridaActiva(proyectoActivo)) {
-      reply.raw.write(`event: sin-corrida\ndata: ${JSON.stringify({ motivo: "No hay ninguna corrida activa para este proyecto." })}\n\n`);
-      reply.raw.end();
-      return;
-    }
-
-    for (const evento of historialActivo(proyectoActivo)) {
-      reply.raw.write(`data: ${JSON.stringify(evento)}\n\n`);
-    }
-
-    // Hallazgo 3 de la revisión final de rama: cuando la corrida suscrita termina (real o
-    // sintéticamente, ver `corridas.ts`), esta conexión se cierra explícitamente en vez de
-    // quedarse muda para siempre — así la lógica de reconexión de `Explorar.tsx`
-    // (`intentoConexion`) se dispara sola y engancha con la corrida siguiente cuando aparezca.
-    const cancelar = suscribirseAEventos(proyectoActivo, (evento) => {
-      reply.raw.write(`data: ${JSON.stringify(evento)}\n\n`);
-      if (TIPOS_FIN_CORRIDA.has(evento.type)) {
-        cancelar?.();
-        reply.raw.end();
-      }
-    });
-    req.raw.on("close", () => {
-      cancelar?.();
-    });
+    reply.raw.write(`event: sin-corrida\ndata: ${JSON.stringify({ motivo: "No hay ninguna corrida activa para este proyecto." })}\n\n`);
+    reply.raw.end();
   });
 
   if (existsSync(distClient)) {

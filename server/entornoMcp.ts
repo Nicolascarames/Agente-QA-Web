@@ -9,7 +9,7 @@
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir, platform } from "node:os";
 import { dirname, join } from "node:path";
-import { projectPaths } from "agente-qa-contract/project";
+import { projectPaths } from "./proyecto.js";
 import type { CapaConfig } from "../shared/tipos.js";
 
 const NOMBRE_APP_MCP = "agente-qa-mcp";

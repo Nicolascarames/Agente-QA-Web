@@ -9,19 +9,16 @@ type CargaActividad =
   | { estado: "cargando" }
   | { estado: "listo"; datos: ActividadDisponible | ActividadNoDisponible };
 
-// Geometría EXACTA de `panels.dashboard` en design/mockup-design.js: seis
-// cajas de estadística en fila (s0..s5) y dos paneles grandes debajo (cur/act),
-// todo en % del contenedor `[data-canvas]`.
-const GEOMETRIA_STATS: DisposicionPanel[] = [0, 16.8, 33.6, 50.4, 67.2, 84].map((x) => ({ x, y: 0, w: 15.3, h: 15, z: 1 }));
+// Geometría EXACTA de `panels.dashboard` en design/mockup-design.js, recortada a las tres cajas
+// que quedan tras el Bloque 2: las otras tres ("Pantallas"/"Locators"/"Candidatos") contaban
+// `map.json` del mapeador antiguo, que se borró entero con él — vuelven con datos reales cuando
+// el Bloque 8 (Reports/Dashboard) exista.
+const GEOMETRIA_STATS: DisposicionPanel[] = [0, 16.8, 33.6].map((x) => ({ x, y: 0, w: 15.3, h: 15, z: 1 }));
 const GEOMETRIA_CUR: DisposicionPanel = { x: 0, y: 20, w: 48, h: 78, z: 1 };
 const GEOMETRIA_ACT: DisposicionPanel = { x: 51, y: 20, w: 49, h: 78, z: 1 };
 
-// Etiquetas de las seis cajas, en el mismo orden que GEOMETRIA_STATS (s0..s5).
-// El mockup usa "Tests" y "Pass rate" para s4/s5 — datos que solo llenaría un
-// Ejecutor que no existe (fuera de alcance de esta spec). En su lugar se
-// muestran los seis campos reales que ya lee `/api/estado` hoy: nada de
-// atrezo, nada inventado.
-const ETIQUETAS = ["Pantallas", "Locators", "Candidatos", "Features", "e2e", "Informe"];
+// Etiquetas de las cajas, en el mismo orden que GEOMETRIA_STATS.
+const ETIQUETAS = ["Features", "e2e", "Informe"];
 
 export function Dashboard() {
   const [estado, setEstado] = useState<CargaEstado>({ estado: "cargando" });
@@ -63,9 +60,6 @@ export function Dashboard() {
   const statBoxes =
     estado.estado === "listo"
       ? [
-          { valor: estado.datos.mapa.pantallas },
-          { valor: estado.datos.mapa.localizadores },
-          { valor: estado.datos.mapa.candidatosEscenario },
           { valor: estado.datos.features.ficheros, subtitulo: estado.datos.features.estado, destacado: estado.datos.features.estado === "listo" },
           { valor: estado.datos.e2e.ficheros, subtitulo: estado.datos.e2e.estado, destacado: estado.datos.e2e.estado === "listo" },
           { valor: estado.datos.reporte.estado, destacado: estado.datos.reporte.estado === "listo" },
@@ -107,7 +101,7 @@ export function Dashboard() {
               </div>
             )}
             {estado.estado === "listo" && estado.datos.agenteQaInicializado && (
-              <p className="text-text-dim">Sin corrida en curso — el indicador llega con Explorar (Bloque 3).</p>
+              <p className="text-text-dim">Sin corrida en curso — el indicador llega con la consola conectada al agente (Bloque 4).</p>
             )}
           </Panel>
 

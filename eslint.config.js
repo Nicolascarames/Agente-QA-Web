@@ -4,7 +4,9 @@ export default tseslint.config(
   {
     // design/ es material de referencia desempaquetado del mockup (ver
     // design/README.md), no código de la app: no se lintea ni se tipa.
-    ignores: ["dist-client/**", "dist-server/**", "node_modules/**", "design/**"],
+    // pruebas/ (fuera de git, ver ESTADO.md) es un proyecto Playwright aparte con su
+    // propio tsconfig: no lo cubre ninguno de los de este repo.
+    ignores: ["dist-client/**", "dist-server/**", "node_modules/**", "design/**", "pruebas/**"],
   },
   ...tseslint.configs.recommendedTypeChecked,
   {

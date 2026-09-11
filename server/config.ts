@@ -1,17 +1,92 @@
 // Lectura/escritura de la configuración de proyecto (spec Bloque 4, `llm` desde Spec B/Bloque 3):
-// el `config.json`/`.env` del proyecto activo (`projectPaths` del contrato). Puro en el sentido
-// de que no guarda nada en memoria: cada lectura vuelve a tocar disco, igual que `estado.ts`.
+// el `config.json`/`.env` del proyecto activo (`projectPaths` local, ver `proyecto.ts`). Puro en
+// el sentido de que no guarda nada en memoria: cada lectura vuelve a tocar disco, igual que
+// `estado.ts`.
+//
+// `ProjectConfig`/`LlmConfig`/`parseProjectConfig` sustituyen a los de `agente-qa-contract/project`
+// (Bloque 2: esa dependencia se quita del todo). A propósito NO son una réplica del `ZodObject`
+// original: un chequeo mínimo de forma basta para este bloque — la validación estricta (con
+// mensajes de campo a campo) es tarea de un bloque posterior si hace falta.
 import { promises as fs } from "node:fs";
-import { parseProjectConfig, projectPaths, type LlmConfig, type ProjectConfig } from "agente-qa-contract/project";
 import type {
   CambiosConfigProyecto,
   CampoConfig,
   CampoSecreto,
   ConfigProyecto,
   ConfigProyectoRespuesta,
+  EnvironmentApp,
   LlmProyecto,
+  Proveedor,
 } from "../shared/tipos.js";
 import { VAR_PASSWORD_APP, VAR_USUARIO_APP, buscarVariable, escribirVariable, type CampoResuelto } from "./entornoMcp.js";
+import { projectPaths } from "./proyecto.js";
+
+const ENTORNOS: readonly EnvironmentApp[] = ["dev", "test", "staging", "production"];
+const PROVEEDORES: readonly Proveedor[] = ["anthropic", "openai", "google", "groq"];
+
+export interface LlmConfig {
+  modalidad: "api" | "suscripcion";
+  proveedor?: Proveedor;
+  modelo?: string;
+}
+
+export interface ProjectConfig {
+  schemaVersion: 1;
+  appUrl: string;
+  environment: EnvironmentApp;
+  limits: { maxIterations: number; maxScreens: number; maxCostUsd: number };
+  loginRecipe?: unknown;
+  testIdAttribute?: string;
+  llm?: LlmConfig;
+}
+
+export type ParseProjectConfigResult = { ok: true; config: ProjectConfig } | { ok: false; issues: { path: string; message: string }[] };
+
+/** Chequeo mínimo de forma, no una validación exhaustiva: ver comentario de cabecera. */
+export function parseProjectConfig(input: unknown): ParseProjectConfigResult {
+  if (typeof input !== "object" || input === null) {
+    return { ok: false, issues: [{ path: "", message: "config.json no es un objeto" }] };
+  }
+  const raw = input as Record<string, unknown>;
+  if (typeof raw.appUrl !== "string" || raw.appUrl === "") {
+    return { ok: false, issues: [{ path: "appUrl", message: "falta o no es texto" }] };
+  }
+  if (typeof raw.environment !== "string" || !ENTORNOS.includes(raw.environment as EnvironmentApp)) {
+    return { ok: false, issues: [{ path: "environment", message: `debe ser una de: ${ENTORNOS.join(", ")}` }] };
+  }
+  const limitsRaw = (raw.limits ?? {}) as Partial<ProjectConfig["limits"]>;
+  const llmRaw = raw.llm as Partial<LlmConfig> | undefined;
+  let llm: LlmConfig | undefined;
+  if (llmRaw !== undefined) {
+    if (llmRaw.modalidad !== "api" && llmRaw.modalidad !== "suscripcion") {
+      return { ok: false, issues: [{ path: "llm.modalidad", message: 'debe ser "api" o "suscripcion"' }] };
+    }
+    if (llmRaw.modalidad === "suscripcion") {
+      llm = { modalidad: "suscripcion" };
+    } else {
+      if (llmRaw.proveedor !== undefined && !PROVEEDORES.includes(llmRaw.proveedor)) {
+        return { ok: false, issues: [{ path: "llm.proveedor", message: `debe ser una de: ${PROVEEDORES.join(", ")}` }] };
+      }
+      llm = { modalidad: "api", proveedor: llmRaw.proveedor, modelo: llmRaw.modelo };
+    }
+  }
+  return {
+    ok: true,
+    config: {
+      schemaVersion: 1,
+      appUrl: raw.appUrl,
+      environment: raw.environment as EnvironmentApp,
+      limits: {
+        maxIterations: limitsRaw.maxIterations ?? 40,
+        maxScreens: limitsRaw.maxScreens ?? 25,
+        maxCostUsd: limitsRaw.maxCostUsd ?? 2,
+      },
+      ...(raw.loginRecipe !== undefined ? { loginRecipe: raw.loginRecipe } : {}),
+      ...(typeof raw.testIdAttribute === "string" ? { testIdAttribute: raw.testIdAttribute } : {}),
+      ...(llm !== undefined ? { llm } : {}),
+    },
+  };
+}
 
 async function existeDirectorio(ruta: string): Promise<boolean> {
   try {
