@@ -8,8 +8,17 @@ import { leerEstadoProyecto } from "./estado.js";
 import { lanzar, type SesionAgente } from "./agente.js";
 import { leerConfigRaiz, escribirConfigRaiz } from "./proyecto.js";
 import * as git from "./git.js";
+import { leerReporte, sugerirVeredicto } from "./reporter.js";
 import { esEventoTerminal } from "../shared/eventos.js";
-import type { ConfigRaiz, EstadoCorridaActiva, EstadoProyectoActivo, EventoNdjson, RespuestaComando } from "../shared/tipos.js";
+import type {
+  ConfigRaiz,
+  EstadoCorridaActiva,
+  EstadoProyectoActivo,
+  EventoNdjson,
+  RespuestaComando,
+  ResultadoTest,
+  ResultadoTestRojo,
+} from "../shared/tipos.js";
 
 /** Defaults de `ConfigRaiz` cuando `agente-qa.config.json` todavía no existe o no tiene `appUrl`
  *  (Bloque 5): el panel de Configuración necesita algo que pintar antes de que el usuario guarde nada. */
@@ -59,6 +68,19 @@ export function buildApp(opts: AppOptions): FastifyInstance {
     const siguiente: ConfigRaiz = { ...actual, ...req.body };
     await escribirConfigRaiz(proyectoActivo, siguiente);
     await reply.send(siguiente);
+  });
+
+  // --- Ejecutar / Reparar (Bloque 7): lectura fiel del último reporte de Playwright --------------
+  // `sugerencia` es solo la etiqueta del badge de Reparar (`reporter.ts`, regla 2 de la spec): la
+  // clasificación real la hace el agente, no esta ruta.
+
+  app.get("/api/tests", async (): Promise<ResultadoTest[]> => leerReporte(proyectoActivo));
+
+  app.get("/api/tests/rojos", async (): Promise<ResultadoTestRojo[]> => {
+    const resultados = await leerReporte(proyectoActivo);
+    return resultados
+      .filter((resultado) => resultado.estado !== "passed")
+      .map((resultado) => ({ ...resultado, sugerencia: sugerirVeredicto(resultado) }));
   });
 
   // --- Consola global (Bloque 4: conectada al agente real vía el SDK) --------------------

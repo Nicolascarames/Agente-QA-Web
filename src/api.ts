@@ -1,4 +1,12 @@
-import type { ConfigRaiz, EstadoCorridaActiva, EstadoProyecto, EstadoProyectoActivo, RespuestaComando } from "../shared/tipos";
+import type {
+  ConfigRaiz,
+  EstadoCorridaActiva,
+  EstadoProyecto,
+  EstadoProyectoActivo,
+  RespuestaComando,
+  ResultadoTest,
+  ResultadoTestRojo,
+} from "../shared/tipos";
 
 /** true si la respuesta es el 501 documentado de /api/actividad; false si es cualquier otro fallo. */
 export interface ActividadNoDisponible {
@@ -140,4 +148,14 @@ export function descartarGenerados(rutas: string[]): Promise<void> {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ rutas }),
   });
+}
+
+// --- Ejecutar / Reparar (Bloque 7): resultados reales del último reporte de Playwright ---------
+
+export function obtenerTests(): Promise<ResultadoTest[]> {
+  return pedirJson<ResultadoTest[]>("/api/tests");
+}
+
+export function obtenerTestsRojos(): Promise<ResultadoTestRojo[]> {
+  return pedirJson<ResultadoTestRojo[]>("/api/tests/rojos");
 }

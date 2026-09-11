@@ -7,31 +7,30 @@ import { Generar } from "./Generar";
 import { Ejecutar } from "./Ejecutar";
 import { Reparar } from "./Reparar";
 import { Reports } from "./Reports";
-import { useCorridaGlobal } from "./useCorridaGlobal";
+import { useCorridaGlobal, type EstadoCorridaGlobal } from "./useCorridaGlobal";
 import { ConsolaGlobal } from "./ConsolaGlobal";
-import type { EventoNdjson } from "../shared/tipos";
 
 // Las siete pestañas de ESTADO.md — nada más. Bloque 2: fuera Explorar (el mapeador antiguo) y
 // fuera Motor/Instalar (la guía integrada, atada al mismo catálogo del CLI que se borró con él).
 type Pestana = "Dashboard" | "Configuración" | "Redactar" | "Generar" | "Ejecutar" | "Reparar" | "Reports";
 
-function contenidoPestana(
-  pestana: Pestana,
-  chat: { corridaActiva: string | null; eventos: EventoNdjson[]; marcarCorridaActiva: (etiqueta: string | null) => void },
-) {
+// Redactar/Generar (Bloque 6) y Ejecutar/Reparar (Bloque 7) traen cada una su propio chat ligero
+// que reutiliza el mismo estado de corrida que la consola global de la banda 2, así que las cuatro
+// necesitan las mismas tres piezas que recibe `<ConsolaGlobal>`.
+function contenidoPestana(pestana: Pestana, corrida: EstadoCorridaGlobal) {
   switch (pestana) {
     case "Dashboard":
       return <Dashboard />;
     case "Configuración":
       return <Configuracion />;
     case "Redactar":
-      return <Redactar {...chat} />;
+      return <Redactar {...corrida} />;
     case "Generar":
-      return <Generar {...chat} />;
+      return <Generar {...corrida} />;
     case "Ejecutar":
-      return <Ejecutar />;
+      return <Ejecutar {...corrida} />;
     case "Reparar":
-      return <Reparar />;
+      return <Reparar {...corrida} />;
     case "Reports":
       return <Reports />;
   }
@@ -58,7 +57,8 @@ export default function App() {
 
   // El indicador "● en curso" y el panel de consola global comparten el mismo hook: vive aquí
   // (nunca se desmonta al cambiar de pestaña).
-  const { corridaActiva, eventos, marcarCorridaActiva } = useCorridaGlobal();
+  const corridaGlobal = useCorridaGlobal();
+  const { corridaActiva, eventos, marcarCorridaActiva } = corridaGlobal;
 
   // Dos bandas apiladas dentro de `<main>` (Bloque 3): cada una es su propio `[data-canvas]` de
   // un viewport de alto menos la topbar, así los paneles flotantes de cada banda quedan acotados a
@@ -194,7 +194,7 @@ export default function App() {
             el borde superior de la banda tapado bajo la topbar `sticky top-0`. */}
         <div ref={banda1Ref} className="relative" data-canvas="true" style={{ height: alturaBanda, scrollMarginTop: alturaTopbar }}>
           <div key={pestana} className="relative h-full animate-page-fade overflow-hidden">
-            {contenidoPestana(pestana, { corridaActiva, eventos, marcarCorridaActiva })}
+            {contenidoPestana(pestana, corridaGlobal)}
           </div>
           <button
             type="button"
