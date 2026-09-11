@@ -1,10 +1,18 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { execFile as execFileCb } from "node:child_process";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "./app.js";
 import type { EventoAgente, SesionAgente } from "./agente.js";
 import type { EstadoCorridaActiva, EstadoProyecto, EstadoProyectoActivo, RespuestaComando } from "../shared/tipos.js";
+
+const execFile = promisify(execFileCb);
+async function git(cwd: string, args: string[]): Promise<string> {
+  const { stdout } = await execFile("git", args, { cwd });
+  return stdout;
+}
 
 /**
  * Sesión falsa: nunca lanza el SDK real — lento y no determinista, igual que en `agente.test.ts`.
@@ -177,6 +185,140 @@ describe("buildApp", () => {
     const respuesta = await app.inject({ method: "POST", url: "/api/pregunta/responder", payload: { opcionesElegidas: ["A"] } });
     expect(respuesta.statusCode).toBe(200);
     expect(responderPregunta).toHaveBeenCalledWith({ opcionesElegidas: ["A"] });
+    await app.close();
+  });
+
+  // --- Redactar / Generar (Bloque 6): rutas de escenarios, ficheros generados y diff ---------
+
+  it("GET /api/escenarios devuelve [] sin tests/features/, y los .feature si los hay", async () => {
+    const app = buildApp({ proyectoInicial: proyecto });
+    const vacio = await app.inject({ method: "GET", url: "/api/escenarios" });
+    expect(vacio.json<string[]>()).toEqual([]);
+
+    await mkdir(path.join(proyecto, "tests", "features"), { recursive: true });
+    await writeFile(path.join(proyecto, "tests", "features", "login.feature"), "Feature: login\n", "utf8");
+    const conFicheros = await app.inject({ method: "GET", url: "/api/escenarios" });
+    expect(conFicheros.json<string[]>()).toEqual(["login.feature"]);
+    await app.close();
+  });
+
+  it("GET /api/escenarios/:nombre devuelve el contenido, 404 si no existe", async () => {
+    const app = buildApp({ proyectoInicial: proyecto });
+    const faltante = await app.inject({ method: "GET", url: "/api/escenarios/login.feature" });
+    expect(faltante.statusCode).toBe(404);
+
+    await mkdir(path.join(proyecto, "tests", "features"), { recursive: true });
+    await writeFile(path.join(proyecto, "tests", "features", "login.feature"), "Feature: login\n", "utf8");
+    const respuesta = await app.inject({ method: "GET", url: "/api/escenarios/login.feature" });
+    expect(respuesta.statusCode).toBe(200);
+    expect(respuesta.json<{ contenido: string }>().contenido).toBe("Feature: login\n");
+    await app.close();
+  });
+
+  it("PUT /api/escenarios/:nombre escribe el fichero, creando tests/features/ si hace falta", async () => {
+    const app = buildApp({ proyectoInicial: proyecto });
+    const respuesta = await app.inject({
+      method: "PUT",
+      url: "/api/escenarios/nuevo.feature",
+      payload: { contenido: "Feature: nuevo\n" },
+    });
+    expect(respuesta.statusCode).toBe(200);
+    const leido = await app.inject({ method: "GET", url: "/api/escenarios/nuevo.feature" });
+    expect(leido.json<{ contenido: string }>().contenido).toBe("Feature: nuevo\n");
+    await app.close();
+  });
+
+  it("GET/PUT /api/escenarios/:nombre rechazan un nombre que se sale de tests/features/ (path traversal)", async () => {
+    const app = buildApp({ proyectoInicial: proyecto });
+    const fueraDelProyecto = path.join(proyecto, "..", "secreto.txt");
+    await writeFile(fueraDelProyecto, "no deberías poder leer esto", "utf8");
+
+    const lectura = await app.inject({ method: "GET", url: "/api/escenarios/..%2Fsecreto.txt" });
+    expect(lectura.statusCode).toBe(400);
+
+    const escritura = await app.inject({
+      method: "PUT",
+      url: "/api/escenarios/..%2Fsecreto.txt",
+      payload: { contenido: "pwned" },
+    });
+    expect(escritura.statusCode).toBe(400);
+
+    const contenidoTrasIntento = await readFile(fueraDelProyecto, "utf8");
+    expect(contenidoTrasIntento).toBe("no deberías poder leer esto");
+    await rm(fueraDelProyecto);
+    await app.close();
+  });
+
+  it("GET /api/generados devuelve pages y specs por separado, [] si no existen sus carpetas", async () => {
+    const app = buildApp({ proyectoInicial: proyecto });
+    const vacio = await app.inject({ method: "GET", url: "/api/generados" });
+    expect(vacio.json<{ pages: string[]; specs: string[] }>()).toEqual({ pages: [], specs: [] });
+
+    await mkdir(path.join(proyecto, "tests", "pages"), { recursive: true });
+    await mkdir(path.join(proyecto, "tests", "specs"), { recursive: true });
+    await writeFile(path.join(proyecto, "tests", "pages", "login.page.ts"), "export class LoginPage {}\n", "utf8");
+    await writeFile(path.join(proyecto, "tests", "specs", "login.spec.ts"), "test('login', () => {});\n", "utf8");
+    const respuesta = await app.inject({ method: "GET", url: "/api/generados" });
+    expect(respuesta.json<{ pages: string[]; specs: string[] }>()).toEqual({ pages: ["login.page.ts"], specs: ["login.spec.ts"] });
+    await app.close();
+  });
+
+  it("GET /api/generados/diff devuelve el diff de un fichero nuevo sin trackear del proyecto", async () => {
+    await git(proyecto, ["init", "-q"]);
+    await git(proyecto, ["config", "user.email", "test@test.com"]);
+    await git(proyecto, ["config", "user.name", "test"]);
+    await writeFile(path.join(proyecto, "base.txt"), "base\n", "utf8");
+    await git(proyecto, ["add", "base.txt"]);
+    await git(proyecto, ["commit", "-q", "-m", "inicial"]);
+    await mkdir(path.join(proyecto, "tests", "specs"), { recursive: true });
+    await writeFile(path.join(proyecto, "tests", "specs", "login.spec.ts"), "test('login', () => {});\n", "utf8");
+
+    const app = buildApp({ proyectoInicial: proyecto });
+    const sinRuta = await app.inject({ method: "GET", url: "/api/generados/diff" });
+    expect(sinRuta.statusCode).toBe(400);
+
+    const respuesta = await app.inject({ method: "GET", url: "/api/generados/diff?ruta=tests/specs/login.spec.ts" });
+    expect(respuesta.statusCode).toBe(200);
+    expect(respuesta.json<{ diff: string }>().diff).toContain("login.spec.ts");
+    await app.close();
+  });
+
+  it("POST /api/generados/commit crea un commit con las rutas dadas", async () => {
+    await git(proyecto, ["init", "-q"]);
+    await git(proyecto, ["config", "user.email", "test@test.com"]);
+    await git(proyecto, ["config", "user.name", "test"]);
+    await writeFile(path.join(proyecto, "base.txt"), "base\n", "utf8");
+    await git(proyecto, ["add", "base.txt"]);
+    await git(proyecto, ["commit", "-q", "-m", "inicial"]);
+    await mkdir(path.join(proyecto, "tests", "specs"), { recursive: true });
+    await writeFile(path.join(proyecto, "tests", "specs", "login.spec.ts"), "test('login', () => {});\n", "utf8");
+
+    const app = buildApp({ proyectoInicial: proyecto });
+    const respuesta = await app.inject({
+      method: "POST",
+      url: "/api/generados/commit",
+      payload: { rutas: ["tests/specs/login.spec.ts"], mensaje: "test: genera login.spec.ts" },
+    });
+    expect(respuesta.statusCode).toBe(200);
+    expect((await git(proyecto, ["log", "-1", "--format=%s"])).trim()).toBe("test: genera login.spec.ts");
+    await app.close();
+  });
+
+  it("POST /api/generados/descartar borra del árbol de trabajo un fichero nuevo", async () => {
+    await git(proyecto, ["init", "-q"]);
+    await git(proyecto, ["config", "user.email", "test@test.com"]);
+    await git(proyecto, ["config", "user.name", "test"]);
+    await writeFile(path.join(proyecto, "base.txt"), "base\n", "utf8");
+    await git(proyecto, ["add", "base.txt"]);
+    await git(proyecto, ["commit", "-q", "-m", "inicial"]);
+    await mkdir(path.join(proyecto, "tests", "specs"), { recursive: true });
+    const ruta = path.join(proyecto, "tests", "specs", "login.spec.ts");
+    await writeFile(ruta, "test('login', () => {});\n", "utf8");
+
+    const app = buildApp({ proyectoInicial: proyecto });
+    const respuesta = await app.inject({ method: "POST", url: "/api/generados/descartar", payload: { rutas: ["tests/specs/login.spec.ts"] } });
+    expect(respuesta.statusCode).toBe(200);
+    await expect(readFile(ruta, "utf8")).rejects.toThrow();
     await app.close();
   });
 });

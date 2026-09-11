@@ -9,21 +9,25 @@ import { Reparar } from "./Reparar";
 import { Reports } from "./Reports";
 import { useCorridaGlobal } from "./useCorridaGlobal";
 import { ConsolaGlobal } from "./ConsolaGlobal";
+import type { EventoNdjson } from "../shared/tipos";
 
 // Las siete pestañas de ESTADO.md — nada más. Bloque 2: fuera Explorar (el mapeador antiguo) y
 // fuera Motor/Instalar (la guía integrada, atada al mismo catálogo del CLI que se borró con él).
 type Pestana = "Dashboard" | "Configuración" | "Redactar" | "Generar" | "Ejecutar" | "Reparar" | "Reports";
 
-function contenidoPestana(pestana: Pestana) {
+function contenidoPestana(
+  pestana: Pestana,
+  chat: { corridaActiva: string | null; eventos: EventoNdjson[]; marcarCorridaActiva: (etiqueta: string | null) => void },
+) {
   switch (pestana) {
     case "Dashboard":
       return <Dashboard />;
     case "Configuración":
       return <Configuracion />;
     case "Redactar":
-      return <Redactar />;
+      return <Redactar {...chat} />;
     case "Generar":
-      return <Generar />;
+      return <Generar {...chat} />;
     case "Ejecutar":
       return <Ejecutar />;
     case "Reparar":
@@ -190,7 +194,7 @@ export default function App() {
             el borde superior de la banda tapado bajo la topbar `sticky top-0`. */}
         <div ref={banda1Ref} className="relative" data-canvas="true" style={{ height: alturaBanda, scrollMarginTop: alturaTopbar }}>
           <div key={pestana} className="relative h-full animate-page-fade overflow-hidden">
-            {contenidoPestana(pestana)}
+            {contenidoPestana(pestana, { corridaActiva, eventos, marcarCorridaActiva })}
           </div>
           <button
             type="button"

@@ -94,3 +94,50 @@ export function responderPregunta(respuesta: { textoLibre?: string; opcionesEleg
     body: JSON.stringify(respuesta),
   });
 }
+
+// --- Redactar / Generar (Bloque 6) ------------------------------------------------------------
+
+export function obtenerEscenarios(): Promise<string[]> {
+  return pedirJson<string[]>("/api/escenarios");
+}
+
+export function obtenerEscenario(nombre: string): Promise<{ contenido: string }> {
+  return pedirJsonEstricto<{ contenido: string }>(`/api/escenarios/${encodeURIComponent(nombre)}`);
+}
+
+export function guardarEscenario(nombre: string, contenido: string): Promise<void> {
+  return pedirJsonEstricto<void>(`/api/escenarios/${encodeURIComponent(nombre)}`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ contenido }),
+  });
+}
+
+export interface Generados {
+  pages: string[];
+  specs: string[];
+}
+
+export function obtenerGenerados(): Promise<Generados> {
+  return pedirJson<Generados>("/api/generados");
+}
+
+export function obtenerDiffGenerado(ruta: string): Promise<{ diff: string }> {
+  return pedirJsonEstricto<{ diff: string }>(`/api/generados/diff?ruta=${encodeURIComponent(ruta)}`);
+}
+
+export function commitGenerados(rutas: string[], mensaje: string): Promise<void> {
+  return pedirJsonEstricto<void>("/api/generados/commit", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ rutas, mensaje }),
+  });
+}
+
+export function descartarGenerados(rutas: string[]): Promise<void> {
+  return pedirJsonEstricto<void>("/api/generados/descartar", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ rutas }),
+  });
+}
