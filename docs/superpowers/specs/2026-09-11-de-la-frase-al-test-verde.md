@@ -550,7 +550,6 @@ npm run lint && npm run typecheck && npm test && node bin/agente-qa.mjs instalar
 
 Anotado para que no se cuele por la puerta de atrás:
 
-- **Cucumber real.** El Gherkin es documento más `test.step`. Si alguna vez hace falta, es otra spec.
 - **Multi-proyecto.** Una instancia por repo. Sin lista, sin selector, sin recientes.
 - **Otros proveedores de LLM.** Solo Claude. El hueco para añadir otro queda hecho en `agente.ts`.
 - **Codex y Copilot desde la consola de la web.** Se usan en su entorno, no desde aquí.

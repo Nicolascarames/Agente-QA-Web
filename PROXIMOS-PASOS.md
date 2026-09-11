@@ -47,7 +47,6 @@ el 4.
 
 ## Lo que NO entra
 
-- **Cucumber.** El Gherkin es documento `.feature` más `test.step`. No se quiere, ni ahora ni después.
 - **Multi-proyecto.** Una instancia por repo. Sin lista, sin selector, sin recientes.
 - **Otros proveedores de LLM.** Solo Claude. El hueco para añadir otro queda hecho en `agente.ts`.
 - **Codex y Copilot desde la consola de la web.** Se usan en su entorno; sus resultados sí aparecen

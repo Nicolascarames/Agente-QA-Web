@@ -14,6 +14,11 @@ Cómo trabajar en este repo. Las decisiones de producto viven en la spec, no aqu
 
 ## Correcciones asimiladas
 
+- **«Lo que NO entra» es para alcance que alguien podría añadir por error, no para nombrar cosas
+  ajenas al plan.** Corregido dos veces: el mapa del sistema anterior y Cucumber. Si la decisión
+  positiva ya está escrita («el Gherkin es documento más `test.step`»), listar además la alternativa
+  descartada solo la mantiene viva. Antes de añadir una línea ahí, comprobar que no está dicho ya en
+  positivo.
 - **No conservar código «porque ya está escrito» sin comprobar a qué está atado.** Al planificar el
   replanteo dije que se rescataban la consola, el canal de eventos y siete pestañas; la auditoría
   redujo eso a siete ficheros. El autocompletado de la consola estaba atado 1:1 a los subcomandos de
