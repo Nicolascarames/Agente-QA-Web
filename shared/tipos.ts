@@ -29,11 +29,14 @@ export interface EstadoProyectoActivo {
   actual: string;
 }
 
-/** Config raíz del repo (`agente-qa.config.json`), Bloque 3. Formato mínimo: solo la URL base
- *  hoy; el Bloque 5 añade `entorno`, `barrera` y `listaBlanca`. */
+/** Config raíz del repo (`agente-qa.config.json`), Bloque 3. Bloque 5 añade `entorno`, `barrera`
+ *  (interruptor de la barrera de escrituras) y `listaBlanca` (URLs permitidas con la barrera activa). */
 export interface ConfigRaiz {
   schemaVersion: 1;
   appUrl: string;
+  entorno: string;
+  barrera: boolean;
+  listaBlanca: string[];
 }
 
 // --- Consola global: el canal de eventos sobrevive al Bloque 2, vacío de contenido -----------

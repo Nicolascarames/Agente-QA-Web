@@ -6,8 +6,13 @@ import Fastify, { type FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
 import { leerEstadoProyecto } from "./estado.js";
 import { lanzar, type SesionAgente } from "./agente.js";
+import { leerConfigRaiz, escribirConfigRaiz } from "./proyecto.js";
 import { esEventoTerminal } from "../shared/eventos.js";
-import type { EstadoCorridaActiva, EstadoProyectoActivo, EventoNdjson, RespuestaComando } from "../shared/tipos.js";
+import type { ConfigRaiz, EstadoCorridaActiva, EstadoProyectoActivo, EventoNdjson, RespuestaComando } from "../shared/tipos.js";
+
+/** Defaults de `ConfigRaiz` cuando `agente-qa.config.json` todavía no existe o no tiene `appUrl`
+ *  (Bloque 5): el panel de Configuración necesita algo que pintar antes de que el usuario guarde nada. */
+const CONFIG_RAIZ_POR_DEFECTO: ConfigRaiz = { schemaVersion: 1, appUrl: "", entorno: "pruebas", barrera: false, listaBlanca: [] };
 
 export interface AppOptions {
   proyectoInicial: string;
@@ -44,6 +49,17 @@ export function buildApp(opts: AppOptions): FastifyInstance {
   // Alcance: una instancia por repo (decisión cerrada en ESTADO.md) — sin selector ni recientes.
   app.get("/api/proyecto", (): EstadoProyectoActivo => ({ actual: proyectoActivo }));
 
+  // --- Config raíz (Bloque 3, formulario real en Bloque 5) --------------------------------
+
+  app.get("/api/config", async (): Promise<ConfigRaiz> => (await leerConfigRaiz(proyectoActivo)) ?? CONFIG_RAIZ_POR_DEFECTO);
+
+  app.post<{ Body: Partial<ConfigRaiz> }>("/api/config", async (req, reply) => {
+    const actual = (await leerConfigRaiz(proyectoActivo)) ?? CONFIG_RAIZ_POR_DEFECTO;
+    const siguiente: ConfigRaiz = { ...actual, ...req.body };
+    await escribirConfigRaiz(proyectoActivo, siguiente);
+    await reply.send(siguiente);
+  });
+
   // --- Consola global (Bloque 4: conectada al agente real vía el SDK) --------------------
 
   app.get("/api/corridas/activa", (): EstadoCorridaActiva => ({ activa: corridaActiva !== null, runId: corridaActiva?.runId ?? null }));
@@ -61,7 +77,16 @@ export function buildApp(opts: AppOptions): FastifyInstance {
       return;
     }
     const runId = randomUUID();
-    corridaActiva = { sesion: lanzarFn(texto, { cwd: proyectoActivo }), runId };
+    const config = await leerConfigRaiz(proyectoActivo);
+    corridaActiva = {
+      sesion: lanzarFn(texto, {
+        cwd: proyectoActivo,
+        entorno: config?.entorno,
+        barreraActiva: config?.barrera,
+        listaBlanca: config?.listaBlanca,
+      }),
+      runId,
+    };
     await reply.send({ runId } satisfies RespuestaComando);
   });
 

@@ -1,4 +1,4 @@
-import type { EstadoCorridaActiva, EstadoProyecto, EstadoProyectoActivo, RespuestaComando } from "../shared/tipos";
+import type { ConfigRaiz, EstadoCorridaActiva, EstadoProyecto, EstadoProyectoActivo, RespuestaComando } from "../shared/tipos";
 
 /** true si la respuesta es el 501 documentado de /api/actividad; false si es cualquier otro fallo. */
 export interface ActividadNoDisponible {
@@ -39,6 +39,20 @@ export async function obtenerActividad(): Promise<ActividadDisponible | Activida
 /** Alcance: una instancia por repo (decisión cerrada en ESTADO.md) — sin selector ni recientes. */
 export function obtenerProyecto(): Promise<EstadoProyectoActivo> {
   return pedirJson<EstadoProyectoActivo>("/api/proyecto");
+}
+
+// --- Config raíz (Bloque 5: entorno, barrera, lista blanca) -----------------------------------
+
+export function obtenerConfig(): Promise<ConfigRaiz> {
+  return pedirJson<ConfigRaiz>("/api/config");
+}
+
+export function guardarConfig(parcial: Partial<ConfigRaiz>): Promise<ConfigRaiz> {
+  return pedirJsonEstricto<ConfigRaiz>("/api/config", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(parcial),
+  });
 }
 
 /** Igual que `pedirJson`, pero usa el `error` del cuerpo (400/404) como mensaje si la petición falla. */

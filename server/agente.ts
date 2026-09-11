@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { query as queryReal } from "@anthropic-ai/claude-agent-sdk";
 import type { CanUseTool, PermissionResult, Query, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
+import { redactarSecretosProfundo, verificarLlamada } from "./barrera.js";
 
 const dirActual = path.dirname(fileURLToPath(import.meta.url));
 // tsconfig.server.json no fija rootDir: este fichero compila a dist-server/server/agente.js (conserva
@@ -43,6 +44,10 @@ export interface SesionAgente {
 export interface OpcionesLanzar {
   cwd: string;
   queryFn?: typeof queryReal;
+  /** Bloque 5: barrera de escrituras. Sin `barreraActiva`, se comporta como si estuviera apagada. */
+  entorno?: string;
+  barreraActiva?: boolean;
+  listaBlanca?: string[];
 }
 
 function mensajeUsuario(texto: string): SDKUserMessage {
@@ -158,18 +163,41 @@ export function lanzar(peticionInicial: string, opciones: OpcionesLanzar): Sesio
   const abortController = new AbortController();
   const colaMensajes = crearCola<SDKUserMessage>();
   const difusorEventos = crearDifusor<EventoAgente>();
+  // Todo lo que sale por el difusor pasa antes por la redacción de secretos (Bloque 5): ninguna
+  // credencial de `process.env` llega al modelo ni a un log vía SSE.
+  const emitirSeguro = (evento: EventoAgente) => difusorEventos.emitir({ ...evento, data: redactarSecretosProfundo(evento.data) });
   colaMensajes.push(mensajeUsuario(peticionInicial));
 
   // Una única pregunta pendiente a la vez: `responderPregunta` no recibe `requestId` (viene tal
   // cual del body de `POST /api/pregunta/responder`), así que solo puede haber una en vuelo.
   let preguntaPendiente: ((respuesta: RespuestaPregunta) => void) | null = null;
+  // Última URL conocida por navegación (Bloque 5): la barrera la usa para juzgar acciones que no
+  // traen la URL en su propio input (click, type...), solo `browser_navigate` la trae.
+  let urlActual: string | null = null;
 
   const canUseTool: CanUseTool = (toolName, input, opcionesTool) => {
+    if (toolName.startsWith("mcp__playwright__")) {
+      const resultado = verificarLlamada({
+        toolName,
+        toolInput: input,
+        urlActual,
+        barreraActiva: opciones.barreraActiva ?? false,
+        listaBlanca: opciones.listaBlanca ?? [],
+        entorno: opciones.entorno ?? "pruebas",
+      });
+      if (!resultado.permitir) {
+        emitirSeguro({ type: "barrera.bloqueo", data: { toolName, motivo: resultado.motivo } });
+        return Promise.resolve({ behavior: "deny", message: resultado.motivo });
+      }
+      if (toolName === "mcp__playwright__browser_navigate") {
+        urlActual = (input as { url?: string }).url ?? urlActual;
+      }
+    }
     if (toolName !== "AskUserQuestion") {
       return Promise.resolve({ behavior: "allow" });
     }
     const entrada = input as unknown as EntradaPreguntaUsuario;
-    difusorEventos.emitir({ type: "agente.pregunta", data: { requestId: opcionesTool.requestId, questions: entrada.questions } });
+    emitirSeguro({ type: "agente.pregunta", data: { requestId: opcionesTool.requestId, questions: entrada.questions } });
     return new Promise<PermissionResult>((resolve) => {
       preguntaPendiente = (respuesta) => {
         // `{ behavior: "allow", updatedInput: { questions, answers } }` (lo que pedía el brief) se
@@ -211,27 +239,27 @@ export function lanzar(peticionInicial: string, opciones: OpcionesLanzar): Sesio
           const turnosEncolados = mensaje.queued_turn_count ?? 0;
           if (turnosEncolados > 0) {
             // El CLI ya sabe encadenar el siguiente turno encolado solo: se informa, pero no se cierra.
-            difusorEventos.emitir({ type: "agente.turno", data: mensaje });
+            emitirSeguro({ type: "agente.turno", data: mensaje });
             continue;
           }
-          difusorEventos.emitir({ type: mensaje.is_error ? "operation.error" : "operation.completed", data: mensaje });
+          emitirSeguro({ type: mensaje.is_error ? "operation.error" : "operation.completed", data: mensaje });
           terminada = true;
           break;
         }
-        difusorEventos.emitir({ type: `agente.${mensaje.type}`, data: mensaje });
+        emitirSeguro({ type: `agente.${mensaje.type}`, data: mensaje });
       }
     } catch (error) {
       // `abortController.abort()` (parar()) hace que `q` rechace con un error de "Operation
       // aborted" en vez de terminar limpio: comprobado en manual contra pruebas/sauce — sin este
       // catch, el rechazo queda sin manejar (la promesa de este IIFE es `void`) y tumba el proceso.
       if (!abortController.signal.aborted) {
-        difusorEventos.emitir({ type: "operation.error", data: { message: error instanceof Error ? error.message : String(error) } });
+        emitirSeguro({ type: "operation.error", data: { message: error instanceof Error ? error.message : String(error) } });
         terminada = true;
       }
     } finally {
       if (!terminada) {
         // Solo llega aquí por `parar()` (abort): un fallo real ya ha marcado `terminada` arriba.
-        difusorEventos.emitir({ type: "operation.stopped", data: null });
+        emitirSeguro({ type: "operation.stopped", data: null });
       }
       difusorEventos.cerrar();
       colaMensajes.cerrar();

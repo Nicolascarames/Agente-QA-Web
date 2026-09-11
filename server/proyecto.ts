@@ -53,7 +53,13 @@ export async function leerConfigRaiz(rootDir: string): Promise<ConfigRaiz | null
   if (typeof raw !== "object" || raw === null) return null;
   const candidato = raw as Record<string, unknown>;
   if (typeof candidato.appUrl !== "string" || candidato.appUrl === "") return null;
-  return { schemaVersion: 1, appUrl: candidato.appUrl };
+  return {
+    schemaVersion: 1,
+    appUrl: candidato.appUrl,
+    entorno: typeof candidato.entorno === "string" ? candidato.entorno : "pruebas",
+    barrera: typeof candidato.barrera === "boolean" ? candidato.barrera : false,
+    listaBlanca: Array.isArray(candidato.listaBlanca) ? (candidato.listaBlanca as string[]) : [],
+  };
 }
 
 export async function escribirConfigRaiz(rootDir: string, config: ConfigRaiz): Promise<void> {

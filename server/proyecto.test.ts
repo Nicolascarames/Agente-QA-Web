@@ -47,7 +47,30 @@ describe("leerConfigRaiz / escribirConfigRaiz", () => {
   });
 
   it("escribe y relee la config raíz", async () => {
-    await escribirConfigRaiz(proyecto, { schemaVersion: 1, appUrl: "http://localhost:3000" });
-    expect(await leerConfigRaiz(proyecto)).toEqual({ schemaVersion: 1, appUrl: "http://localhost:3000" });
+    await escribirConfigRaiz(proyecto, {
+      schemaVersion: 1,
+      appUrl: "http://localhost:3000",
+      entorno: "produccion",
+      barrera: true,
+      listaBlanca: ["http://localhost:3000"],
+    });
+    expect(await leerConfigRaiz(proyecto)).toEqual({
+      schemaVersion: 1,
+      appUrl: "http://localhost:3000",
+      entorno: "produccion",
+      barrera: true,
+      listaBlanca: ["http://localhost:3000"],
+    });
+  });
+
+  it("rellena entorno/barrera/listaBlanca con sus defaults si faltan en el JSON leído", async () => {
+    await writeFile(configRaizPath(proyecto), JSON.stringify({ schemaVersion: 1, appUrl: "http://localhost:3000" }), "utf8");
+    expect(await leerConfigRaiz(proyecto)).toEqual({
+      schemaVersion: 1,
+      appUrl: "http://localhost:3000",
+      entorno: "pruebas",
+      barrera: false,
+      listaBlanca: [],
+    });
   });
 });
