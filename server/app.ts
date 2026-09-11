@@ -6,8 +6,16 @@ import Fastify, { type FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
 import { leerEstadoProyecto } from "./estado.js";
 import { lanzar, type SesionAgente } from "./agente.js";
+import { leerReporte, sugerirVeredicto } from "./reporter.js";
 import { esEventoTerminal } from "../shared/eventos.js";
-import type { EstadoCorridaActiva, EstadoProyectoActivo, EventoNdjson, RespuestaComando } from "../shared/tipos.js";
+import type {
+  EstadoCorridaActiva,
+  EstadoProyectoActivo,
+  EventoNdjson,
+  RespuestaComando,
+  ResultadoTest,
+  ResultadoTestRojo,
+} from "../shared/tipos.js";
 
 export interface AppOptions {
   proyectoInicial: string;
@@ -43,6 +51,19 @@ export function buildApp(opts: AppOptions): FastifyInstance {
 
   // Alcance: una instancia por repo (decisión cerrada en ESTADO.md) — sin selector ni recientes.
   app.get("/api/proyecto", (): EstadoProyectoActivo => ({ actual: proyectoActivo }));
+
+  // --- Ejecutar / Reparar (Bloque 7): lectura fiel del último reporte de Playwright --------------
+  // `sugerencia` es solo la etiqueta del badge de Reparar (`reporter.ts`, regla 2 de la spec): la
+  // clasificación real la hace el agente, no esta ruta.
+
+  app.get("/api/tests", async (): Promise<ResultadoTest[]> => leerReporte(proyectoActivo));
+
+  app.get("/api/tests/rojos", async (): Promise<ResultadoTestRojo[]> => {
+    const resultados = await leerReporte(proyectoActivo);
+    return resultados
+      .filter((resultado) => resultado.estado !== "passed")
+      .map((resultado) => ({ ...resultado, sugerencia: sugerirVeredicto(resultado) }));
+  });
 
   // --- Consola global (Bloque 4: conectada al agente real vía el SDK) --------------------
 

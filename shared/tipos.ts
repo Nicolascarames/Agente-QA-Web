@@ -62,3 +62,29 @@ export interface EventoNdjson {
   type: string;
   data: unknown;
 }
+
+// --- Ejecutar / Reparar (Bloque 7): resultados reales del último reporte de Playwright ---------
+// Viven aquí, no en server/reporter.ts, porque src/api.ts (tsconfig.app.json) no puede importar de
+// server/ (tsconfig.server.json) — server/reporter.ts los re-exporta para conservar su forma
+// pública documentada en la spec.
+
+/** Un test, leído fielmente del JSON de Playwright: `server/reporter.ts` nunca lo reinterpreta como
+ *  juicio (regla 2 de la spec), solo lo aplana a esta forma. */
+export interface ResultadoTest {
+  nombre: string;
+  ficheroSpec: string;
+  estado: "passed" | "failed" | "skipped" | "timedOut";
+  duracionMs: number;
+  reintentos: number;
+  mensajeError?: string;
+  pasos: { titulo: string; estado: "passed" | "failed" | "skipped" }[];
+}
+
+/** Etiqueta SUGERIDA para el badge de Reparar — nunca definitiva. Quien clasifica de verdad "fallo
+ *  del test" vs. "fallo de la aplicación" es el agente, visible en el chat. */
+export type Sugerencia = "fallo-test" | "fallo-aplicacion" | "desconocido";
+
+/** Respuesta de `GET /api/tests/rojos`: un `ResultadoTest` en rojo más la sugerencia de badge. */
+export interface ResultadoTestRojo extends ResultadoTest {
+  sugerencia: Sugerencia;
+}
