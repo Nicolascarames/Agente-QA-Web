@@ -29,110 +29,11 @@ export interface EstadoProyectoActivo {
   actual: string;
 }
 
-// --- Configuración (Bloque 4) --------------------------------------------------------
-// Convención de capas replicada de `agente-qa-mcp/src/config/resolve.ts` (nunca importada):
-// entorno (`process.env`) > proyecto (`.agente-qa/.env`) > global (`.env` de `agente-qa-mcp`).
-
-export type CapaConfig = "entorno" | "proyecto" | "global";
-
-/** Campo siempre resuelto (config.json de proyecto: no tiene capa "entorno"). */
-export interface CampoConfig<T> {
-  valor: T;
-  capa: CapaConfig;
-  /** false solo cuando `capa === "entorno"`: una variable de entorno del sistema no se edita desde la web. */
-  editable: boolean;
-}
-
-/** Campo que puede no tener valor en ninguna capa (claves, provider/model de un perfil sin configurar). */
-export interface CampoConfigVacio<T> {
-  valor: T | null;
-  capa: CapaConfig | null;
-  editable: boolean;
-}
-
-export type EnvironmentApp = "dev" | "test" | "staging" | "production";
-
-/** Como `ClaveInfo`: nunca viaja el valor completo salvo que se pida explícitamente por `/ver`. */
-export interface CampoSecreto {
-  hayValor: boolean;
-  ultimos4: string | null;
-  capa: CapaConfig | null;
-  editable: boolean;
-}
-
-export type Proveedor = "anthropic" | "openai" | "google" | "groq";
-
-/**
- * Modalidad de LLM del proyecto (Spec B, Bloque 1 de agente-qa-mcp: ya no hay perfiles `rapido`/
- * `experto`, tabla rol→perfil ni modos de coste — una sola modalidad activa). `proveedor`/`modelo`
- * solo tienen valor con `modalidad: "api"`; con `"suscripcion"` van a `null` porque no aplican
- * (usa el binario `claude`, sin proveedor ni modelo que configurar). Vive en `llm` de
- * `config.json` del proyecto, no en el `.env` global: por eso no lleva `CapaConfig` como el resto
- * de campos de esta interfaz, siempre es editable desde este mismo proyecto.
- */
-export interface LlmProyecto {
-  modalidad: Modalidad;
-  proveedor: Proveedor | null;
-  modelo: string | null;
-}
-
-export type Modalidad = "api" | "suscripcion";
-
-export interface ConfigProyecto {
-  appUrl: CampoConfig<string>;
-  environment: CampoConfig<EnvironmentApp>;
-  limits: {
-    maxIterations: CampoConfig<number>;
-    maxScreens: CampoConfig<number>;
-    maxCostUsd: CampoConfig<number>;
-  };
-  /** Ausente si el proyecto no tiene `llm` en `config.json` todavía (p.ej. uno recién creado con
-   *  `init`, que no lo escribe): "sin configurar" no es lo mismo que "api sin proveedor ni
-   *  modelo", así que no se sintetiza ese valor por defecto. */
-  llm?: LlmProyecto;
-  credenciales: {
-    usuario: CampoSecreto;
-    password: CampoSecreto;
-  };
-  /** Contenido crudo de `.agente-qa/memory.json`: sin esquema todavía en agente-qa-mcp. */
-  memoria: unknown;
-}
-
-export type ConfigProyectoRespuesta = { inicializado: false } | { inicializado: true; config: ConfigProyecto };
-
-export interface ClaveInfo {
-  proveedor: Proveedor;
-  hayClave: boolean;
-  ultimos4: string | null;
-  capa: CapaConfig | null;
-}
-
-export interface ResultadoCli {
-  encontrado: boolean;
-  ruta?: string;
-  origen?: "PATH" | "repo-hermano" | "guardado";
-  diagnostico: string[];
-}
-
-export interface ResultadoSubproceso {
-  codigo: number | null;
-  stdout: string;
-  stderr: string;
-}
-
-/** `llm` dentro de `CambiosConfigProyecto`: o se cambia a `suscripcion` (nada más que decir), o a
- *  `api` con proveedor y modelo completos — nunca a medias, para no dejar `config.json` con un
- *  proveedor sin modelo o viceversa. */
-export type CambiosLlmProyecto = { modalidad: "suscripcion" } | { modalidad: "api"; proveedor: Proveedor; modelo: string };
-
-/** Cuerpo de `PUT /api/config/proyecto`: solo los campos que cambian, el resto se conserva. */
-export interface CambiosConfigProyecto {
-  appUrl?: string;
-  environment?: EnvironmentApp;
-  limits?: Partial<{ maxIterations: number; maxScreens: number; maxCostUsd: number }>;
-  llm?: CambiosLlmProyecto;
-  credenciales?: Partial<{ usuario: string; password: string }>;
-  memoria?: unknown;
+/** Config raíz del repo (`agente-qa.config.json`), Bloque 3. Formato mínimo: solo la URL base
+ *  hoy; el Bloque 5 añade `entorno`, `barrera` y `listaBlanca`. */
+export interface ConfigRaiz {
+  schemaVersion: 1;
+  appUrl: string;
 }
 
 // --- Consola global: el canal de eventos sobrevive al Bloque 2, vacío de contenido -----------

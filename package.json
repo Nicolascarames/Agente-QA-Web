@@ -1,17 +1,20 @@
 {
   "name": "agente-qa-web",
   "version": "0.1.0",
-  "description": "Interfaz web local para Agente-QA-MCP: lee el estado de un proyecto en disco y lanza su CLI como subproceso.",
+  "description": "Interfaz web local que convierte una frase en castellano en un test de Playwright ejecutado y en verde, vía el SDK de Claude.",
   "type": "module",
   "license": "MIT",
   "author": "Nicolascarames",
   "engines": {
     "node": ">=22"
   },
+  "bin": {
+    "agente-qa": "bin/agente-qa.mjs"
+  },
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "build": "vite build && node scripts/comprobar-estilos.mjs && tsc -p tsconfig.server.json",
-    "start": "node dist-server/index.js",
+    "start": "node dist-server/server/index.js",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.app.json --noEmit",
     "test": "vitest run"
@@ -20,15 +23,14 @@
     "rolldown": "1.2.3"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.3.268",
     "@fastify/static": "^8.1.1",
-    "cross-spawn": "^7.0.6",
     "fastify": "^5.2.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-rnd": "^10.4.13"
   },
   "devDependencies": {
-    "@types/cross-spawn": "^6.0.6",
     "@types/node": "^26.2.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",

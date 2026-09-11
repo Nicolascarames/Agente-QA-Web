@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ejecutarInit, obtenerActividad, obtenerEstado, type ActividadDisponible, type ActividadNoDisponible } from "./api";
+import { obtenerActividad, obtenerEstado, type ActividadDisponible, type ActividadNoDisponible } from "./api";
 import { Panel, type DisposicionPanel } from "./Panel";
 import type { EstadoProyecto } from "../shared/tipos";
 
@@ -23,7 +23,6 @@ const ETIQUETAS = ["Features", "e2e", "Informe"];
 export function Dashboard() {
   const [estado, setEstado] = useState<CargaEstado>({ estado: "cargando" });
   const [actividad, setActividad] = useState<CargaActividad>({ estado: "cargando" });
-  const [ejecutandoInit, setEjecutandoInit] = useState(false);
 
   const recargarEstado = useCallback(() => {
     return obtenerEstado()
@@ -44,14 +43,6 @@ export function Dashboard() {
       .catch(() => {
         setActividad({ estado: "listo", datos: { disponible: false, motivo: "no se pudo consultar /api/actividad" } });
       });
-  }, [recargarEstado]);
-
-  const lanzarInit = useCallback(() => {
-    setEjecutandoInit(true);
-    void ejecutarInit()
-      .then(() => recargarEstado())
-      .catch(() => undefined)
-      .finally(() => setEjecutandoInit(false));
   }, [recargarEstado]);
 
   // statBoxes[i] corresponde a ETIQUETAS[i]/GEOMETRIA_STATS[i]. Vacío mientras
@@ -88,17 +79,7 @@ export function Dashboard() {
           <Panel tabId="dashboard" panelId="cur" titulo="En curso ahora" disposicionPorDefecto={GEOMETRIA_CUR}>
             {estado.estado === "cargando" && <p className="text-text-dim">Cargando…</p>}
             {estado.estado === "listo" && !estado.datos.agenteQaInicializado && (
-              <div className="flex items-center justify-between gap-3 rounded-8 border border-border-strong bg-accent-bg px-3 py-2">
-                <span className="text-accent-soft">No hay .agente-qa/ en este proyecto.</span>
-                <button
-                  type="button"
-                  onClick={lanzarInit}
-                  disabled={ejecutandoInit}
-                  className="rounded-6 border border-border-strong bg-bg-sunken px-3 py-1 text-accent-soft disabled:opacity-50"
-                >
-                  {ejecutandoInit ? "ejecutando init…" : "ejecutar init"}
-                </button>
-              </div>
+              <p className="text-accent-soft">No hay .agente-qa/ en este proyecto todavía.</p>
             )}
             {estado.estado === "listo" && estado.datos.agenteQaInicializado && (
               <p className="text-text-dim">Sin corrida en curso — el indicador llega con la consola conectada al agente (Bloque 4).</p>

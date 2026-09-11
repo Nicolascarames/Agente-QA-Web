@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { obtenerConfigProyecto, obtenerProyecto } from "./api";
+import { obtenerProyecto } from "./api";
 import { Dashboard } from "./Dashboard";
 import { Configuracion } from "./Configuracion";
 import { Redactar } from "./Redactar";
@@ -51,7 +51,6 @@ export default function App() {
   const [pestana, setPestana] = useState<Pestana>("Dashboard");
   const [proyectoActual, setProyectoActual] = useState<string>("");
   const [sidebarAbierta, setSidebarAbierta] = useState(false);
-  const [appUrl, setAppUrl] = useState<string | null>(null);
 
   // El indicador "● en curso" y el panel de consola global comparten el mismo hook: vive aquí
   // (nunca se desmonta al cambiar de pestaña).
@@ -81,9 +80,6 @@ export default function App() {
   useEffect(() => {
     void obtenerProyecto().then((datos) => {
       setProyectoActual(datos.actual);
-    });
-    void obtenerConfigProyecto().then((datos) => {
-      setAppUrl(datos.inicializado ? datos.config.appUrl.valor : null);
     });
   }, []);
 
@@ -127,7 +123,6 @@ export default function App() {
           <p className="mt-1 truncate text-2xs text-text-faint" title={proyectoActual}>
             {proyectoActual || "sin proyecto"}
           </p>
-          <p className="mt-1 text-2xs text-text-ghost">URL objetivo: {appUrl && appUrl.trim() ? appUrl : "sin configurar"}</p>
         </div>
 
         <div className="px-3 pb-1.5 pt-1.5 text-2xs uppercase tracking-[.05em] text-text-faint">Operaciones</div>

@@ -7,17 +7,13 @@ import type { EstadoCorridaActiva, EstadoProyecto, EstadoProyectoActivo } from "
 
 describe("buildApp", () => {
   let proyecto: string;
-  let appDataTmp: string;
 
   beforeEach(async () => {
     proyecto = await mkdtemp(path.join(tmpdir(), "agente-qa-web-app-proyecto-"));
-    appDataTmp = await mkdtemp(path.join(tmpdir(), "agente-qa-web-app-appdata-"));
-    process.env.APPDATA = appDataTmp;
   });
 
   afterEach(async () => {
     await rm(proyecto, { recursive: true, force: true });
-    await rm(appDataTmp, { recursive: true, force: true });
   });
 
   it("GET /api/estado deriva el estado del proyecto activo del disco", async () => {
@@ -43,17 +39,6 @@ describe("buildApp", () => {
     const respuesta = await app.inject({ method: "GET", url: "/api/proyecto" });
     expect(respuesta.statusCode).toBe(200);
     expect(respuesta.json<EstadoProyectoActivo>()).toEqual({ actual: proyecto });
-    await app.close();
-  });
-
-  it("POST /api/init responde con el resultado del subproceso aunque el binario no esté en PATH", async () => {
-    const app = buildApp({ proyectoInicial: proyecto });
-    const respuesta = await app.inject({ method: "POST", url: "/api/init" });
-    // No asumimos que agente-qa-mcp esté instalado en el entorno de test: solo que
-    // la ruta responde con una forma { codigo, stdout, stderr } y no revienta.
-    const cuerpo = respuesta.json<{ codigo: number | null; stdout: string; stderr: string }>();
-    expect(cuerpo).toHaveProperty("codigo");
-    expect(cuerpo).toHaveProperty("stderr");
     await app.close();
   });
 
