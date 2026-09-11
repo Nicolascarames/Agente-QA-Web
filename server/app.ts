@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, promises as fs } from "node:fs";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,6 +6,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
 import { leerEstadoProyecto } from "./estado.js";
 import { lanzar, type SesionAgente } from "./agente.js";
+import * as git from "./git.js";
 import { esEventoTerminal } from "../shared/eventos.js";
 import type { EstadoCorridaActiva, EstadoProyectoActivo, EventoNdjson, RespuestaComando } from "../shared/tipos.js";
 
@@ -127,6 +128,101 @@ export function buildApp(opts: AppOptions): FastifyInstance {
     }
     corridaActiva.sesion.responderPregunta(req.body ?? {});
     await reply.status(200).send({ ok: true });
+  });
+
+  // --- Redactar / Generar (Bloque 6) --------------------------------------------------------
+  // Convención confirmada en `skill/skills/qa/SKILL.md` (no la de `projectPaths()`, que mira
+  // `.agente-qa/` para el Dashboard — inconsistencia previa del repo, fuera de este bloque).
+  const featuresDir = path.join(proyectoActivo, "tests", "features");
+  const pagesDir = path.join(proyectoActivo, "tests", "pages");
+  const specsDir = path.join(proyectoActivo, "tests", "specs");
+
+  // Directorio inexistente (proyecto sin ningún `.feature`/`.spec.ts` generado todavía) → lista
+  // vacía, nunca se crea aquí: solo escribir crea carpetas.
+  async function listarFicheros(dir: string, extension: string): Promise<string[]> {
+    let entradas;
+    try {
+      entradas = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+      return [];
+    }
+    return entradas.filter((entrada) => entrada.isFile() && entrada.name.endsWith(extension)).map((entrada) => entrada.name);
+  }
+
+  app.get("/api/escenarios", async () => listarFicheros(featuresDir, ".feature"));
+
+  // `nombre` llega de la URL: sin esta validación, un `..%2f..` se sale de `featuresDir` y permite
+  // leer/escribir cualquier fichero del sistema (hallazgo de la revisión del Bloque 6).
+  function nombreEscenarioSeguro(nombre: string): string | null {
+    if (!nombre || nombre !== path.basename(nombre) || !nombre.endsWith(".feature")) {
+      return null;
+    }
+    return nombre;
+  }
+
+  app.get<{ Params: { nombre: string } }>("/api/escenarios/:nombre", async (req, reply) => {
+    const nombre = nombreEscenarioSeguro(req.params.nombre);
+    if (!nombre) {
+      await reply.status(400).send({ error: "nombre de fichero inválido" });
+      return;
+    }
+    try {
+      const contenido = await fs.readFile(path.join(featuresDir, nombre), "utf8");
+      await reply.send({ contenido });
+    } catch {
+      await reply.status(404).send({ error: `no existe ${nombre}` });
+    }
+  });
+
+  app.put<{ Params: { nombre: string }; Body: { contenido?: string } }>("/api/escenarios/:nombre", async (req, reply) => {
+    const nombre = nombreEscenarioSeguro(req.params.nombre);
+    if (!nombre) {
+      await reply.status(400).send({ error: "nombre de fichero inválido" });
+      return;
+    }
+    const contenido = req.body?.contenido;
+    if (typeof contenido !== "string") {
+      await reply.status(400).send({ error: 'falta "contenido"' });
+      return;
+    }
+    await fs.mkdir(featuresDir, { recursive: true });
+    await fs.writeFile(path.join(featuresDir, nombre), contenido, "utf8");
+    await reply.send({ ok: true });
+  });
+
+  app.get("/api/generados", async () => {
+    const [pages, specs] = await Promise.all([listarFicheros(pagesDir, ".page.ts"), listarFicheros(specsDir, ".spec.ts")]);
+    return { pages, specs };
+  });
+
+  app.get<{ Querystring: { ruta?: string } }>("/api/generados/diff", async (req, reply) => {
+    const ruta = req.query.ruta;
+    if (!ruta) {
+      await reply.status(400).send({ error: 'falta "ruta"' });
+      return;
+    }
+    const contenido = await git.diff(proyectoActivo, [ruta]);
+    await reply.send({ diff: contenido });
+  });
+
+  app.post<{ Body: { rutas?: string[]; mensaje?: string } }>("/api/generados/commit", async (req, reply) => {
+    const { rutas, mensaje } = req.body ?? {};
+    if (!rutas || rutas.length === 0 || !mensaje) {
+      await reply.status(400).send({ error: 'faltan "rutas" o "mensaje"' });
+      return;
+    }
+    await git.commit(proyectoActivo, rutas, mensaje);
+    await reply.send({ ok: true });
+  });
+
+  app.post<{ Body: { rutas?: string[] } }>("/api/generados/descartar", async (req, reply) => {
+    const rutas = req.body?.rutas;
+    if (!rutas || rutas.length === 0) {
+      await reply.status(400).send({ error: 'falta "rutas"' });
+      return;
+    }
+    await git.descartar(proyectoActivo, rutas);
+    await reply.send({ ok: true });
   });
 
   if (existsSync(distClient)) {
