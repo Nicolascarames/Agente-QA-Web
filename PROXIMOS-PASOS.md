@@ -1,6 +1,6 @@
 # PRÓXIMOS PASOS — Agente-QA-Web
 
-Actualizado: 2026-09-11
+Actualizado: 2026-09-11 (Bloque 2 cerrado)
 
 Cola priorizada. **Una tarea = una línea.** El detalle vive en la spec.
 
@@ -14,9 +14,10 @@ Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`]
       referencias escritos; `pruebas/sauce/` monta Playwright contra SauceDemo real. Tres
       peticiones distintas, tres tests verdes a la primera, estables en dos ejecuciones. Detalle
       en `ESTADO.md`.
-- [ ] **Bloque 2 — Vaciar la web.** Borrar todo lo que no aparece en la lista de «se conserva» de
-      `ESTADO.md`. Crear `shared/eventos.ts` con la constante única de tipos de evento. Al cerrar: la
-      web arranca y navega con siete pestañas honestas y vacías.
+- [x] **Bloque 2 — Vaciar la web.** Cerrado 2026-09-11. Catálogo/mapa/CLI antiguo y la "guía
+      integrada" no listada en la spec, fuera; `agente-qa-contract` retirada del todo;
+      `shared/eventos.ts` creado. Siete pestañas navegan vacías, incluida Configuración. Detalle en
+      `ESTADO.md`.
 - [ ] **Bloque 3 — `npx agente-qa` sobre el repo actual.** `bin/agente-qa.mjs`, `server/doctor.ts`,
       lectura de `agente-qa.config.json`. Sin argumentos, sin selector: `cwd` es el proyecto.
 - [ ] **Bloque 4 — La consola habla con el agente.** `server/agente.ts` envuelve `query()` del SDK.

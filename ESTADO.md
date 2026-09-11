@@ -27,8 +27,8 @@ y el usuario acepta o rechaza. Quien juzga es Playwright, ejecutando el test.
 
 ## Qué funciona hoy
 
-**Bloque 1 cerrado — la puerta pasó.** El resto del plan nuevo no está implementado. Lo que
-existe además es una cáscara de interfaz de la que se aprovecha esto:
+**Bloques 1 y 2 cerrados.** El resto del plan nuevo no está implementado. La web arranca y navega
+con siete pestañas honestas y vacías; no queda nada del catálogo/mapa/CLI antiguo.
 
 | Pieza | Fichero |
 |---|---|
@@ -37,13 +37,15 @@ existe además es una cáscara de interfaz de la que se aprovecha esto:
 | Forma canónica de `.feature`/`.page.ts`/`.spec.ts`, verificada contra SauceDemo real | `skill/referencias/plantillas.md` |
 | Tokens de color y tipografía, autocontenidos, fuente propia sin CDN | `src/tokens.css` |
 | Guard de estilos en build — falla si el CSS usa una variable no definida | `scripts/comprobar-estilos.mjs` |
-| Estructura Fastify + SSE (las rutas, no su contenido) | `server/app.ts` |
-| Canal de eventos: `EventoNdjson`, `type` como texto libre a propósito | `shared/tipos.ts:191` |
-| Resolución del proyecto por `cwd` | `server/proyecto.ts:24-33` |
+| Estructura Fastify + SSE (las rutas, no su contenido); rutas del sistema antiguo retiradas o convertidas en stubs 501 | `server/app.ts` |
+| Canal de eventos: `EventoNdjson`, `type` como texto libre a propósito | `shared/tipos.ts` |
+| Tipos de evento terminal centralizados, antes duplicados a mano en tres sitios | `shared/eventos.ts` |
+| Resolución del proyecto por `--project` → env → `cwd`, sin `agente-qa-contract` | `server/proyecto.ts` |
+| Parseo mínimo de `agente-qa.config.json` a mano, sin Zod ni la dependencia externa | `server/config.ts` |
 | La caja de texto de la consola y el pintado de líneas | `src/ConsolaGlobal.tsx` |
-| La maqueta y el estilo de siete pestañas | — |
+| La maqueta y el estilo de siete pestañas, todas vacías (Configuración incluida) | `src/App.tsx` |
 
-El resto se borra en el Bloque 2. La lista exacta está en la spec.
+Nada de esto se toca por debajo del alcance real necesario para los bloques siguientes.
 
 ### Bloque 1 — cómo se validó
 
@@ -91,6 +93,8 @@ El chat es el mismo desde las cuatro primeras: una sola conversación, cuatro vi
 | Fallo de la aplicación | No se toca nada. Se informa. Es un bug encontrado |
 | Proveedor | Solo Claude, por la suscripción del usuario. El hueco para otro queda hecho |
 | Convenciones de la skill | Buenas prácticas estándar, afinadas con lo que se rechace |
+| Alcance real del Bloque 2 | Más amplio que la lista literal de la spec: se aplicó el criterio de ESTADO.md («todo lo que no está en "se conserva" se borra»). Se vació también Configuración (doctor/health-check, se reconstruye en el Bloque 3) y se borró entera una función de "guía integrada" no listada en la spec (`GuiaPestana`, `CajonFicha`, `FiltrosGuia`, `InsigniasEjes`, `Motor`, `Instalar.tsx`, `src/consola/*`) |
+| `agente-qa-contract` | Retirada del todo en el Bloque 2, no en el 3/5. Lo que daba (parseo de config, resolución de proyecto) se reescribió a mano y mínimo en `server/config.ts` y `server/proyecto.ts` |
 
 ---
 
