@@ -58,7 +58,7 @@ export default function App() {
   // El indicador "● en curso" y el panel de consola global comparten el mismo hook: vive aquí
   // (nunca se desmonta al cambiar de pestaña).
   const corridaGlobal = useCorridaGlobal();
-  const { corridaActiva, eventos, marcarCorridaActiva } = corridaGlobal;
+  const { corridaActiva, eventos, marcarCorridaActiva, agregarMensajeUsuario } = corridaGlobal;
 
   // Dos bandas apiladas dentro de `<main>` (Bloque 3): cada una es su propio `[data-canvas]` de
   // un viewport de alto menos la topbar, así los paneles flotantes de cada banda quedan acotados a
@@ -209,7 +209,12 @@ export default function App() {
 
         {/* Banda 2 — la consola global. */}
         <div ref={banda2Ref} className="relative" data-canvas="true" style={{ height: alturaBanda, scrollMarginTop: alturaTopbar }}>
-          <ConsolaGlobal corridaActiva={corridaActiva} eventos={eventos} marcarCorridaActiva={marcarCorridaActiva} />
+          <ConsolaGlobal
+            corridaActiva={corridaActiva}
+            eventos={eventos}
+            marcarCorridaActiva={marcarCorridaActiva}
+            agregarMensajeUsuario={agregarMensajeUsuario}
+          />
           <button
             type="button"
             onClick={() => {

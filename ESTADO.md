@@ -1,6 +1,8 @@
 # ESTADO — Agente-QA-Web
 
-Actualizado: 2026-09-12 (plan de nueve bloques completo; tres deudas cerradas: reporter JSON, trazabilidad de nombres, `TS5055` en build)
+Actualizado: 2026-09-12 (plan de nueve bloques completo; tres deudas cerradas: reporter JSON,
+trazabilidad de nombres, `TS5055` en build; después del plan: continuidad de conversación con
+`resume` y consola única, sin chats duplicados por pestaña)
 
 ## Qué es esto
 
@@ -34,9 +36,12 @@ gated a validar contra webs reales) y la deuda anotada en `PROXIMOS-PASOS.md`.
 mostrando ese repo. El subcomando `doctor` comprueba sesión/SDK/Node/Playwright y sale con el
 código correspondiente. La consola global lanza el agente de verdad (SDK de Claude Code) sobre el
 repo activo: escribes una petición, se ejecuta con Playwright MCP y la skill de QA, y los eventos
-llegan por SSE. Redactar, Generar, Ejecutar y Reparar muestran datos reales del repo (Gherkin
-editable, diff con aceptar/descartar, resultados de Playwright), cada una con su propio chat que
-comparte la misma sesión de la consola global. Con la barrera de escrituras encendida en
+llegan por SSE. Un segundo mensaje reanuda la conversación anterior (`resume` del SDK, `session_id`
+guardado en memoria): no hace falta repetir el contexto. Redactar, Generar, Ejecutar y Reparar
+muestran datos reales del repo (Gherkin editable, diff con aceptar/descartar, resultados de
+Playwright) pero **ya no tienen caja de texto propia** — toda la conversación vive solo en la
+consola global, al fondo de la pantalla; esas cuatro pestañas son de solo lectura sobre el mismo
+`eventos`/`corridaActiva`. Con la barrera de escrituras encendida en
 Configuración, toda llamada de escritura de Playwright contra una URL fuera de la lista blanca se
 deniega y cualquier secreto conocido (variables `PASSWORD`/`SECRET`/`TOKEN`/`KEY`/`CREDENCIAL`) se
 redacta antes de salir por el canal de eventos.
@@ -56,17 +61,18 @@ redacta antes de salir por el canal de eventos.
 | Canal de eventos: `EventoNdjson`, `type` como texto libre a propósito | `shared/tipos.ts` |
 | Tipos de evento terminal centralizados, antes duplicados a mano en tres sitios | `shared/eventos.ts` |
 | Resolución del proyecto por `--project` → env → `cwd`, sin `agente-qa-contract` | `server/proyecto.ts` |
-| La caja de texto de la consola, conectada al agente: envía/encola peticiones, botones Parar/Interrumpir, renderiza preguntas del agente con botones + texto libre | `src/ConsolaGlobal.tsx` |
-| La maqueta y el estilo de siete pestañas, todas vacías salvo la consola (Configuración incluida) | `src/App.tsx` |
-| Envuelve `query()` del SDK de Claude Code: cola de entrada en modo streaming, difusor de eventos a N suscriptores SSE, `canUseTool` para `AskUserQuestion`, mapeo a los tres eventos terminales | `server/agente.ts` |
-| Rutas `/api/comando` (lanza o encola), `/api/eventos` (SSE, un suscriptor por conexión), `/api/parar`, `/api/interrumpir`, `/api/pregunta/responder`; estado de la sesión activa en memoria del módulo | `server/app.ts` |
+| La única caja de texto de toda la app: envía/encola peticiones, botones Parar/Interrumpir, eco inmediato de tu propio mensaje, narración legible del agente (texto y `tool_use` extraídos de los mensajes del SDK, no JSON en bruto), indicador "trabajando", bloque resaltado de fin de turno/error, preguntas de `AskUserQuestion` con botones + texto libre | `src/ConsolaGlobal.tsx` |
+| El hilo de la consola no se borra entre turnos (se acumula en `eventos` mientras la pestaña siga abierta); `agregarMensajeUsuario` inserta el eco local | `src/useCorridaGlobal.ts` |
+| La maqueta y el estilo de siete pestañas; Redactar/Generar/Ejecutar/Reparar ya no montan su propio chat, solo la consola global | `src/App.tsx` |
+| Envuelve `query()` del SDK de Claude Code: cola de entrada en modo streaming, difusor de eventos a N suscriptores SSE, `canUseTool` para `AskUserQuestion`, mapeo a los tres eventos terminales, `resume` opcional para reanudar el hilo anterior | `server/agente.ts` |
+| Rutas `/api/comando` (lanza o encola), `/api/eventos` (SSE, un suscriptor por conexión), `/api/parar`, `/api/interrumpir`, `/api/pregunta/responder`; estado de la sesión activa y último `session_id` visto en memoria del módulo, pasado como `resume` a la siguiente corrida | `server/app.ts` |
 | La skill de QA reestructurada como plugin del SDK (manifiesto + `skills/qa/`), para que `plugins` la cargue sin copiar nada al repo del usuario | `skill/.claude-plugin/plugin.json`, `skill/skills/qa/` |
 | Barrera de escrituras: compara cada llamada `mcp__playwright__*` de escritura contra la lista blanca del entorno activo (dentro de `canUseTool`, mismo canal `deny+message` del Bloque 4); redacción de secretos aplicada a toda emisión del difusor de eventos | `server/barrera.ts`, uso en `server/agente.ts` |
 | `ConfigRaiz` con `entorno`/`barrera`/`listaBlanca`; formulario real en el panel "proyecto" de Configuración; rutas `GET/POST /api/config` | `shared/tipos.ts`, `server/proyecto.ts`, `src/Configuracion.tsx`, `server/app.ts` |
 | `diff`/`commit`/`descartar` sobre `tests/{features,pages,specs}/` vía `git` del sistema (sin dependencias nuevas); rutas `/api/escenarios*` y `/api/generados*` | `server/git.ts`, `server/app.ts` |
-| Redactar (lista+edición de `.feature`) y Generar (lista+diff con Aceptar/Descartar de `.page.ts`/`.spec.ts`), cada una con un chat propio (`ChatAgente`) que comparte el estado de la consola global | `src/Redactar.tsx`, `src/Generar.tsx` |
+| Redactar (lista+edición de `.feature`) y Generar (lista+diff con Aceptar/Descartar de `.page.ts`/`.spec.ts`); sin chat propio, solo lectura sobre el estado que ya trae la consola global | `src/Redactar.tsx`, `src/Generar.tsx` |
 | Lector fiel del último reporte JSON de Playwright (`test-results/results.json`, verificado de punta a punta contra `pruebas/sauce/`); `sugerirVeredicto` es solo una etiqueta de badge, nunca un juez — la clasificación real la da el agente | `server/reporter.ts` |
-| Ejecutar (lista+pasos+error de cada test) y Reparar (solo los rojos, badge de sugerencia, diff con Aplicar/Rechazar), cada una con su chat (`ChatCorrida`) | `src/Ejecutar.tsx`, `src/Reparar.tsx` |
+| Ejecutar (lista+pasos+error de cada test) y Reparar (solo los rojos, badge de sugerencia, diff con Aplicar/Rechazar); sin chat propio ni barra de lanzamiento (la `BarraLanzamientoDeshabilitada` del Bloque 5-6 se retiró: ya no describía la realidad) | `src/Ejecutar.tsx`, `src/Reparar.tsx` |
 | Trazabilidad: cruza cada `Escenario:` del `.feature` con los `test.step` del `.spec.ts` homónimo (mismo nombre base), por igualdad exacta de secuencia de frases; cruce con `leerReporte` para el color; ruta `GET /api/trazabilidad` | `server/trazabilidad.ts` |
 | Historial de ejecuciones: coste/duración/turnos + resultados por test, acumulado en `agente-qa.historial.json` (recorte a 200), enganchado tras cada `operation.completed`/`operation.error`; ruta `GET /api/historial` | `server/costes.ts`, uso en `server/agente.ts` |
 | Elementos frágiles: cuenta los comentarios `// FRÁGIL: <motivo>` reales de la skill en `tests/pages/` y `tests/specs/`; ruta `GET /api/fragiles` | `server/fragiles.ts` |
@@ -104,7 +110,8 @@ dieron tres tests verdes a la primera y estables en dos ejecuciones seguidas:
 | **Dashboard** | Escenarios cubiertos, verdes, rojos, última ejecución, coste acumulado, elementos frágiles |
 | **Configuración** | URL base, entornos, credenciales y el interruptor de la barrera de escrituras |
 
-El chat es el mismo desde las cuatro primeras: una sola conversación, cuatro vistas.
+Las siete son de solo lectura sobre el repo: la única conversación con el agente vive en la consola
+global, al fondo de la pantalla, no en las pestañas.
 
 ---
 
@@ -130,7 +137,8 @@ El chat es el mismo desde las cuatro primeras: una sola conversación, cuatro vi
 | Una corrida = una sesión `query()`, no una petición (Bloque 4) | Mensajes escritos mientras hay una corrida activa se encolan en la misma sesión (modo streaming-input) en vez de lanzar una `query()` nueva — necesario porque `Query.interrupt()` solo existe en ese modo y porque Playwright MCP no soporta dos sesiones concurrentes sobre el mismo navegador |
 | Barrera de escrituras (Bloque 5): `canUseTool`, no un hook nativo del SDK | El SDK expone `hooks.PreToolUse` pero su interacción con `permissionDecision:"ask"` en modo headless (sin terminal) no está probada en este repo. Se reutilizó `canUseTool` — ya validado en el Bloque 4 para `AskUserQuestion` — añadiendo la comprobación de lista blanca antes de esa rama, con el mismo canal `{behavior:"deny", message}` |
 | Fallo del test vs fallo de la aplicación (Bloque 7) | `server/reporter.ts` nunca judge: `sugerirVeredicto` es una heurística de badge (patrones de error típicos de localizador vs de aserción de valor), marcada en la UI como sugerencia. La clasificación real la hace el agente en el chat, coherente con el principio de ESTADO.md de que el código nunca juzga lo que produce el agente |
-| Chat propio por pestaña (Bloques 6 y 7) | `<ConsolaGlobal>` monta su propio `<Panel tabId="global" panelId="consola">` con key fija: no se puede anidar dentro de otro panel sin duplicarla. Redactar/Generar/Ejecutar/Reparar montan un componente de chat ligero propio (`ChatAgente`/`ChatCorrida`) que reutiliza el mismo estado (`corridaActiva`/`eventos`/`marcarCorridaActiva`) que `App.tsx` ya pasa a la consola global — no hay dos sesiones ni dos suscripciones SSE, solo dos vistas del mismo estado |
+| Chat propio por pestaña (Bloques 6 y 7) — **revertido después del plan (2026-09-12)** | Redactar/Generar/Ejecutar/Reparar tuvieron cada una su chat ligero (`ChatAgente`/`ChatCorrida`) hasta que, en uso real, confundía dónde escribir (parecía una cuarta caja junto a las dos reales). Se quitaron los cuatro y la `BarraLanzamientoDeshabilitada` con ellos; la única conversación vive en `<ConsolaGlobal>` (banda 2), que sigue montando su propio `<Panel tabId="global" panelId="consola">` |
+| Continuidad de la conversación con `resume` (después del plan, 2026-09-12) | Si el agente terminaba un turno con una pregunta en texto plano (no vía `AskUserQuestion`), `server/agente.ts` cerraba la sesión igual que si hubiera acabado de verdad — el siguiente mensaje lanzaba una `query()` nueva sin memoria de nada, verificado en producción (contestar "sí, confirmo" a una propuesta del agente producía "no tengo contexto"). Fix: `server/app.ts` guarda el último `session_id` visto en cualquier evento del difusor (en memoria, se pierde al reiniciar el servidor) y lo pasa como `resume` a la siguiente `lanzar()`. El SDK sí soporta `resume` con `prompt` en modo streaming-input (verificado con un script aislado antes de dar el fix por bueno) — el fallo inicial en pruebas fue un servidor de desarrollo zombi (ver "Hechos verificados"), no el código |
 | Contrato `/api/generados/diff\|commit\|descartar` (Bloques 6 y 7) | Fijado por el Bloque 6 (`?ruta=` en el diff, `{rutas: string[], mensaje}` en el commit, `{rutas: string[]}` en el descarte) porque ahí vive `server/git.ts`. El Bloque 7 se implementó en paralelo sin verlo y asumió nombres distintos (`?fichero=`, `{fichero}`) — se corrigió al integrar; si se vuelve a tocar este contrato, `Reparar.tsx` es el único consumidor a revisar |
 | Emparejamiento feature↔spec para trazabilidad (Bloque 8) | Por nombre base igual (`X.feature` ↔ `X.spec.ts`), inferido del único ejemplo de `plantillas.md` (`anadir-al-carrito.feature`/`anadir-al-carrito.spec.ts`) — no hay una regla escrita en la spec que lo exija. Si se genera un spec con otro nombre, saldría "no cubierto" pese a existir el test. Anotado en `PROXIMOS-PASOS.md` para verificar contra un proyecto real |
 | "Elementos frágiles" del Dashboard (Bloque 8) | Cuenta comentarios `// FRÁGIL: <motivo>` reales (convención ya escrita en `skill/skills/qa/referencias/localizadores.md` desde antes del Bloque 8), no una señal inventada — coherente con el principio de que el código nunca juzga, solo cuenta lo que el agente ya marcó |
@@ -178,6 +186,22 @@ Comprobados contra documentación oficial, no de memoria:
   commitear puede desaparecer solo (limpieza automática del harness) aunque el agente haya hecho
   cambios reales: hay que commitear dentro del propio worktree en cuanto el trabajo esté verificado,
   no confiar en que el directorio sobreviva hasta la fusión.
+- **Tres agentes en paralelo sin worktree (mismo árbol de trabajo, ficheros disjuntos) pueden pisarse
+  igualmente si uno de ellos ejecuta `git stash`/`git reset`** al toparse con conflictos aparentes:
+  un `git stash` de "por si acaso" agarra TODO lo no comiteado, incluido el trabajo en curso de los
+  otros dos agentes, no solo el suyo. Pasó real al despachar el fix de `resume` + la consola única +
+  la limpieza de pestañas (2026-09-12): dos `git reset` de por medio borraron el arreglo del backend
+  ya verificado. Se detectó por `git log -g` (dos entradas seguidas "reset: moving to HEAD" sin
+  commit real entre medias) y se recuperó a mano. Regla para subagentes que comparten árbol de
+  trabajo: nunca `git stash`/`git reset`/`git checkout -- <todo>` para "limpiar" un conflicto —
+  identificar el fichero propio y tocar solo ese.
+- **Un `npm run dev` (Vite + `tsx watch` vía `concurrently`) puede quedarse zombi tras muchos
+  reinicios seguidos en una sesión larga**: sigue respondiendo en el puerto pero ya no recompila ni
+  refleja los últimos cambios, y no imprime nada por su cuenta (a diferencia de Vite, cuyo log sí se
+  ve) — parecía que el fix de `resume` no funcionaba hasta que se aisló con un script mínimo (si
+  funciona) y se confirmó reiniciando el servidor del todo. Señal de alarma: cero líneas de log del
+  lado servidor durante varios minutos con actividad real. Solución siempre igual: matar los procesos
+  Node huérfanos por puerto (`Get-NetTCPConnection` + `Stop-Process` en Windows) y relanzar limpio.
 
 ### El agente — cómo se implementó (Bloque 4)
 

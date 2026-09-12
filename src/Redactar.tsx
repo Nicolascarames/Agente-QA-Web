@@ -1,16 +1,7 @@
 import { useEffect, useState } from "react";
 import { Panel } from "./Panel";
-import {
-  enviarComando,
-  guardarEscenario,
-  interrumpirCorrida,
-  obtenerEscenario,
-  obtenerEscenarios,
-  obtenerTrazabilidad,
-  pararCorrida,
-  responderPregunta,
-} from "./api";
-import type { CoberturaEscenario, EventoNdjson } from "../shared/tipos";
+import { guardarEscenario, obtenerEscenario, obtenerEscenarios, obtenerTrazabilidad } from "./api";
+import type { CoberturaEscenario } from "../shared/tipos";
 
 // Badge de cobertura por fichero .feature (Bloque 8), junto al nombre en la lista de la izquierda:
 // resume todos los `Escenario:` de ese fichero en un único estado, por prioridad — un fichero con
@@ -50,183 +41,7 @@ function badgeDeFichero(escenarios: CoberturaEscenario[]): BadgeCobertura {
 // coste` de mentira para un agente que no existía. Ahora el agente existe y se lanza escribiendo
 // en el chat de la derecha — una segunda barra de "lanzar" sería redundante con esa caja de texto.
 
-interface OpcionPregunta {
-  label: string;
-  description: string;
-}
-
-interface PreguntaAgente {
-  questions: { question: string; header: string; options: OpcionPregunta[] }[];
-}
-
-export interface ChatAgenteProps {
-  corridaActiva: string | null;
-  eventos: EventoNdjson[];
-  marcarCorridaActiva: (etiqueta: string | null) => void;
-}
-
-/**
- * `ConsolaGlobal` no sirve aquí tal cual: se envuelve en su propio `<Panel tabId="global"
- * panelId="consola">`, así que montarla otra vez dentro del panel "chat" de esta pestaña
- * duplicaría esa clave global de `Panel` (misma entrada de `localStorage`). Este es el mismo
- * chat — mismos endpoints de `api.ts`, misma lógica de `agente.pregunta` — sin el envoltorio de
- * `Panel`, porque el de esta pestaña ya lo pone el `<Panel panelId="chat">` que lo contiene.
- */
-export function ChatAgente({ corridaActiva, eventos, marcarCorridaActiva }: ChatAgenteProps) {
-  const [comando, setComando] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [enviando, setEnviando] = useState(false);
-  const [preguntaPendiente, setPreguntaPendiente] = useState<PreguntaAgente | null>(null);
-
-  useEffect(() => {
-    const ultimo = eventos[eventos.length - 1];
-    if (ultimo?.type === "agente.pregunta") {
-      setPreguntaPendiente(ultimo.data as PreguntaAgente);
-    }
-  }, [eventos]);
-
-  useEffect(() => {
-    if (!corridaActiva) setPreguntaPendiente(null);
-  }, [corridaActiva]);
-
-  const manejarError = (err: unknown) => {
-    setError(err instanceof Error ? err.message : String(err));
-  };
-
-  const enviar = (): Promise<void> => {
-    const texto = comando.trim();
-    if (!texto) return Promise.resolve();
-    setError(null);
-    setEnviando(true);
-    return enviarComando(texto)
-      .then((respuesta) => {
-        marcarCorridaActiva(respuesta.runId);
-        setComando("");
-      })
-      .catch(manejarError)
-      .finally(() => setEnviando(false));
-  };
-
-  const responder = (respuesta: { textoLibre?: string; opcionesElegidas?: string[] }) => {
-    setError(null);
-    setEnviando(true);
-    responderPregunta(respuesta)
-      .then(() => {
-        setPreguntaPendiente(null);
-        setComando("");
-      })
-      .catch(manejarError)
-      .finally(() => setEnviando(false));
-  };
-
-  const enviarOResponder = () => {
-    if (preguntaPendiente) {
-      const texto = comando.trim();
-      if (!texto) return;
-      responder({ textoLibre: texto });
-      return;
-    }
-    void enviar();
-  };
-
-  const parar = () => {
-    pararCorrida().catch(manejarError);
-  };
-
-  const interrumpir = () => {
-    void enviar().then(() => interrumpirCorrida().catch(manejarError));
-  };
-
-  return (
-    <div className="flex h-full flex-col gap-2">
-      <ul className="flex-1 overflow-auto">
-        {eventos.length === 0 ? (
-          <p className="text-text-dim">Sin eventos todavía: escribe un comando.</p>
-        ) : (
-          eventos.map((evento, indice) => (
-            <li key={`${evento.runId}-${String(indice)}`} className="border-b border-border pb-1.5 text-2xs text-text-faint">
-              <span className="text-accent-soft">{evento.type}</span>
-            </li>
-          ))
-        )}
-      </ul>
-      {preguntaPendiente && (
-        <div className="flex flex-col gap-1.5 rounded-7 border border-border-soft p-2">
-          {preguntaPendiente.questions.map((pregunta, indice) => (
-            <div key={`${pregunta.header}-${String(indice)}`} className="flex flex-col gap-1">
-              <p className="text-xs font-bold text-text-bright">
-                {pregunta.header}: {pregunta.question}
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {pregunta.options.map((opcion) => (
-                  <button
-                    key={opcion.label}
-                    type="button"
-                    title={opcion.description}
-                    disabled={enviando}
-                    onClick={() => {
-                      responder({ opcionesElegidas: [opcion.label] });
-                    }}
-                    className="rounded-7 border border-border-soft bg-bg-sunken px-2 py-1 text-2xs text-text-bright disabled:opacity-50"
-                  >
-                    {opcion.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-      {error && <p className="text-xs text-danger">{error}</p>}
-      <div className="flex gap-1.5">
-        <input
-          value={comando}
-          onChange={(e) => {
-            setComando(e.target.value);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") enviarOResponder();
-          }}
-          disabled={enviando}
-          placeholder={preguntaPendiente ? "Responde por texto libre…" : "Escribe un comando…"}
-          className="flex-1 rounded-7 border border-border-soft bg-bg-sunken px-2.5 py-1.5 text-sm text-text-bright disabled:opacity-50"
-        />
-        <button
-          type="button"
-          onClick={enviarOResponder}
-          disabled={enviando}
-          className="rounded-7 border border-accent bg-accent px-3 py-1 text-xs font-bold text-on-accent disabled:opacity-50"
-        >
-          ▶️
-        </button>
-        <button
-          type="button"
-          onClick={parar}
-          disabled={!corridaActiva}
-          className="rounded-7 border border-border-soft bg-bg-sunken px-3 py-1 text-xs font-bold text-text-bright disabled:opacity-50"
-        >
-          Parar
-        </button>
-        <button
-          type="button"
-          onClick={interrumpir}
-          disabled={!corridaActiva}
-          className="rounded-7 border border-border-soft bg-bg-sunken px-3 py-1 text-xs font-bold text-text-bright disabled:opacity-50"
-        >
-          Interrumpir
-        </button>
-      </div>
-    </div>
-  );
-}
-
-export interface RedactarProps {
-  corridaActiva: string | null;
-  eventos: EventoNdjson[];
-  marcarCorridaActiva: (etiqueta: string | null) => void;
-}
-
-export function Redactar({ corridaActiva, eventos, marcarCorridaActiva }: RedactarProps) {
+export function Redactar({}: object) {
   const [escenarios, setEscenarios] = useState<string[]>([]);
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
   const [contenido, setContenido] = useState("");
@@ -290,7 +105,7 @@ export function Redactar({ corridaActiva, eventos, marcarCorridaActiva }: Redact
   return (
     <div className="flex h-full flex-col gap-2.5 p-4">
       <div className="relative flex-1" data-canvas="true">
-        <Panel tabId="redactar" panelId="lista" titulo="Features y escenarios" disposicionPorDefecto={{ x: 0, y: 0, w: 25, h: 100, z: 1 }}>
+        <Panel tabId="redactar" panelId="lista" titulo="Features y escenarios" disposicionPorDefecto={{ x: 0, y: 0, w: 30, h: 100, z: 1 }}>
           {escenarios.length === 0 ? (
             <p className="p-3 text-xs text-text-dim">Sin ficheros .feature todavía en tests/features/.</p>
           ) : (
@@ -319,7 +134,7 @@ export function Redactar({ corridaActiva, eventos, marcarCorridaActiva }: Redact
           )}
         </Panel>
 
-        <Panel tabId="redactar" panelId="detalle" titulo="Detalle del escenario" disposicionPorDefecto={{ x: 26.5, y: 0, w: 46, h: 100, z: 1 }}>
+        <Panel tabId="redactar" panelId="detalle" titulo="Detalle del escenario" disposicionPorDefecto={{ x: 31.5, y: 0, w: 67.5, h: 100, z: 1 }}>
           <div className="flex h-full flex-col gap-2 p-2">
             {!seleccionado ? (
               <p className="p-2 text-xs text-text-dim">Elige un escenario de la lista.</p>
@@ -348,10 +163,6 @@ export function Redactar({ corridaActiva, eventos, marcarCorridaActiva }: Redact
               </>
             )}
           </div>
-        </Panel>
-
-        <Panel tabId="redactar" panelId="chat" titulo="Hablar con el agente" disposicionPorDefecto={{ x: 74, y: 0, w: 26, h: 100, z: 1 }}>
-          <ChatAgente corridaActiva={corridaActiva} eventos={eventos} marcarCorridaActiva={marcarCorridaActiva} />
         </Panel>
       </div>
     </div>

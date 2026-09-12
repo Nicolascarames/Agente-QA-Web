@@ -143,6 +143,21 @@ describe("buildApp", () => {
     await app.close();
   });
 
+  it("reusa el último session_id conocido vía `resume` en la siguiente corrida", async () => {
+    const { sesion: primeraSesion } = crearSesionFalsa([{ type: "operation.completed", data: { session_id: "sesion-123", result: "ok" } }]);
+    const { sesion: segundaSesion } = crearSesionFalsa();
+    const lanzarFn = vi.fn().mockReturnValueOnce(primeraSesion).mockReturnValueOnce(segundaSesion);
+    const app = buildApp({ proyectoInicial: proyecto, lanzarFn });
+
+    await app.inject({ method: "POST", url: "/api/comando", payload: { texto: "primero" } });
+    await app.inject({ method: "GET", url: "/api/eventos" }); // drena hasta el evento terminal y cierra la corrida activa
+
+    await app.inject({ method: "POST", url: "/api/comando", payload: { texto: "segundo" } });
+
+    expect(lanzarFn).toHaveBeenNthCalledWith(2, "segundo", expect.objectContaining({ resume: "sesion-123" }));
+    await app.close();
+  });
+
   it("POST /api/parar es idempotente: 200 tanto si hay sesión activa como si no", async () => {
     const appSinSesion = buildApp({ proyectoInicial: proyecto });
     expect((await appSinSesion.inject({ method: "POST", url: "/api/parar" })).statusCode).toBe(200);

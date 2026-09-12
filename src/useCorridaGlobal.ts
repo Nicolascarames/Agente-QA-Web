@@ -21,13 +21,15 @@ export interface EstadoCorridaGlobal {
   corridaActiva: string | null;
   eventos: EventoNdjson[];
   marcarCorridaActiva: (etiqueta: string | null) => void;
+  agregarMensajeUsuario: (texto: string) => void;
 }
 
 /**
  * Vive en `App.tsx` (nunca se desmonta al cambiar de pestaña): una única conexión SSE para toda
- * la app. `marcarCorridaActiva` es lo que `ConsolaGlobal` llama al lanzar una corrida: limpia el
- * historial y fuerza reabrir el SSE (el servidor cierra la conexión de la corrida anterior al
- * terminar, así que hace falta una nueva por cada corrida).
+ * la app. `marcarCorridaActiva` es lo que `ConsolaGlobal` llama al lanzar una corrida: fuerza
+ * reabrir el SSE (el servidor cierra la conexión de la corrida anterior al terminar, así que hace
+ * falta una nueva por cada corrida) sin vaciar `eventos` — el historial se acumula turno tras
+ * turno, como un chat.
  *
  * Bloque 2: el backend que lanzaba corridas de verdad (`server/corridas.ts`) se borró. Lo que
  * queda es la estructura (esta misma conexión SSE, honesta sobre que no hay nada activo) para que
@@ -77,12 +79,23 @@ export function useCorridaGlobal(): EstadoCorridaGlobal {
   const marcarCorridaActiva = useCallback((etiqueta: string | null) => {
     setCorridaActiva((actual) => {
       if (etiqueta !== null && actual === null) {
-        setEstado(ESTADO_CONSOLA_INICIAL);
         setIntentoConexion((n) => n + 1);
       }
       return etiqueta;
     });
   }, []);
 
-  return { corridaActiva, eventos: estado.eventos, marcarCorridaActiva };
+  const agregarMensajeUsuario = useCallback((texto: string) => {
+    setEstado((actual) =>
+      reducirEventoConsola(actual, {
+        runId: "local",
+        ts: new Date().toISOString(),
+        agent: "usuario",
+        type: "usuario.mensaje",
+        data: { texto },
+      })
+    );
+  }, []);
+
+  return { corridaActiva, eventos: estado.eventos, marcarCorridaActiva, agregarMensajeUsuario };
 }

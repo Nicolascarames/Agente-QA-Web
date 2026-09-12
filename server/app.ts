@@ -30,6 +30,16 @@ import type {
  *  (Bloque 5): el panel de Configuración necesita algo que pintar antes de que el usuario guarde nada. */
 const CONFIG_RAIZ_POR_DEFECTO: ConfigRaiz = { schemaVersion: 1, appUrl: "", entorno: "pruebas", barrera: false, listaBlanca: [] };
 
+/** Extrae `session_id` de un evento del agente si lo trae, para poder reanudar la conversación
+ *  (`resume`) en el siguiente `/api/comando` sin acoplarse a la forma completa del mensaje del SDK. */
+function extraerSessionId(data: unknown): string | undefined {
+  if (data && typeof data === "object" && "session_id" in data) {
+    const valor = (data as { session_id?: unknown }).session_id;
+    if (typeof valor === "string") return valor;
+  }
+  return undefined;
+}
+
 export interface AppOptions {
   proyectoInicial: string;
   /** Inyectable para test — por defecto `lanzar()` real de `agente.ts`. */
@@ -52,6 +62,9 @@ export function buildApp(opts: AppOptions): FastifyInstance {
   // por repo, igual que `proyectoActivo`). `sesion` y `runId` van juntos para que TypeScript sepa
   // que uno no puede existir sin el otro.
   let corridaActiva: { sesion: SesionAgente; runId: string } | null = null;
+  // Último session_id visto por el difusor de eventos, para reanudar la conversación en el
+  // próximo /api/comando — en memoria, se pierde al reiniciar el servidor, decisión explícita.
+  let ultimaSesionId: string | null = null;
 
   // El estado no se guarda: se deriva del disco en cada petición.
   app.get("/api/estado", async () => leerEstadoProyecto(proyectoActivo));
@@ -121,6 +134,7 @@ export function buildApp(opts: AppOptions): FastifyInstance {
         entorno: config?.entorno,
         barreraActiva: config?.barrera,
         listaBlanca: config?.listaBlanca,
+        resume: ultimaSesionId ?? undefined,
       }),
       runId,
     };
@@ -156,6 +170,7 @@ export function buildApp(opts: AppOptions): FastifyInstance {
     void (async () => {
       for (let resultado = await suscripcion.next(); !resultado.done; resultado = await suscripcion.next()) {
         const evento = resultado.value;
+        ultimaSesionId = extraerSessionId(evento.data) ?? ultimaSesionId;
         const envoltorio: EventoNdjson = { runId, ts: new Date().toISOString(), agent: "agente-qa", type: evento.type, data: evento.data };
         reply.raw.write(`data: ${JSON.stringify(envoltorio)}\n\n`);
         if (esEventoTerminal(evento.type)) {

@@ -4,6 +4,14 @@ Cómo trabajar en este repo. Las decisiones de producto viven en la spec, no aqu
 
 ## Trampas conocidas
 
+- **Subagentes que comparten árbol de trabajo (sin worktree) nunca deben ejecutar `git
+  stash`/`git reset`/`git checkout -- <todo>` para "limpiar" un conflicto.** Arrastra también el
+  trabajo en curso de los demás. Si algo de otro fichero estorba, se ignora — solo se toca el
+  fichero propio del brief.
+- **Un `npm run dev` puede quedarse zombi tras muchos reinicios seguidos** (sirve por el puerto pero
+  ya no recompila ni imprime nada por su lado servidor). Si algo que debería funcionar no cambia de
+  comportamiento en el navegador, sospechar del proceso antes que del código: matar por puerto y
+  relanzar limpio.
 - **`vitest.config.ts` debe excluir `dist-client/` y `dist-server/`.** Si no, los `.test.js`
   compilados se cuelan en el glob y `npm test` revienta entero con un `TypeError` que parece de
   entorno y no lo es. Ya está excluido; no lo quites.

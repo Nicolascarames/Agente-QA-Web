@@ -50,6 +50,9 @@ export interface OpcionesLanzar {
   entorno?: string;
   barreraActiva?: boolean;
   listaBlanca?: string[];
+  /** Reanuda el hilo de conversación anterior (SDK `resume`), en memoria únicamente — si no se
+   *  pasa, se lanza una conversación nueva. */
+  resume?: string;
 }
 
 function mensajeUsuario(texto: string): SDKUserMessage {
@@ -219,6 +222,7 @@ export function lanzar(peticionInicial: string, opciones: OpcionesLanzar): Sesio
     options: {
       cwd: opciones.cwd,
       abortController,
+      resume: opciones.resume,
       mcpServers: { playwright: { command: "npx", args: ["@playwright/mcp@latest"] } },
       plugins: [{ type: "local", path: rutaSkill }],
       skills: ["qa"],

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Panel } from "./Panel";
 import { enviarComando, interrumpirCorrida, pararCorrida, responderPregunta } from "./api";
+import { esEventoTerminal } from "../shared/eventos";
 import type { EventoNdjson } from "../shared/tipos";
 
 interface OpcionPregunta {
@@ -17,12 +18,13 @@ function serializarDatos(data: unknown): string {
   return typeof data === "string" ? data : JSON.stringify(data);
 }
 
-function LineaEvento({ evento }: { evento: EventoNdjson }) {
-  if (evento.type === "raw.stdout") {
-    const datos = evento.data as { linea?: unknown };
-    const linea = typeof datos?.linea === "string" ? datos.linea : serializarDatos(evento.data);
-    return <li className="text-xs text-text-dim">{linea}</li>;
-  }
+interface BloqueContenidoAsistente {
+  type: string;
+  text?: string;
+  name?: string;
+}
+
+function LineaVolcadoCrudo({ evento }: { evento: EventoNdjson }) {
   return (
     <li className="border-b border-border pb-1.5 text-xs text-text-faint">
       <span className="text-text-ghost">{evento.ts}</span> <span className="text-accent-soft">{evento.type}</span>{" "}
@@ -32,17 +34,79 @@ function LineaEvento({ evento }: { evento: EventoNdjson }) {
   );
 }
 
+function LineaAgenteAssistant({ evento }: { evento: EventoNdjson }) {
+  const contenido = (evento.data as { message?: { content?: unknown } } | undefined)?.message?.content;
+  if (!Array.isArray(contenido) || contenido.length === 0) {
+    return <LineaVolcadoCrudo evento={evento} />;
+  }
+  return (
+    <>
+      {(contenido as BloqueContenidoAsistente[]).map((bloque, indice) => {
+        if (bloque.type === "text" && bloque.text) {
+          return (
+            <li key={indice} className="text-xs text-text-bright">
+              {bloque.text}
+            </li>
+          );
+        }
+        if (bloque.type === "tool_use") {
+          return (
+            <li key={indice} className="text-2xs text-text-dim">
+              → usando {bloque.name}
+            </li>
+          );
+        }
+        return null;
+      })}
+    </>
+  );
+}
+
+function LineaEvento({ evento }: { evento: EventoNdjson }) {
+  if (evento.type === "raw.stdout") {
+    const datos = evento.data as { linea?: unknown };
+    const linea = typeof datos?.linea === "string" ? datos.linea : serializarDatos(evento.data);
+    return <li className="text-xs text-text-dim">{linea}</li>;
+  }
+  if (evento.type === "usuario.mensaje") {
+    const { texto } = evento.data as { texto: string };
+    return (
+      <li className="ml-auto max-w-[80%] rounded-7 border border-accent bg-accent-bg px-2.5 py-1.5 text-xs text-text-bright">
+        {texto}
+      </li>
+    );
+  }
+  if (evento.type === "agente.assistant") {
+    return <LineaAgenteAssistant evento={evento} />;
+  }
+  if (evento.type === "operation.completed" || evento.type === "operation.error") {
+    const esError = evento.type === "operation.error";
+    const { result } = (evento.data as { result?: string } | undefined) ?? {};
+    return (
+      <li
+        className={`rounded-7 border px-2.5 py-1.5 text-xs font-semibold ${
+          esError ? "border-danger bg-bg-sunken text-danger" : "border-accent bg-accent-bg text-text-bright"
+        }`}
+      >
+        {result ?? (esError ? "Ha ocurrido un error — mira el detalle." : "Terminado.")}
+      </li>
+    );
+  }
+  return <LineaVolcadoCrudo evento={evento} />;
+}
+
 export interface ConsolaGlobalProps {
   corridaActiva: string | null;
   eventos: EventoNdjson[];
   marcarCorridaActiva: (etiqueta: string | null) => void;
+  agregarMensajeUsuario: (texto: string) => void;
 }
 
 /**
  * Bloque 4: la caja de texto lanza el agente de verdad vía el SDK. Enviar ya no bloquea si hay una
  * corrida activa — encola en la misma sesión (el CLI la atiende al terminar el turno en curso).
  */
-export function ConsolaGlobal({ corridaActiva, eventos, marcarCorridaActiva }: ConsolaGlobalProps) {
+export function ConsolaGlobal({ corridaActiva, eventos, marcarCorridaActiva, agregarMensajeUsuario }: ConsolaGlobalProps) {
   const [comando, setComando] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -68,6 +132,7 @@ export function ConsolaGlobal({ corridaActiva, eventos, marcarCorridaActiva }: C
   const enviar = (): Promise<void> => {
     const texto = comando.trim();
     if (!texto) return Promise.resolve();
+    agregarMensajeUsuario(texto);
     setError(null);
     setEnviando(true);
     return enviarComando(texto)
@@ -80,6 +145,7 @@ export function ConsolaGlobal({ corridaActiva, eventos, marcarCorridaActiva }: C
   };
 
   const responder = (respuesta: { textoLibre?: string; opcionesElegidas?: string[] }) => {
+    agregarMensajeUsuario(respuesta.opcionesElegidas?.length ? respuesta.opcionesElegidas.join(", ") : (respuesta.textoLibre ?? ""));
     setError(null);
     setEnviando(true);
     responderPregunta(respuesta)
@@ -121,8 +187,14 @@ export function ConsolaGlobal({ corridaActiva, eventos, marcarCorridaActiva }: C
             eventos.map((evento, indice) => <LineaEvento key={`${evento.runId}-${String(indice)}`} evento={evento} />)
           )}
         </ul>
+        {corridaActiva &&
+          (() => {
+            const ultimo = eventos[eventos.length - 1];
+            if (ultimo && (esEventoTerminal(ultimo.type) || ultimo.type === "agente.pregunta")) return null;
+            return <p className="animate-pulse text-2xs text-text-dim">🤖 trabajando…</p>;
+          })()}
         {preguntaPendiente && (
-          <div className="flex flex-col gap-1.5 rounded-7 border border-border-soft p-2">
+          <div className="flex flex-col gap-1.5 rounded-7 border border-accent bg-accent-bg p-2">
             {preguntaPendiente.questions.map((pregunta, indice) => (
               <div key={`${pregunta.header}-${String(indice)}`} className="flex flex-col gap-1">
                 <p className="text-xs font-bold text-text-bright">

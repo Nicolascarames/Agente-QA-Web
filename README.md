@@ -3,72 +3,147 @@
 Escribes en castellano lo que quieres probar. Sale un test de Playwright que **ya se ha ejecutado y
 está verde**.
 
-> **Todavía no funciona.** El plan está escrito y aprobado, la implementación no ha empezado. Lo que
-> hay hoy es una cáscara de interfaz. Ver `ESTADO.md`.
+> Esta guía es para levantar la app y probarla a mano en cada sesión. El estado interno del proyecto
+> (qué bloques están cerrados, decisiones tomadas) vive en `ESTADO.md`; la cola de trabajo en
+> `PROXIMOS-PASOS.md`. Esta página no se toca para eso — solo para "cómo arranco esto y qué hago".
 
-## Qué va a hacer
+## Qué necesitas antes de empezar
 
-Te pones en cualquier repo tuyo y escribes:
+- **Node.js 22 o superior.**
+- **Claude Code con sesión iniciada** en este ordenador (`claude login` una vez). Se usa tu
+  suscripción: no hace falta `ANTHROPIC_API_KEY` ni ninguna clave en el repo.
+- **Playwright** en el repo donde vayas a generar/ejecutar tests (`npx playwright install` si hace
+  falta).
 
+Para comprobar las tres cosas de golpe: ver el apartado "El doctor" más abajo.
+
+## Levantar la app en local (modo desarrollo, este repo)
+
+Desde la raíz de este repo:
+
+```bash
+npm install                 # una vez
+npm run dev -- --project <ruta-a-un-repo-con-tests>
 ```
-npx agente-qa
+
+Ejemplo real usando el proyecto de pruebas incluido:
+
+```bash
+npm run dev -- --project "C:\GitHub\Agente-QA-Web\pruebas\sauce"
 ```
 
-Se abre una página en tu navegador, trabajando sobre **ese** repo. Escribes lo que quieres probar:
+Esto levanta **dos procesos**: Vite (cliente, `http://localhost:5173`) y Fastify (servidor,
+`http://localhost:3939`, con `/api/*` proxeado desde Vite). Abre `http://localhost:5173` en el
+navegador.
 
-> quiero probar que se puede añadir un producto al carrito
+**Si la página carga pero todo lo que empieza por `/api/` falla** (Dashboard vacío, consola sin
+respuesta): el servidor (puerto 3939) no arrancó. Compruébalo con:
 
-Y entonces:
+```bash
+curl http://localhost:3939/api/proyecto
+```
 
-1. **Mira tu web de verdad.** Abre el navegador y lee la pantalla.
-2. **Te pregunta lo que sea ambiguo**, con botones. *«He encontrado 6 productos. ¿Un producto
-   concreto o cualquiera?»*
-3. **Te enseña lo que ha entendido**, en lenguaje llano, antes de escribir nada:
+Si no responde nada, para `npm run dev` del todo y arranca el servidor aparte, en otra terminal,
+para ver el error real:
 
-   > Dado que he iniciado sesión y estoy en el catálogo
-   > Cuando añado "Sauce Labs Backpack" al carrito
-   > Entonces el carrito muestra 1 artículo
+```bash
+npx tsx server/index.ts
+```
 
-   Lo lees en diez segundos. Si se ha equivocado, lo corriges ahí mismo. **Este es el momento de
-   corregir barato.**
-4. **Escribe el código**: el Page Object y el test.
-5. **Lo ejecuta.** Si falla, lee el error, lo corrige y vuelve a ejecutar.
-6. **Te enseña el diff.** Aceptas o descartas. Si aceptas, se commitea.
+(Puede pasar tras muchos cambios de código seguidos en una misma sesión larga: el proceso que vigila
+los ficheros se queda colgado sin avisar. La solución siempre es la misma: parar todo y volver a
+lanzar `npm run dev` limpio.)
 
-Los ficheros se generan en `tests/` de tu repo, así que se versionan junto a la aplicación que
+## Usarlo de verdad, sobre un repo cualquiera (no este)
+
+Una vez publicado el paquete, será `npx agente-qa`. Hasta entonces, desde la raíz de **este** repo
+pero apuntando a otro:
+
+```bash
+node bin/agente-qa.mjs          # arranca sobre process.cwd() — ejecútalo DESDE el repo destino
+```
+
+o, para probar sin moverte de aquí, usa `pruebas/sauce/` (repo de pruebas contra
+[SauceDemo](https://www.saucedemo.com), ya montado, fuera de git):
+
+```bash
+cd pruebas/sauce
+node ../../bin/agente-qa.mjs
+```
+
+La primera vez pregunta la URL base y crea `agente-qa.config.json` en la raíz de ese repo; las
+siguientes veces no repregunta.
+
+### El doctor
+
+```bash
+node bin/agente-qa.mjs doctor
+```
+
+Comprueba sesión de Claude Code, binario del SDK, versión de Node y Playwright. Si algo falta, te da
+el comando exacto para arreglarlo.
+
+### Instalar la skill en otro repo (para usarla desde su propia terminal, sin la web)
+
+```bash
+node bin/agente-qa.mjs instalar
+```
+
+Genera `.claude/skills/qa/`, `AGENTS.md` y `.github/copilot-instructions.md` en el repo destino.
+`--solo claude|codex|copilot` para escribir solo uno.
+
+## Cómo se usa la interfaz
+
+Todo pasa por **una única consola de chat**, fija al fondo de la pantalla (botón `↓ Consola` /
+`↑ Arriba` para bajar y subir). Escribes ahí lo que quieres probar, en castellano y en una sola
+frase con todo lo necesario, por ejemplo:
+
+> Añade un producto al carrito en SauceDemo
+
+- Tu propio mensaje aparece al instante en el hilo.
+- Mientras trabaja, se ve un indicador "🤖 trabajando…" y una narración legible de lo que va
+  haciendo (no un volcado técnico).
+- Si necesita decidir algo ambiguo, pregunta — a veces con botones, a veces en una frase; contesta
+  escribiendo en la misma caja.
+- Al terminar, el resultado se resalta en un bloque aparte.
+- **Puedes seguir la conversación**: un segundo mensaje recuerda lo que hablasteis antes, no hace
+  falta repetir el contexto desde cero.
+
+Las cinco pestañas de la izquierda muestran lo que el agente va dejando en el repo (son de solo
+lectura, no tienen su propia caja de texto):
+
+| Pestaña | Qué muestra |
+|---|---|
+| **Dashboard** | Escenarios cubiertos, verdes, rojos, última ejecución, coste acumulado, elementos frágiles |
+| **Redactar** | Los `.feature` generados, editables a mano, con badge de cobertura por fichero |
+| **Generar** | Los `.page.ts` y `.spec.ts`, con el visor de diff (Aceptar/Descartar) |
+| **Ejecutar** | Los tests con su estado y el detalle paso a paso, con las frases del Gherkin |
+| **Reparar** | Solo los tests en rojo, con el veredicto sugerido (fallo del test o de la app) y el diff de corrección |
+| **Reports** | Historial de ejecuciones, fallos agrupados por causa, tests inestables, pass rate |
+| **Configuración** | URL base, entornos, y el interruptor de la barrera de escrituras |
+
+Los ficheros se generan en `tests/` del repo destino, así que se versionan junto a la aplicación que
 prueban.
-
-## Qué necesitas
-
-- **Node.js 18 o superior.**
-- **Claude Code instalado y con tu sesión iniciada** en ese ordenador. Se usa tu suscripción: no hace
-  falta ninguna clave de API ni configurar nada en el repo.
-- **Playwright** en el repo donde vayas a generar los tests.
-
-`npx agente-qa doctor` comprueba las tres cosas y te dice el comando exacto que falta.
-
-Un `claude login` por ordenador y todos tus repos de esa máquina funcionan.
-
-## También desde la terminal
-
-La misma inteligencia se puede usar sin la web, con Claude Code, Codex o Copilot:
-
-```
-npx agente-qa instalar
-```
-
-Deja las instrucciones donde cada uno las busca. A partir de ahí le pides el test directamente en tu
-terminal o en VS Code. Los tests que generes así **también aparecen en la web**, porque la interfaz
-lee la carpeta del repo.
 
 ## Trabajando contra una aplicación real
 
 Explorar significa pulsar botones de verdad: crear pedidos, mandar correos, borrar cosas. Por eso hay
-un interruptor por repo:
+un interruptor por repo, en **Configuración**:
 
 - **Apagado** (por defecto en entornos de prueba): barra libre.
-- **Encendido**: cualquier envío que no esté en tu lista blanca se detiene y te pregunta, diciéndote a
-  qué entorno apunta.
+- **Encendido**: cualquier envío que no esté en tu lista blanca se detiene y te pregunta, diciéndote
+  a qué entorno apunta.
 
 Las credenciales salen siempre de variables de entorno y nunca aparecen en un log ni viajan al
-modelo.
+modelo (se redactan automáticamente).
+
+## Verificación del propio código de este repo
+
+```bash
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+```
+
+Los cuatro deben salir en verde antes de dar por buena una sesión de cambios.

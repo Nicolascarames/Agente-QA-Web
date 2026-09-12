@@ -17,6 +17,7 @@
     "postcss.config.js",
     "scripts/dev.mjs",
     "scripts/comprobar-estilos.mjs",
+    "scripts/limpiar-dist-server.mjs",
     "bin/agente-qa.mjs"
   ]
 }

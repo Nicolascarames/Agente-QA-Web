@@ -1,6 +1,7 @@
 # PRÓXIMOS PASOS — Agente-QA-Web
 
-Actualizado: 2026-09-12 (plan de nueve bloques completo; tres deudas cerradas)
+Actualizado: 2026-09-12 (plan de nueve bloques completo; tres deudas cerradas; después del plan:
+continuidad de conversación y consola única)
 
 Cola priorizada. **Una tarea = una línea.** El detalle vive en la spec.
 
@@ -68,6 +69,14 @@ Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`]
 
 ## Después del plan
 
+- [x] **Continuidad de conversación y consola única.** Cerrado 2026-09-12. `server/agente.ts`/
+      `server/app.ts`: `resume` del SDK reanuda el hilo anterior (bug real corregido: el agente
+      perdía el contexto en cuanto terminaba un turno con una pregunta en texto plano). Se quitó el
+      chat propio de Redactar/Generar/Ejecutar/Reparar y la barra deshabilitada de Ejecutar/Reparar:
+      toda la conversación vive solo en la consola global (`src/ConsolaGlobal.tsx`), que ahora
+      además muestra tu propio mensaje al instante, narración legible del agente (no JSON en bruto),
+      indicador de "trabajando" y un bloque resaltado al terminar el turno. Verificado en vivo contra
+      `pruebas/sauce/`: dos mensajes seguidos, el segundo recuerda el primero. Detalle en `ESTADO.md`.
 - [ ] **Publicar en npm** — cuando los nueve bloques estén implementados y validados contra webs
       reales. Hasta entonces se instala desde GitHub por SHA. Reservar `agente-qa` al publicar.
 

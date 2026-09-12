@@ -56,6 +56,22 @@ describe("lanzar", () => {
     expect(eventos.map((e) => e.type)).toEqual(["agente.assistant", "operation.completed"]);
   });
 
+  it("pasa `resume` a queryFn cuando se indica en las opciones", async () => {
+    let opcionesCapturadas: { resume?: string } | undefined;
+    const queryFnFalsaQueCaptura: typeof query = (params) => {
+      opcionesCapturadas = params.options;
+      return Object.assign(generadorDe([]), { interrupt: () => Promise.resolve(undefined) }) as unknown as Query;
+    };
+
+    const sesion = lanzar("sigue con lo de antes", { cwd: "/tmp", queryFn: queryFnFalsaQueCaptura, resume: "sesion-anterior" });
+    const suscripcion = sesion.suscribirse()[Symbol.asyncIterator]();
+    while (!(await suscripcion.next()).done) {
+      // drenar hasta que cierre
+    }
+
+    expect(opcionesCapturadas?.resume).toBe("sesion-anterior");
+  });
+
   it("emite operation.error en vez de operation.completed cuando el result trae is_error", async () => {
     const mensajeResultado = { type: "result", subtype: "error_during_execution", is_error: true, queued_turn_count: 0 } as unknown as SDKMessage;
 
