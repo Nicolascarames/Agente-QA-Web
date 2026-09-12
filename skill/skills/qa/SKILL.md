@@ -32,7 +32,19 @@ que sí (o lo corrija y confirmes la versión corregida).
 
 ## 4. Definición de terminado
 
-El test se ha ejecutado con `npx playwright test` y está verde. **No hay otra definición.**
+El test se ha ejecutado con:
+
+```
+PLAYWRIGHT_JSON_OUTPUT_NAME=test-results/results.json npx playwright test --reporter=list,json
+```
+
+y está verde. **No hay otra definición.**
+
+El reporter `json` con esa ruta exacta es obligatorio, no cosmético: la web de agente-qa
+(Ejecutar, Reparar, Reports, Dashboard) lee `test-results/results.json` para mostrar resultados
+reales. Sin él, la ejecución sale verde en la terminal pero la web no ve nada. No lo consigas
+editando el `reporter` de `playwright.config.ts` del repo destino — es un fichero ajeno; usa
+siempre esta variante por variable de entorno, que no lo toca.
 
 Decir «hecho», «listo» o «ya debería funcionar» sin haber ejecutado el test es un fallo de este
 trabajo, no un matiz. Si el test no se ha corrido, no está terminado.

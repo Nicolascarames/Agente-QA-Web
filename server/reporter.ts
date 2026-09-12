@@ -87,9 +87,11 @@ function recorrerSuite(suite: SuiteJson, resultados: ResultadoTest[]): void {
   }
 }
 
-// Sin `playwright.config.ts` explícito en este repo (lo genera la skill por proyecto destino, ver
-// skill/skills/qa/), no hay dónde leer la ruta configurada del reporter `json`. A falta de eso, se
-// asume la convención de Playwright: `test-results/results.json` en la raíz del proyecto.
+// La skill (skill/skills/qa/SKILL.md, sección 4) obliga a ejecutar los tests con
+// `PLAYWRIGHT_JSON_OUTPUT_NAME=test-results/results.json npx playwright test --reporter=list,json`
+// — por variable de entorno, sin tocar el `playwright.config.ts` del repo destino, que es ajeno.
+// Verificado de punta a punta contra `pruebas/sauce/`: sin esos flags, Playwright no escribe
+// ningún JSON (el `reporter: 'html'` de ese repo no lo genera) y esta función siempre devolvía `[]`.
 function rutaReporte(rootDir: string): string {
   return path.join(rootDir, "test-results", "results.json");
 }

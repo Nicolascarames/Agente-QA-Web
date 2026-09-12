@@ -1,6 +1,6 @@
 # PRÓXIMOS PASOS — Agente-QA-Web
 
-Actualizado: 2026-09-12 (Bloques 8 y 9 cerrados — plan de nueve bloques completo)
+Actualizado: 2026-09-12 (plan de nueve bloques completo; tres deudas cerradas)
 
 Cola priorizada. **Una tarea = una línea.** El detalle vive en la spec.
 
@@ -89,18 +89,15 @@ Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`]
       implementó `security find-generic-password` porque no hay máquina macOS a mano para verificar
       el nombre exacto del servicio, y adivinarlo daría falsos negativos silenciosos. Verificar y
       completar cuando haya acceso a macOS.
-- [ ] **`server/reporter.ts` asume `test-results/results.json`** sin haberlo confirmado contra un
-      `playwright.config.ts` real generado por la skill. Verificar la primera vez que se ejecute un
-      test de verdad y ajustar la ruta si hace falta.
-- [ ] **`server/trazabilidad.ts` asume que un `.feature` y su `.spec.ts` comparten nombre base**
-      (`anadir-al-carrito.feature` ↔ `anadir-al-carrito.spec.ts`), inferido del único ejemplo de
-      `plantillas.md`, no de una regla escrita explícita. Si el agente llega a generar specs con otro
-      nombre, todos los escenarios de ese feature saldrían como "no cubierto" aunque el test exista.
-      Verificar contra proyectos reales.
-- [ ] **`npm run build` falla con `TS5055` si `dist-server/` ya existe de un build anterior**
-      (tsconfig del server sin limpieza previa). No es un bug del código, solo falta un paso de
-      `rm -rf dist-server` (o un script `clean`) antes de `tsc`. Molestó a tres agentes distintos en
-      esta sesión sin ser suyo — mejorarlo cuando se toque el pipeline de build.
+
+### Cerradas 2026-09-12
+
+- [x] **`server/reporter.ts` no tenía quién generara `test-results/results.json`.** La skill ahora
+      obliga al reporter `json` por variable de entorno. Detalle en `ESTADO.md`.
+- [x] **Nombre base compartido `.feature`/`.spec.ts` (trazabilidad), verificado contra proyecto
+      real.** Se cumple en los tres pares de `pruebas/sauce/`. Detalle en `ESTADO.md`.
+- [x] **`TS5055` en `npm run build` con `dist-server/` preexistente.** `scripts/limpiar-dist-server.mjs`
+      antes de `tsc`. Detalle en `ESTADO.md`.
 
 ---
 

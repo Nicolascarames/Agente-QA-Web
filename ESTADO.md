@@ -1,6 +1,6 @@
 # ESTADO — Agente-QA-Web
 
-Actualizado: 2026-09-12 (Bloques 8 y 9 cerrados — plan de nueve bloques completo)
+Actualizado: 2026-09-12 (plan de nueve bloques completo; tres deudas cerradas: reporter JSON, trazabilidad de nombres, `TS5055` en build)
 
 ## Qué es esto
 
@@ -51,6 +51,7 @@ redacta antes de salir por el canal de eventos.
 | Forma canónica de `.feature`/`.page.ts`/`.spec.ts`, verificada contra SauceDemo real | `skill/referencias/plantillas.md` |
 | Tokens de color y tipografía, autocontenidos, fuente propia sin CDN | `src/tokens.css` |
 | Guard de estilos en build — falla si el CSS usa una variable no definida | `scripts/comprobar-estilos.mjs` |
+| Limpia `dist-server/` antes de compilarlo — evita `TS5055` si queda de un build anterior | `scripts/limpiar-dist-server.mjs` |
 | Estructura Fastify + SSE (las rutas, no su contenido); rutas del sistema antiguo retiradas o convertidas en stubs 501 | `server/app.ts` |
 | Canal de eventos: `EventoNdjson`, `type` como texto libre a propósito | `shared/tipos.ts` |
 | Tipos de evento terminal centralizados, antes duplicados a mano en tres sitios | `shared/eventos.ts` |
@@ -64,7 +65,7 @@ redacta antes de salir por el canal de eventos.
 | `ConfigRaiz` con `entorno`/`barrera`/`listaBlanca`; formulario real en el panel "proyecto" de Configuración; rutas `GET/POST /api/config` | `shared/tipos.ts`, `server/proyecto.ts`, `src/Configuracion.tsx`, `server/app.ts` |
 | `diff`/`commit`/`descartar` sobre `tests/{features,pages,specs}/` vía `git` del sistema (sin dependencias nuevas); rutas `/api/escenarios*` y `/api/generados*` | `server/git.ts`, `server/app.ts` |
 | Redactar (lista+edición de `.feature`) y Generar (lista+diff con Aceptar/Descartar de `.page.ts`/`.spec.ts`), cada una con un chat propio (`ChatAgente`) que comparte el estado de la consola global | `src/Redactar.tsx`, `src/Generar.tsx` |
-| Lector fiel del último reporte JSON de Playwright (`test-results/results.json`, por confirmar contra un proyecto real); `sugerirVeredicto` es solo una etiqueta de badge, nunca un juez — la clasificación real la da el agente | `server/reporter.ts` |
+| Lector fiel del último reporte JSON de Playwright (`test-results/results.json`, verificado de punta a punta contra `pruebas/sauce/`); `sugerirVeredicto` es solo una etiqueta de badge, nunca un juez — la clasificación real la da el agente | `server/reporter.ts` |
 | Ejecutar (lista+pasos+error de cada test) y Reparar (solo los rojos, badge de sugerencia, diff con Aplicar/Rechazar), cada una con su chat (`ChatCorrida`) | `src/Ejecutar.tsx`, `src/Reparar.tsx` |
 | Trazabilidad: cruza cada `Escenario:` del `.feature` con los `test.step` del `.spec.ts` homónimo (mismo nombre base), por igualdad exacta de secuencia de frases; cruce con `leerReporte` para el color; ruta `GET /api/trazabilidad` | `server/trazabilidad.ts` |
 | Historial de ejecuciones: coste/duración/turnos + resultados por test, acumulado en `agente-qa.historial.json` (recorte a 200), enganchado tras cada `operation.completed`/`operation.error`; ruta `GET /api/historial` | `server/costes.ts`, uso en `server/agente.ts` |
@@ -136,6 +137,9 @@ El chat es el mismo desde las cuatro primeras: una sola conversación, cuatro vi
 | "Tests inestables" en Reports (Bloque 8) | Un test es flaky si, entre las últimas 5 entradas de `agente-qa.historial.json`, aparece tanto en verde como en rojo. El historial se guarda de más antiguo a más nuevo (`server/costes.ts`) — el primer intento del frontend cogió `slice(0, 5)` (las 5 más antiguas de siempre) en vez de `slice(-5)`; corregido en revisión antes de cerrar el bloque |
 | Ruta a `skill/` en `instalar.ts` (Bloque 9) | Prueba primero la resolución a dos niveles (`../..`, válida para el código compilado en `dist-server/server/instalar.js`, el caso real de `npx agente-qa instalar`) y cae a un nivel (`..`) solo si esa carpeta no existe — necesario porque los tests de Vitest importan el `.ts` fuente directamente desde `server/`, un nivel menos que el compilado. `server/agente.ts` no necesita este fallback porque solo pasa la ruta a `plugins` del SDK, nunca lee ficheros de ahí él mismo |
 | Confirmación antes de sobrescribir en `instalar` (Bloque 9) | Un marcador de propiedad (cadena fija en un comentario HTML) en el fichero generado decide si es "nuestro" (se sobrescribe sin preguntar) o ajeno (pide confirmación). Sin terminal interactiva (`process.stdin.isTTY` falso, p.ej. CI) nunca pregunta: asume que no hay que tocarlo y sigue, para no colgar el proceso |
+| Cómo llega `test-results/results.json` a existir (deuda cerrada 2026-09-12) | `server/reporter.ts` siempre asumió esa ruta pero nada la generaba: verificado contra `pruebas/sauce/` (`playwright.config.ts` real, `reporter: 'html'`) que tras `npx playwright test` el fichero **no existe** — `leerReporte` habría devuelto `[]` siempre en cualquier proyecto real, dejando Ejecutar/Reparar/Reports/Dashboard vacíos. Se descartó tocar el `reporter` del `playwright.config.ts` del repo destino (fichero ajeno, ver principio de "Ficheros existentes"); en su lugar `skill/skills/qa/SKILL.md` §4 obliga a `PLAYWRIGHT_JSON_OUTPUT_NAME=test-results/results.json npx playwright test --reporter=list,json` por variable de entorno, que no requiere tocar nada del repo destino. Verificado de punta a punta: ese comando genera el JSON en `pruebas/sauce/`, y `leerReporte`/`cruzarTrazabilidad` reales (ejecutados a mano con `tsx`, no solo leídos) devuelven los cuatro resultados y los tres escenarios "cubierto" con el veredicto correcto |
+| Nombre base compartido `.feature`/`.spec.ts` para trazabilidad (deuda cerrada 2026-09-12) | La sospecha del Bloque 8 (regla inferida, no escrita) se verificó contra los tres pares reales de `pruebas/sauce/` (`anadir-al-carrito`, `login-usuario-bloqueado`, `quitar-del-carrito`): la convención se cumple y el cruce de pasos palabra por palabra calza en los tres. Sigue sin estar escrita como regla en la skill — si algún día el agente nombra un spec distinto del feature, ese escenario saldría "no-cubierto" pese a existir el test — pero no bloquea nada con el uso real de hoy |
+| `TS5055` en `npm run build` (deuda cerrada 2026-09-12) | Reproducido: `tsc -p tsconfig.server.json` falla con `dist-server/` de un build anterior presente, compila limpio si se borra antes. No es un bug del código servidor, es un build compuesto (`composite: true`) sin limpieza previa. Fix: `scripts/limpiar-dist-server.mjs` (borra `dist-server/`) enganchado en `npm run build` antes de `tsc`. Verificado con dos `npm run build` seguidos, el caso exacto que fallaba |
 
 ---
 
