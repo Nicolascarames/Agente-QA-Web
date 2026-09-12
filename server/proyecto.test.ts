@@ -1,8 +1,16 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { configRaizPath, escribirConfigRaiz, leerConfigRaiz, resolverProyectoInicial } from "./proyecto.js";
+import {
+  configRaizPath,
+  credencialesPath,
+  escribirConfigRaiz,
+  escribirCredenciales,
+  leerConfigRaiz,
+  leerCredenciales,
+  resolverProyectoInicial,
+} from "./proyecto.js";
 
 describe("resolverProyectoInicial", () => {
   it("usa --project del argv si viene", () => {
@@ -72,5 +80,68 @@ describe("leerConfigRaiz / escribirConfigRaiz", () => {
       barrera: false,
       listaBlanca: [],
     });
+  });
+});
+
+describe("leerCredenciales / escribirCredenciales", () => {
+  let proyecto: string;
+
+  beforeEach(async () => {
+    proyecto = await mkdtemp(path.join(tmpdir(), "agente-qa-web-credenciales-"));
+  });
+
+  afterEach(async () => {
+    await rm(proyecto, { recursive: true, force: true });
+  });
+
+  it("devuelve variables: [] si agente-qa.credenciales.json no existe todavía (no es un error)", async () => {
+    expect(await leerCredenciales(proyecto)).toEqual({ schemaVersion: 1, variables: [] });
+  });
+
+  it("devuelve variables: [] si el fichero no es JSON válido", async () => {
+    await writeFile(credencialesPath(proyecto), "no es json", "utf8");
+    expect(await leerCredenciales(proyecto)).toEqual({ schemaVersion: 1, variables: [] });
+  });
+
+  it("escribe y relee las credenciales", async () => {
+    await escribirCredenciales(proyecto, {
+      schemaVersion: 1,
+      variables: [
+        { nombre: "USUARIO", valor: "admin" },
+        { nombre: "CONTRASENA", valor: "secreto123" },
+      ],
+    });
+    expect(await leerCredenciales(proyecto)).toEqual({
+      schemaVersion: 1,
+      variables: [
+        { nombre: "USUARIO", valor: "admin" },
+        { nombre: "CONTRASENA", valor: "secreto123" },
+      ],
+    });
+  });
+
+  it("ignora entradas mal formadas (sin nombre/valor string) al releer", async () => {
+    await writeFile(
+      credencialesPath(proyecto),
+      JSON.stringify({ schemaVersion: 1, variables: [{ nombre: "OK", valor: "1" }, { nombre: 5, valor: "x" }, "no-es-objeto"] }),
+      "utf8"
+    );
+    expect(await leerCredenciales(proyecto)).toEqual({ schemaVersion: 1, variables: [{ nombre: "OK", valor: "1" }] });
+  });
+
+  it("crea el .gitignore con la entrada si no existía, al guardar credenciales por primera vez", async () => {
+    await escribirCredenciales(proyecto, { schemaVersion: 1, variables: [{ nombre: "A", valor: "1" }] });
+    const gitignore = await readFile(path.join(proyecto, ".gitignore"), "utf8");
+    expect(gitignore.split(/\r?\n/)).toContain("agente-qa.credenciales.json");
+  });
+
+  it("añade la entrada a un .gitignore existente sin duplicarla en escrituras sucesivas", async () => {
+    await writeFile(path.join(proyecto, ".gitignore"), "node_modules/\n", "utf8");
+    await escribirCredenciales(proyecto, { schemaVersion: 1, variables: [{ nombre: "A", valor: "1" }] });
+    await escribirCredenciales(proyecto, { schemaVersion: 1, variables: [{ nombre: "A", valor: "2" }] });
+    const gitignore = await readFile(path.join(proyecto, ".gitignore"), "utf8");
+    const lineas = gitignore.split(/\r?\n/).filter((l) => l.trim() === "agente-qa.credenciales.json");
+    expect(lineas).toHaveLength(1);
+    expect(gitignore).toContain("node_modules/");
   });
 });

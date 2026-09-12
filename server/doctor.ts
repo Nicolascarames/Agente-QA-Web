@@ -4,19 +4,13 @@ import { promises as fs } from "node:fs";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
+import type { ResultadoComprobacion, ResultadoDoctor } from "../shared/tipos.js";
+
+// `ResultadoComprobacion`/`ResultadoDoctor` viven en shared/tipos.ts (Bloque "después del plan": la
+// pestaña Configuración los pide por `GET /api/doctor`, y src/api.ts no puede importar de server/).
+export type { ResultadoComprobacion, ResultadoDoctor } from "../shared/tipos.js";
 
 const requerirDesdeAqui = createRequire(import.meta.url);
-
-export interface ResultadoComprobacion {
-  nombre: string;
-  ok: boolean;
-  mensaje: string;
-}
-
-export interface ResultadoDoctor {
-  ok: boolean;
-  comprobaciones: ResultadoComprobacion[];
-}
 
 async function existeFichero(ruta: string): Promise<boolean> {
   try {

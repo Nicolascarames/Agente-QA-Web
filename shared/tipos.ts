@@ -30,13 +30,29 @@ export interface EstadoProyectoActivo {
 }
 
 /** Config raíz del repo (`agente-qa.config.json`), Bloque 3. Bloque 5 añade `entorno`, `barrera`
- *  (interruptor de la barrera de escrituras) y `listaBlanca` (URLs permitidas con la barrera activa). */
+ *  (interruptor de la barrera de escrituras) y `listaBlanca` (URLs permitidas con la barrera activa).
+ *  Este fichero SÍ se versiona (`server/proyecto.ts`): nunca va aquí un secreto, por eso las
+ *  credenciales de prueba viven aparte, en `ConfigCredenciales`. */
 export interface ConfigRaiz {
   schemaVersion: 1;
   appUrl: string;
   entorno: string;
   barrera: boolean;
   listaBlanca: string[];
+}
+
+/** Un par nombre/valor que el agente puede usar en pruebas (usuario, contraseña, o cualquier otra
+ *  variable) — nunca un catálogo cerrado de campos, el usuario decide qué necesita nombrar. */
+export interface CredencialVariable {
+  nombre: string;
+  valor: string;
+}
+
+/** `agente-qa.credenciales.json`, en `.gitignore` a propósito (a diferencia de `agente-qa.config.json`):
+ *  son secretos de verdad, nunca deben acabar en un commit. */
+export interface ConfigCredenciales {
+  schemaVersion: 1;
+  variables: CredencialVariable[];
 }
 
 // --- Consola global: el canal de eventos sobrevive al Bloque 2, vacío de contenido -----------
@@ -119,4 +135,30 @@ export interface ElementoFragil {
   fichero: string; // ruta relativa a la raíz del repo destino
   linea: number; // 1-indexed
   motivo: string; // lo que sigue a "// FRÁGIL:" en esa línea
+}
+
+// --- Doctor (Bloque 3), expuesto ahora también por API para la pestaña Configuración -----------
+// Viven aquí, no en server/doctor.ts, por la misma frontera de tsconfig que ResultadoTest arriba:
+// server/doctor.ts re-exporta estos tipos para conservar su forma pública.
+
+export interface ResultadoComprobacion {
+  nombre: string;
+  ok: boolean;
+  mensaje: string;
+}
+
+export interface ResultadoDoctor {
+  ok: boolean;
+  comprobaciones: ResultadoComprobacion[];
+}
+
+// --- Ejecutar tests desde la web (después del plan) ---------------------------------------------
+
+/** Resultado de lanzar `npx playwright test` de verdad desde la pestaña Ejecutar — antes esa
+ *  pestaña solo leía `test-results/results.json` sin poder generarlo. `salida` es la consola cruda
+ *  (list+json mezclados) para poder mostrar algo si el proceso falla antes de escribir el JSON. */
+export interface ResultadoEjecucionPlaywright {
+  ok: boolean;
+  codigo: number | null;
+  salida: string;
 }

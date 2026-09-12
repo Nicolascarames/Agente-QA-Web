@@ -23,18 +23,22 @@ type CargaActividad =
 // `obtenerActividad` más abajo).
 type CargaBloque<T> = { estado: "cargando" } | { estado: "error" } | { estado: "listo"; datos: T };
 
-// Geometría de las seis cajas de estadística (Bloque 8), en dos filas de tres sobre el mismo ancho
-// de columna que usaba `panels.dashboard` en el mockup. Debajo, "En curso ahora"/"Actividad
-// reciente" ocupan lo que queda hasta el 98 % (mismo margen que el Bloque 2).
+// Geometría de las seis cajas de estadística (Bloque 8), en dos filas de tres a todo el ancho del
+// contenedor (antes solo ocupaban la mitad izquierda, dejando un hueco vacío a la derecha). Debajo,
+// "En curso ahora"/"Actividad reciente" también a todo el ancho, en dos columnas. Separación
+// uniforme de 1.5 (GAP) en horizontal y vertical, sin dejar sobrante: cada fila/columna llega hasta
+// el borde del contenedor.
+const GAP = 1.5;
+const COL_W = (100 - 2 * GAP) / 3;
 const GEOMETRIA_STATS: DisposicionPanel[] = [0, 1, 2, 0, 1, 2].map((col, i) => ({
-  x: [0, 16.8, 33.6][col],
-  y: i < 3 ? 0 : 16,
-  w: 15.3,
-  h: 14,
+  x: col * (COL_W + GAP),
+  y: i < 3 ? 0 : 15.75,
+  w: COL_W,
+  h: 14.25,
   z: 1,
 }));
-const GEOMETRIA_CUR: DisposicionPanel = { x: 0, y: 34, w: 48, h: 64, z: 1 };
-const GEOMETRIA_ACT: DisposicionPanel = { x: 51, y: 34, w: 49, h: 64, z: 1 };
+const GEOMETRIA_CUR: DisposicionPanel = { x: 0, y: 31.5, w: (100 - GAP) / 2, h: 68.5, z: 1 };
+const GEOMETRIA_ACT: DisposicionPanel = { x: (100 - GAP) / 2 + GAP, y: 31.5, w: (100 - GAP) / 2, h: 68.5, z: 1 };
 
 // Etiquetas de las cajas, en el mismo orden que GEOMETRIA_STATS.
 const ETIQUETAS = ["Escenarios cubiertos", "Tests en verde", "Tests en rojo", "Última ejecución", "Coste acumulado", "Elementos frágiles"];

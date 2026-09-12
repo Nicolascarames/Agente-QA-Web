@@ -1,11 +1,14 @@
 import type {
   CoberturaEscenario,
+  ConfigCredenciales,
   ConfigRaiz,
   ElementoFragil,
   EstadoCorridaActiva,
   EstadoProyecto,
   EstadoProyectoActivo,
   RegistroEjecucion,
+  ResultadoDoctor,
+  ResultadoEjecucionPlaywright,
   RespuestaComando,
   ResultadoTest,
   ResultadoTestRojo,
@@ -64,6 +67,26 @@ export function guardarConfig(parcial: Partial<ConfigRaiz>): Promise<ConfigRaiz>
     headers: { "content-type": "application/json" },
     body: JSON.stringify(parcial),
   });
+}
+
+// --- Credenciales de prueba (después del plan): fichero aparte, nunca versionado -----------------
+
+export function obtenerCredenciales(): Promise<ConfigCredenciales> {
+  return pedirJson<ConfigCredenciales>("/api/credenciales");
+}
+
+export function guardarCredenciales(variables: { nombre: string; valor: string }[]): Promise<ConfigCredenciales> {
+  return pedirJsonEstricto<ConfigCredenciales>("/api/credenciales", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ variables }),
+  });
+}
+
+// --- Doctor, expuesto por API para la pestaña Configuración --------------------------------------
+
+export function obtenerDoctor(): Promise<ResultadoDoctor> {
+  return pedirJson<ResultadoDoctor>("/api/doctor");
 }
 
 /** Igual que `pedirJson`, pero usa el `error` del cuerpo (400/404) como mensaje si la petición falla. */
@@ -137,6 +160,18 @@ export function obtenerDiffGenerado(ruta: string): Promise<{ diff: string }> {
   return pedirJsonEstricto<{ diff: string }>(`/api/generados/diff?ruta=${encodeURIComponent(ruta)}`);
 }
 
+export function obtenerContenidoGenerado(ruta: string): Promise<{ contenido: string }> {
+  return pedirJsonEstricto<{ contenido: string }>(`/api/generados/contenido?ruta=${encodeURIComponent(ruta)}`);
+}
+
+export function guardarContenidoGenerado(ruta: string, contenido: string): Promise<void> {
+  return pedirJsonEstricto<void>(`/api/generados/contenido?ruta=${encodeURIComponent(ruta)}`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ contenido }),
+  });
+}
+
 export function commitGenerados(rutas: string[], mensaje: string): Promise<void> {
   return pedirJsonEstricto<void>("/api/generados/commit", {
     method: "POST",
@@ -161,6 +196,15 @@ export function obtenerTests(): Promise<ResultadoTest[]> {
 
 export function obtenerTestsRojos(): Promise<ResultadoTestRojo[]> {
   return pedirJson<ResultadoTestRojo[]>("/api/tests/rojos");
+}
+
+/** `ruta`, si se pasa, corre solo ese `.spec.ts` (botón por fila); sin ella, corre la suite entera. */
+export function ejecutarTests(ruta?: string): Promise<ResultadoEjecucionPlaywright> {
+  return pedirJsonEstricto<ResultadoEjecucionPlaywright>("/api/tests/ejecutar", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(ruta ? { ruta } : {}),
+  });
 }
 
 // --- Reports, Dashboard y trazabilidad (Bloque 8) -----------------------------------------------

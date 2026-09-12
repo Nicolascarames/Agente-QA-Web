@@ -72,6 +72,37 @@ describe("lanzar", () => {
     expect(opcionesCapturadas?.resume).toBe("sesion-anterior");
   });
 
+  it("las credenciales de Configuración llegan al system prompt y al env del MCP de Playwright, nunca en claro por eventos", async () => {
+    let opcionesCapturadas: { systemPrompt?: { append?: string }; mcpServers?: Record<string, { env?: Record<string, string> }> } | undefined;
+    const mensajeConSecreto = {
+      type: "assistant",
+      message: { content: [{ type: "text", text: "he entrado con la contraseña secreto123" }] },
+      parent_tool_use_id: null,
+      uuid: "u1",
+      session_id: "s1",
+    } as unknown as SDKMessage;
+    const queryFnFalsaQueCaptura: typeof query = (params) => {
+      opcionesCapturadas = params.options as typeof opcionesCapturadas;
+      return Object.assign(generadorDe([mensajeConSecreto]), { interrupt: () => Promise.resolve(undefined) }) as unknown as Query;
+    };
+
+    const sesion = lanzar("entra como admin", {
+      cwd: "/tmp",
+      queryFn: queryFnFalsaQueCaptura,
+      credenciales: [{ nombre: "CONTRASENA_ADMIN", valor: "secreto123" }],
+    });
+
+    const eventos: EventoAgente[] = [];
+    for await (const evento of sesion.suscribirse()) eventos.push(evento);
+
+    expect(opcionesCapturadas?.systemPrompt?.append).toContain("secreto123");
+    expect(opcionesCapturadas?.mcpServers?.playwright.env).toEqual({ CONTRASENA_ADMIN: "secreto123" });
+
+    const textoEmitido = JSON.stringify(eventos);
+    expect(textoEmitido).not.toContain("secreto123");
+    expect(textoEmitido).toContain("«CONTRASENA_ADMIN»");
+  });
+
   it("emite operation.error en vez de operation.completed cuando el result trae is_error", async () => {
     const mensajeResultado = { type: "result", subtype: "error_during_execution", is_error: true, queued_turn_count: 0 } as unknown as SDKMessage;
 

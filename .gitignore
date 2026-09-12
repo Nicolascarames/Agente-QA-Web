@@ -9,3 +9,9 @@ dist-server/
 .worktrees/
 .playwright-mcp/
 pruebas/
+
+# Solo si se ha usado `npm run dev` en este mismo repo como proyecto de pruebas (server/proyecto.ts
+# resuelve el proyecto activo a `cwd` por defecto): agente-qa.credenciales.json nunca debe
+# versionarse en ningún repo, ni siquiera este.
+agente-qa.credenciales.json
+agente-qa.config.json

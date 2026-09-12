@@ -4,17 +4,21 @@ import { Panel } from "./Panel";
 import { obtenerHistorial, obtenerTests, obtenerTestsRojos } from "./api";
 import type { RegistroEjecucion, ResultadoTest, ResultadoTestRojo } from "../shared/tipos";
 
-// Bloque 8: misma geometría que dejó el Bloque 7 (`panels.reports` del mockup) — tres cajas de
-// estadística en fila (32×34 cada una), `filt` a ancho completo debajo (100×15) y `causes`/`hist`
-// repartiendo el resto (48/49 % de ancho, 41 % de alto). Filtrar (`filt`) sigue fuera de alcance:
-// no hay ningún control de filtrado que implementar todavía.
+// Tres filas a todo el ancho y alto del contenedor, separación uniforme de 1.5 (GAP): tres cajas
+// de estadística arriba, "Filtros" a ancho completo en medio y "Fallos agrupados"/"Historial"
+// repartiendo el resto en dos columnas — antes las tres filas dejaban entre 2 y 4 de hueco
+// desigual y las dos últimas no llegaban al borde inferior. Filtrar (`filt`) sigue fuera de
+// alcance: no hay ningún control de filtrado que implementar todavía.
 const MOTIVO_FILTROS = "Los filtros llegan más adelante.";
+const GAP = 1.5;
+const COL_W = (100 - 2 * GAP) / 3;
+const MITAD = (100 - GAP) / 2;
 
 const ETIQUETAS_STATS = ["Pass rate", "Flaky tests", "Fallos abiertos"];
-const GEOMETRIA_STATS = [0, 34, 68].map((x) => ({ x, y: 0, w: 32, h: 34, z: 1 }));
-const GEOMETRIA_FILT = { x: 0, y: 38, w: 100, h: 15, z: 1 };
-const GEOMETRIA_CAUSES = { x: 0, y: 57, w: 48, h: 41, z: 1 };
-const GEOMETRIA_HIST = { x: 51, y: 57, w: 49, h: 41, z: 1 };
+const GEOMETRIA_STATS = [0, 1, 2].map((col) => ({ x: col * (COL_W + GAP), y: 0, w: COL_W, h: 36.5, z: 1 }));
+const GEOMETRIA_FILT = { x: 0, y: 38, w: 100, h: 16, z: 1 };
+const GEOMETRIA_CAUSES = { x: 0, y: 55.5, w: MITAD, h: 44.5, z: 1 };
+const GEOMETRIA_HIST = { x: MITAD + GAP, y: 55.5, w: MITAD, h: 44.5, z: 1 };
 
 /** Verde=passed, rojo=failed+timedOut: mismo criterio que Dashboard.tsx y `server/reporter.ts`
  *  (que trata "interrupted" como fallo). */

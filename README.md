@@ -34,25 +34,31 @@ npm run dev -- --project "C:\GitHub\Agente-QA-Web\pruebas\sauce"
 
 Esto levanta **dos procesos**: Vite (cliente, `http://localhost:5173`) y Fastify (servidor,
 `http://localhost:3939`, con `/api/*` proxeado desde Vite). Abre `http://localhost:5173` en el
-navegador.
+navegador. Los dos procesos escriben a la misma consola sin prefijo (`[vite]`/`[server]`): si ves
+solo el arranque de Vite y nada del servidor, tarda unos segundos en aparecer, es normal.
 
 **Si la página carga pero todo lo que empieza por `/api/` falla** (Dashboard vacío, consola sin
-respuesta): el servidor (puerto 3939) no arrancó. Compruébalo con:
+respuesta, "Error: /api/estado respondió 500"): el servidor (puerto 3939) no arrancó o quedó
+zombi. Compruébalo con:
 
 ```bash
 curl http://localhost:3939/api/proyecto
 ```
 
-Si no responde nada, para `npm run dev` del todo y arranca el servidor aparte, en otra terminal,
-para ver el error real:
+Si no responde nada, casi siempre son procesos `node` huérfanos de una sesión anterior (`npm run
+dev` no imprime nada al morir, sigue "abierto" sin escuchar en el puerto). Ciérralos todos y vuelve
+a lanzar `npm run dev` limpio:
+
+```bash
+# PowerShell
+Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
+```
+
+Si tras eso sigue sin arrancar, arranca el servidor aparte, en otra terminal, para ver el error real:
 
 ```bash
 npx tsx server/index.ts
 ```
-
-(Puede pasar tras muchos cambios de código seguidos en una misma sesión larga: el proceso que vigila
-los ficheros se queda colgado sin avisar. La solución siempre es la misma: parar todo y volver a
-lanzar `npm run dev` limpio.)
 
 ## Usarlo de verdad, sobre un repo cualquiera (no este)
 
@@ -94,33 +100,38 @@ Genera `.claude/skills/qa/`, `AGENTS.md` y `.github/copilot-instructions.md` en 
 
 ## Cómo se usa la interfaz
 
-Todo pasa por **una única consola de chat**, fija al fondo de la pantalla (botón `↓ Consola` /
-`↑ Arriba` para bajar y subir). Escribes ahí lo que quieres probar, en castellano y en una sola
-frase con todo lo necesario, por ejemplo:
+Todo pasa por **una única consola de chat**, a la derecha de la pantalla, siempre a la vista junto a
+la pestaña activa (sin botones para bajar/subir: las dos zonas caben ya en la misma fila). Escribes
+ahí lo que quieres probar, en castellano y en una sola frase con todo lo necesario, por ejemplo:
 
 > Añade un producto al carrito en SauceDemo
 
-- Tu propio mensaje aparece al instante en el hilo.
+- Tu propio mensaje aparece al instante en el hilo; el chat baja solo hasta el último mensaje, no
+  hace falta hacer scroll a mano.
+- Las respuestas del agente se ven en verde claro, distintas del resto de líneas.
 - Mientras trabaja, se ve un indicador "🤖 trabajando…" y una narración legible de lo que va
   haciendo (no un volcado técnico).
-- Si necesita decidir algo ambiguo, pregunta — a veces con botones, a veces en una frase; contesta
-  escribiendo en la misma caja.
+- Si necesita decidir algo ambiguo, pregunta con opciones numeradas: elígela con el ratón, con las
+  flechas ↑↓ + Enter, o pulsando su número — la primera opción llega con el foco puesto, como una
+  respuesta por defecto. Si ninguna encaja, escribe tu propia respuesta en la caja de abajo.
 - Al terminar, el resultado se resalta en un bloque aparte.
 - **Puedes seguir la conversación**: un segundo mensaje recuerda lo que hablasteis antes, no hace
   falta repetir el contexto desde cero.
 
-Las cinco pestañas de la izquierda muestran lo que el agente va dejando en el repo (son de solo
-lectura, no tienen su propia caja de texto):
+Las siete pestañas de la izquierda muestran lo que el agente va dejando en el repo. No tienen su
+propia caja de texto de chat (toda la conversación va a la consola), pero en Redactar, Generar y
+Reparar el contenido de cada fichero se ve completo y es editable a mano, guardes o no cambios; las
+listas se refrescan solas en cuanto el agente termina un turno, no hace falta recargar la página:
 
 | Pestaña | Qué muestra |
 |---|---|
 | **Dashboard** | Escenarios cubiertos, verdes, rojos, última ejecución, coste acumulado, elementos frágiles |
 | **Redactar** | Los `.feature` generados, editables a mano, con badge de cobertura por fichero |
-| **Generar** | Los `.page.ts` y `.spec.ts`, con el visor de diff (Aceptar/Descartar) |
-| **Ejecutar** | Los tests con su estado y el detalle paso a paso, con las frases del Gherkin |
-| **Reparar** | Solo los tests en rojo, con el veredicto sugerido (fallo del test o de la app) y el diff de corrección |
+| **Generar** | Los `.page.ts` y `.spec.ts`, contenido completo editable, con el visor de diff debajo (Aceptar/Descartar) cuando hay cambios pendientes frente al commit |
+| **Ejecutar** | La lista de tests (título = fichero `.spec.ts`) con botón ▶ por fila y un "▶ Ejecutar todos" arriba para lanzar Playwright de verdad desde la web; el detalle junta los pasos del Gherkin con el código del spec, en la misma pestaña |
+| **Reparar** | Solo los tests en rojo: veredicto sugerido (fallo del test o de la app), el `.spec.ts` completo editable, y el diff de corrección propuesto (Aplicar y reejecutar/Rechazar) |
 | **Reports** | Historial de ejecuciones, fallos agrupados por causa, tests inestables, pass rate |
-| **Configuración** | URL base, entornos, y el interruptor de la barrera de escrituras |
+| **Configuración** | URL base, entorno y barrera de escrituras; credenciales de prueba (usuario/contraseña o cualquier variable con nombre libre); diagnóstico en vivo de las cuatro comprobaciones del `doctor` |
 
 Los ficheros se generan en `tests/` del repo destino, así que se versionan junto a la aplicación que
 prueban.
@@ -134,8 +145,18 @@ un interruptor por repo, en **Configuración**:
 - **Encendido**: cualquier envío que no esté en tu lista blanca se detiene y te pregunta, diciéndote
   a qué entorno apunta.
 
-Las credenciales salen siempre de variables de entorno y nunca aparecen en un log ni viajan al
-modelo (se redactan automáticamente).
+### Credenciales de prueba
+
+En **Configuración → Credenciales** puedes guardar usuario/contraseña o cualquier otra variable con
+nombre libre (p.ej. `USUARIO_ADMIN`). El agente las recibe directamente: pídeselas por su nombre en
+la petición ("entra como admin") sin tener que pegarlas en el chat. Viven en
+`agente-qa.credenciales.json`, en la raíz del repo destino, **nunca versionado** (esta app se
+asegura de que su `.gitignore` lo excluya en cuanto guardas la primera). Nunca salen en claro por el
+chat ni por ningún log: se redactan igual que cualquier secreto de entorno.
+
+Al ejecutar tests desde la pestaña **Ejecutar**, esas mismas variables se pasan también como entorno
+del proceso de Playwright — si el `.spec.ts` las lee con `process.env.<NOMBRE>` en vez de tenerlas
+escritas a fuego, la ejecución real las encuentra igual.
 
 ## Verificación del propio código de este repo
 

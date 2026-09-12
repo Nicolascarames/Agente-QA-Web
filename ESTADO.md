@@ -2,7 +2,9 @@
 
 Actualizado: 2026-09-12 (plan de nueve bloques completo; tres deudas cerradas: reporter JSON,
 trazabilidad de nombres, `TS5055` en build; después del plan: continuidad de conversación con
-`resume` y consola única, sin chats duplicados por pestaña)
+`resume`, consola única, una sola fila en pantalla, contenido crudo editable en Generar/Reparar,
+lanzar Playwright de verdad desde Ejecutar, credenciales de prueba y diagnóstico del doctor en
+Configuración, refresco automático de listas y consola con scroll/color/teclado)
 
 ## Qué es esto
 
@@ -38,10 +40,12 @@ código correspondiente. La consola global lanza el agente de verdad (SDK de Cla
 repo activo: escribes una petición, se ejecuta con Playwright MCP y la skill de QA, y los eventos
 llegan por SSE. Un segundo mensaje reanuda la conversación anterior (`resume` del SDK, `session_id`
 guardado en memoria): no hace falta repetir el contexto. Redactar, Generar, Ejecutar y Reparar
-muestran datos reales del repo (Gherkin editable, diff con aceptar/descartar, resultados de
-Playwright) pero **ya no tienen caja de texto propia** — toda la conversación vive solo en la
-consola global, al fondo de la pantalla; esas cuatro pestañas son de solo lectura sobre el mismo
-`eventos`/`corridaActiva`. Con la barrera de escrituras encendida en
+muestran datos reales del repo (Gherkin/Page Object/spec con contenido completo editable, diff con
+aceptar/descartar cuando lo hay, resultados de Playwright) pero **ya no tienen caja de texto
+propia** — toda la conversación vive solo en la consola global, a la derecha de la misma ventana;
+esas cuatro pestañas son de solo lectura sobre el mismo `eventos`/`corridaActiva` (no tienen chat,
+pero sí escriben directamente en los ficheros del repo vía `guardar`). Con la barrera de escrituras
+encendida en
 Configuración, toda llamada de escritura de Playwright contra una URL fuera de la lista blanca se
 deniega y cualquier secreto conocido (variables `PASSWORD`/`SECRET`/`TOKEN`/`KEY`/`CREDENCIAL`) se
 redacta antes de salir por el canal de eventos.
@@ -68,11 +72,17 @@ redacta antes de salir por el canal de eventos.
 | Rutas `/api/comando` (lanza o encola), `/api/eventos` (SSE, un suscriptor por conexión), `/api/parar`, `/api/interrumpir`, `/api/pregunta/responder`; estado de la sesión activa y último `session_id` visto en memoria del módulo, pasado como `resume` a la siguiente corrida | `server/app.ts` |
 | La skill de QA reestructurada como plugin del SDK (manifiesto + `skills/qa/`), para que `plugins` la cargue sin copiar nada al repo del usuario | `skill/.claude-plugin/plugin.json`, `skill/skills/qa/` |
 | Barrera de escrituras: compara cada llamada `mcp__playwright__*` de escritura contra la lista blanca del entorno activo (dentro de `canUseTool`, mismo canal `deny+message` del Bloque 4); redacción de secretos aplicada a toda emisión del difusor de eventos | `server/barrera.ts`, uso en `server/agente.ts` |
-| `ConfigRaiz` con `entorno`/`barrera`/`listaBlanca`; formulario real en el panel "proyecto" de Configuración; rutas `GET/POST /api/config` | `shared/tipos.ts`, `server/proyecto.ts`, `src/Configuracion.tsx`, `server/app.ts` |
+| `ConfigRaiz` con `appUrl`/`entorno`/`barrera`/`listaBlanca`, los cuatro editables en el panel "proyecto" de Configuración (después del plan: `appUrl` ganó control propio, antes solo la creaba `npx agente-qa` por terminal); rutas `GET/POST /api/config` | `shared/tipos.ts`, `server/proyecto.ts`, `src/Configuracion.tsx`, `server/app.ts` |
 | `diff`/`commit`/`descartar` sobre `tests/{features,pages,specs}/` vía `git` del sistema (sin dependencias nuevas); rutas `/api/escenarios*` y `/api/generados*` | `server/git.ts`, `server/app.ts` |
-| Redactar (lista+edición de `.feature`) y Generar (lista+diff con Aceptar/Descartar de `.page.ts`/`.spec.ts`); sin chat propio, solo lectura sobre el estado que ya trae la consola global | `src/Redactar.tsx`, `src/Generar.tsx` |
+| Redactar (lista+edición de `.feature`) y Generar (lista, contenido completo editable de `.page.ts`/`.spec.ts`, con el diff debajo para Aceptar/Descartar); sin chat propio, solo lectura sobre el estado que ya trae la consola global | `src/Redactar.tsx`, `src/Generar.tsx` |
+| Lectura/escritura de contenido crudo (no diff) de `tests/pages/*.page.ts` y `tests/specs/*.spec.ts`: `GET/PUT /api/generados/contenido?ruta=`, con la misma protección de path traversal que `/api/escenarios/:nombre` (`rutaGeneradaSegura`) | `server/app.ts` |
 | Lector fiel del último reporte JSON de Playwright (`test-results/results.json`, verificado de punta a punta contra `pruebas/sauce/`); `sugerirVeredicto` es solo una etiqueta de badge, nunca un juez — la clasificación real la da el agente | `server/reporter.ts` |
-| Ejecutar (lista+pasos+error de cada test) y Reparar (solo los rojos, badge de sugerencia, diff con Aplicar/Rechazar); sin chat propio ni barra de lanzamiento (la `BarraLanzamientoDeshabilitada` del Bloque 5-6 se retiró: ya no describía la realidad) | `src/Ejecutar.tsx`, `src/Reparar.tsx` |
+Ejecutar (lista con título = `.spec.ts`, botón ▶ por fila y "Ejecutar todos", pasos + código del spec juntos en el detalle) y Reparar (solo los rojos, badge de sugerencia, `.spec.ts` completo editable, diff propuesto con Aplicar/Rechazar); sin chat propio (la `BarraLanzamientoDeshabilitada` del Bloque 5-6 se retiró por no describir la realidad — el botón de ejecutar de hoy es distinto: lanza Playwright de verdad, ver fila de abajo) | `src/Ejecutar.tsx`, `src/Reparar.tsx` |
+| Runner real de Playwright desde la web (después del plan): `spawn("npx", ["playwright","test",...])`, `shell:true` en Windows, mismo `PLAYWRIGHT_JSON_OUTPUT_NAME` que ya exigía la skill; ruta de spec validada por regex (`rutaSpecSegura`, sin ella un valor con `;`/`&&` sería inyección de comandos vía shell); ruta `POST /api/tests/ejecutar`, inyectable en tests (`ejecutarFn`) | `server/ejecutorTests.ts`, uso en `server/app.ts` |
+| Credenciales de prueba (usuario/contraseña o cualquier variable con nombre libre): fichero aparte de `agente-qa.config.json` a propósito (`agente-qa.credenciales.json`, nunca versionado — `escribirCredenciales` añade sola la entrada al `.gitignore` del proyecto destino la primera vez); llegan al agente por el `system prompt` y al `env` del MCP de Playwright y de la ejecución real de tests; se redactan de la salida por SSE igual que un secreto de `process.env`, sin depender de que el nombre matchee el patrón de secretos | `server/proyecto.ts`, `server/barrera.ts`, `server/agente.ts`, `server/ejecutorTests.ts`, rutas `/api/credenciales` en `server/app.ts`, `src/Configuracion.tsx` |
+| Diagnóstico del `doctor` expuesto por API (antes solo por CLI) y mostrado de solo lectura en Configuración | `GET /api/doctor` en `server/app.ts`, `src/Configuracion.tsx` |
+| Redactar y Generar recargan su lista sola cuando `corridaActiva` pasa de un id a `null` (fin de turno): antes, un escenario/spec escrito por el agente desde la consola no aparecía hasta recargar la página a mano — bug real reportado por el usuario | `src/Redactar.tsx`, `src/Generar.tsx` |
+| Consola: scroll automático al último evento, respuestas del agente en verde claro (`text-ok`), y las preguntas de `AskUserQuestion` con navegación por teclado (flechas/dígitos + Enter, primera opción con el foco por defecto) además de click | `src/ConsolaGlobal.tsx` |
 | Trazabilidad: cruza cada `Escenario:` del `.feature` con los `test.step` del `.spec.ts` homónimo (mismo nombre base), por igualdad exacta de secuencia de frases; cruce con `leerReporte` para el color; ruta `GET /api/trazabilidad` | `server/trazabilidad.ts` |
 | Historial de ejecuciones: coste/duración/turnos + resultados por test, acumulado en `agente-qa.historial.json` (recorte a 200), enganchado tras cada `operation.completed`/`operation.error`; ruta `GET /api/historial` | `server/costes.ts`, uso en `server/agente.ts` |
 | Elementos frágiles: cuenta los comentarios `// FRÁGIL: <motivo>` reales de la skill en `tests/pages/` y `tests/specs/`; ruta `GET /api/fragiles` | `server/fragiles.ts` |
@@ -103,15 +113,19 @@ dieron tres tests verdes a la primera y estables en dos ejecuciones seguidas:
 | Pestaña | Qué muestra |
 |---|---|
 | **Redactar** | Los `.feature`, editables, con badge de cobertura por fichero. La primera puerta: corriges el escenario antes de que se escriba código |
-| **Generar** | Los `.page.ts` y `.spec.ts`, y el visor de diff con aceptar/descartar |
-| **Ejecutar** | Tests con su estado y el detalle paso a paso, con las frases del Gherkin |
-| **Reparar** | Solo los rojos, con el veredicto: fallo del test o fallo de la aplicación |
+| **Generar** | Los `.page.ts` y `.spec.ts`, contenido completo editable, y debajo el visor de diff con aceptar/descartar cuando hay cambios pendientes |
+| **Ejecutar** | Tests con su estado, título = `.spec.ts`, botón ▶ por fila y "Ejecutar todos" (lanza Playwright de verdad), y el detalle junta los pasos del Gherkin con el código del spec |
+| **Reparar** | Solo los rojos, con el veredicto: fallo del test o fallo de la aplicación; `.spec.ts` completo editable y diff de corrección propuesto |
 | **Reports** | Historial de ejecuciones, fallos agrupados por causa, tests inestables, pass rate, fallos abiertos |
 | **Dashboard** | Escenarios cubiertos, verdes, rojos, última ejecución, coste acumulado, elementos frágiles |
-| **Configuración** | URL base, entornos, credenciales y el interruptor de la barrera de escrituras |
+| **Configuración** | URL base, entorno y barrera de escrituras; credenciales de prueba; diagnóstico en vivo del `doctor` |
 
 Las siete son de solo lectura sobre el repo: la única conversación con el agente vive en la consola
-global, al fondo de la pantalla, no en las pestañas.
+global, a la derecha de la misma ventana, no en las pestañas. Pestaña activa (70 % de ancho) y
+consola (30 %) están siempre las dos a la vista, sin scroll entre ellas — cada pestaña reserva ese
+70 % como el 100 % de su propio lienzo de paneles movibles, así que sus geometrías por defecto (en
+Redactar/Generar/Ejecutar/Reparar/Configuración/Dashboard/Reports) no cambiaron, solo el ancho real
+que ocupan.
 
 ---
 
@@ -148,6 +162,14 @@ global, al fondo de la pantalla, no en las pestañas.
 | Cómo llega `test-results/results.json` a existir (deuda cerrada 2026-09-12) | `server/reporter.ts` siempre asumió esa ruta pero nada la generaba: verificado contra `pruebas/sauce/` (`playwright.config.ts` real, `reporter: 'html'`) que tras `npx playwright test` el fichero **no existe** — `leerReporte` habría devuelto `[]` siempre en cualquier proyecto real, dejando Ejecutar/Reparar/Reports/Dashboard vacíos. Se descartó tocar el `reporter` del `playwright.config.ts` del repo destino (fichero ajeno, ver principio de "Ficheros existentes"); en su lugar `skill/skills/qa/SKILL.md` §4 obliga a `PLAYWRIGHT_JSON_OUTPUT_NAME=test-results/results.json npx playwright test --reporter=list,json` por variable de entorno, que no requiere tocar nada del repo destino. Verificado de punta a punta: ese comando genera el JSON en `pruebas/sauce/`, y `leerReporte`/`cruzarTrazabilidad` reales (ejecutados a mano con `tsx`, no solo leídos) devuelven los cuatro resultados y los tres escenarios "cubierto" con el veredicto correcto |
 | Nombre base compartido `.feature`/`.spec.ts` para trazabilidad (deuda cerrada 2026-09-12) | La sospecha del Bloque 8 (regla inferida, no escrita) se verificó contra los tres pares reales de `pruebas/sauce/` (`anadir-al-carrito`, `login-usuario-bloqueado`, `quitar-del-carrito`): la convención se cumple y el cruce de pasos palabra por palabra calza en los tres. Sigue sin estar escrita como regla en la skill — si algún día el agente nombra un spec distinto del feature, ese escenario saldría "no-cubierto" pese a existir el test — pero no bloquea nada con el uso real de hoy |
 | `TS5055` en `npm run build` (deuda cerrada 2026-09-12) | Reproducido: `tsc -p tsconfig.server.json` falla con `dist-server/` de un build anterior presente, compila limpio si se borra antes. No es un bug del código servidor, es un build compuesto (`composite: true`) sin limpieza previa. Fix: `scripts/limpiar-dist-server.mjs` (borra `dist-server/`) enganchado en `npm run build` antes de `tsc`. Verificado con dos `npm run build` seguidos, el caso exacto que fallaba |
+| Pestaña activa + consola en una sola fila, sin bandas apiladas (2026-09-12) | Las dos bandas verticales (Bloque 3, cada una un viewport completo con botones "↓ Consola"/"↑ Arriba" para saltar entre ellas) se sustituyeron por una única fila en `App.tsx`: pestaña activa a la izquierda (70 % de ancho) y `<ConsolaGlobal>` a la derecha (30 %), mismo alto (viewport menos topbar). Como la geometría de los paneles de cada pestaña es en % de su propio `[data-canvas]` anidado (no del viewport), estrechar ese contenedor al 70 % reescala sola la disposición por defecto de las siete pestañas sin tocar sus ficheros — solo `ConsolaGlobal.tsx` necesitó `flex-wrap` en la fila de botones (Enviar/Parar/Interrumpir), que desbordaba al perder el 70 % de ancho que tenía antes. Verificado en vivo (Playwright) en Dashboard/Redactar/Reports/Ejecutar a 1440px y 1024px: las tres secciones movibles caben siempre sin scroll de página |
+| Geometrías por defecto realineadas a un `GAP` único de 1.5 (2026-09-12) | Corrección tras revisar en vivo: varias disposiciones por defecto no llenaban su `[data-canvas]` ni compartían huecos entre sí (Dashboard: las seis cajas de estadística solo ocupaban la mitad izquierda, dejando vacía toda la mitad derecha por encima de "En curso"/"Actividad reciente"; Reports: huecos verticales de 2/4 sin patrón y las dos filas inferiores no llegaban al borde inferior; Redactar/Generar/Ejecutar/Reparar: el panel de detalle acababa en x=99, no en 100; Configuración: huecos de 3 en vez de 1.5; consola: márgenes fijos en px-equivalente `{x:2,y:4,w:96,h:90}` en vez de llenar su lienzo). Redefinidas todas para que cada fila/columna llegue exactamente a 0 y 100 con un único hueco de 1.5 entre paneles — `Dashboard.tsx`/`Reports.tsx` calculan las coordenadas desde una constante `GAP` en vez de llevarlas sueltas. `App.tsx` le dio a la consola el mismo `p-4` + `[data-canvas]` anidado que ya usa cada pestaña, para que su panel (ahora `{x:0,y:0,w:100,h:100}`) quede al mismo margen del borde que los demás. Verificado en vivo (Playwright) en Dashboard/Reports/Configuración/Redactar |
+| Contenido crudo de `.page.ts`/`.spec.ts` siempre visible y editable en Generar/Reparar, no solo cuando hay diff (2026-09-12) | Antes, si el fichero coincidía con el commit, Generar/Reparar solo mostraban "sin cambios pendientes" sin enseñar el fichero ni dejar editarlo — bug real reportado por el usuario. Fix: `GET/PUT /api/generados/contenido?ruta=` (`server/app.ts`, validado con `rutaGeneradaSegura` contra `tests/pages/`/`tests/specs/`, mismo patrón que `nombreEscenarioSeguro`) + `<textarea>` editable en `Generar.tsx`/`Reparar.tsx` (`PropuestaDiff`), igual que ya tenía Redactar para `.feature`. El diff sigue debajo, aparte, con Aceptar/Descartar |
+| Contenido y diff se piden por separado en Generar/Reparar, no con `Promise.all` (2026-09-12) | Verificado en vivo contra `pruebas/sauce/`: `git.diff` falla con 500 ahí porque ese proyecto está fuera de git a propósito (ver Bloque 1) y `git add -N` resuelve hacia el repo padre, donde `pruebas/` está en `.gitignore`. Con `Promise.all`, ese fallo del diff bloqueaba también la carga del contenido — justo lo que se acababa de arreglar. Cada `fetch` tiene ahora su propio estado de carga/error; un diff roto muestra su propio mensaje sin impedir ver ni editar el fichero |
+| `npm run dev` no arrancaba el servidor de forma fiable en Windows — bug real, no solo procesos zombis (2026-09-12) | Reportado por el usuario: tras cerrar los procesos huérfanos, `npm run dev` seguía sin levantar el backend (`ECONNREFUSED`/500 en `/api/*`). Aislado y reproducido de forma determinista (10/10) fuera de este repo: `concurrently` lanzando `tsx watch server/index.ts` con Windows nunca llega a arrancar el proceso hijo que `tsx watch` respawnea en cada cambio — sin error, sin log, sin puerto abierto. La causa no es `concurrently` en sí sino su `stdio: "pipe"` (necesario para prefijar `[vite]`/`[server]`): reproducido el mismo fallo con `spawn` directo y `stdio: "pipe"` + reenvío manual, sin `concurrently` de por medio. Con `stdio: "inherit"` arranca siempre a la primera (3/3 verificado con `npm run dev` real, incluida comprobación en navegador). Fix en `scripts/dev.mjs`: dos `spawn` directos con `stdio: "inherit"`, sin `concurrently` (dependencia retirada de `package.json`). Se pierde el prefijo `[vite]`/`[server]` por línea — los dos procesos comparten la misma consola sin distinguir |
+| Credenciales de prueba: fichero aparte de `agente-qa.config.json`, nunca versionado (después del plan, 2026-09-12) | `agente-qa.config.json` SÍ se versiona (decisión del Bloque 3). Guardar ahí una contraseña real las mandaría al historial de git del repo destino en el primer `git add -A` descuidado. Se creó `agente-qa.credenciales.json` aparte, y `escribirCredenciales` (`server/proyecto.ts`) añade la línea al `.gitignore` del proyecto destino la primera vez que se guarda algo — no se puede asumir que ese repo ya la tenga. Además, `redactarSecretos`/`redactarSecretosProfundo` (`server/barrera.ts`) redactaban antes solo valores de `process.env` cuyo NOMBRE matcheaba `PASSWORD\|SECRET\|TOKEN\|KEY\|CREDENCIAL`: una credencial nombrada libremente por el usuario (p.ej. `usuario_admin`) no habría pasado ese filtro. Se añadió un segundo parámetro (`credenciales: Record<string,string>`) que redacta esos valores SIN filtrar por nombre |
+| Cómo llegan las credenciales al agente (después del plan, 2026-09-12) | El modelo necesita ver el VALOR para poder escribirlo en un formulario (no hay forma de que `browser_type` rellene "la variable X" sin que el modelo la conozca), así que van también al `system prompt` (`systemPrompt.append` en `server/agente.ts`), no solo al `env` del MCP de Playwright. Lo que protege la redacción de `barrera.ts` es que no salgan en claro por el canal de eventos SSE hacia el navegador — no que el modelo no las vea, las necesita para actuar |
+| "Ejecutar todos" / botón por fila en Ejecutar es síncrono, sin progreso en vivo (después del plan, 2026-09-12) | `POST /api/tests/ejecutar` espera a que el proceso de Playwright termine y devuelve el resultado entero; no hay streaming paso a paso como en la consola del agente (eso reutilizaría el mismo difusor de eventos que ya usa una sesión de agente, fuera de alcance de esta petición). Aceptable para una suite pequeña; una suite grande bloquea la pestaña hasta que termina — anotado en `PROXIMOS-PASOS.md` |
 
 ---
 
@@ -195,13 +217,18 @@ Comprobados contra documentación oficial, no de memoria:
   commit real entre medias) y se recuperó a mano. Regla para subagentes que comparten árbol de
   trabajo: nunca `git stash`/`git reset`/`git checkout -- <todo>` para "limpiar" un conflicto —
   identificar el fichero propio y tocar solo ese.
-- **Un `npm run dev` (Vite + `tsx watch` vía `concurrently`) puede quedarse zombi tras muchos
-  reinicios seguidos en una sesión larga**: sigue respondiendo en el puerto pero ya no recompila ni
-  refleja los últimos cambios, y no imprime nada por su cuenta (a diferencia de Vite, cuyo log sí se
-  ve) — parecía que el fix de `resume` no funcionaba hasta que se aisló con un script mínimo (si
-  funciona) y se confirmó reiniciando el servidor del todo. Señal de alarma: cero líneas de log del
-  lado servidor durante varios minutos con actividad real. Solución siempre igual: matar los procesos
-  Node huérfanos por puerto (`Get-NetTCPConnection` + `Stop-Process` en Windows) y relanzar limpio.
+- **Un `npm run dev` puede quedarse zombi tras muchos reinicios seguidos en una sesión larga**:
+  sigue "abierto" como proceso pero ya no escucha en ningún puerto ni imprime nada — señal de alarma:
+  cero líneas de log del lado servidor durante varios minutos con actividad real. Solución siempre
+  igual: matar los procesos Node huérfanos (`Get-Process node | Stop-Process -Force` en Windows) y
+  relanzar limpio.
+- **`concurrently` lanzando `tsx watch server/index.ts` en Windows tenía un bug real, no solo
+  zombis** (corregido 2026-09-12): con `stdio: "pipe"` (el modo que usaba `concurrently` para poder
+  prefijar `[vite]`/`[server]`), el proceso hijo que `tsx watch` respawnea en cada cambio nunca
+  llegaba a arrancar — sin error, sin log, sin puerto abierto, de forma determinista (10/10
+  reproducido aislado). `npx tsx watch server/index.ts` suelto, con `stdio` heredado de una consola
+  real, arrancaba siempre a la primera. `scripts/dev.mjs` ya no usa `concurrently`: dos `spawn`
+  directos con `stdio: "inherit"` — se pierde el prefijo por proceso, pero arranca siempre.
 
 ### El agente — cómo se implementó (Bloque 4)
 

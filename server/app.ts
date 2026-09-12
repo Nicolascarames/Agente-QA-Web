@@ -6,21 +6,26 @@ import Fastify, { type FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
 import { leerEstadoProyecto } from "./estado.js";
 import { lanzar, type SesionAgente } from "./agente.js";
-import { leerConfigRaiz, escribirConfigRaiz } from "./proyecto.js";
+import { leerConfigRaiz, escribirConfigRaiz, leerCredenciales, escribirCredenciales } from "./proyecto.js";
 import * as git from "./git.js";
 import { leerReporte, sugerirVeredicto } from "./reporter.js";
 import { cruzarTrazabilidad } from "./trazabilidad.js";
 import { leerHistorial } from "./costes.js";
 import { listarFragiles } from "./fragiles.js";
+import { ejecutarDoctor } from "./doctor.js";
+import { ejecutarPlaywright } from "./ejecutorTests.js";
 import { esEventoTerminal } from "../shared/eventos.js";
 import type {
   ConfigRaiz,
+  ConfigCredenciales,
   CoberturaEscenario,
   ElementoFragil,
   EstadoCorridaActiva,
   EstadoProyectoActivo,
   EventoNdjson,
   RegistroEjecucion,
+  ResultadoDoctor,
+  ResultadoEjecucionPlaywright,
   RespuestaComando,
   ResultadoTest,
   ResultadoTestRojo,
@@ -44,6 +49,10 @@ export interface AppOptions {
   proyectoInicial: string;
   /** Inyectable para test — por defecto `lanzar()` real de `agente.ts`. */
   lanzarFn?: typeof lanzar;
+  /** Inyectable para test — por defecto `ejecutarPlaywright()` real de `ejecutorTests.ts`, que lanza
+   *  un proceso de verdad. Sin esto, testear `/api/tests/ejecutar` lanzaría Playwright en serio en
+   *  cada corrida de `npm test`. */
+  ejecutarFn?: typeof ejecutarPlaywright;
 }
 
 const dirActual = path.dirname(fileURLToPath(import.meta.url));
@@ -57,6 +66,7 @@ export function buildApp(opts: AppOptions): FastifyInstance {
   const app = Fastify({ logger: true });
   const proyectoActivo = opts.proyectoInicial;
   const lanzarFn = opts.lanzarFn ?? lanzar;
+  const ejecutarFn = opts.ejecutarFn ?? ejecutarPlaywright;
 
   // Estado en memoria del módulo: una corrida activa como mucho, sin base de datos (una instancia
   // por repo, igual que `proyectoActivo`). `sesion` y `runId` van juntos para que TypeScript sepa
@@ -89,6 +99,26 @@ export function buildApp(opts: AppOptions): FastifyInstance {
     await reply.send(siguiente);
   });
 
+  // --- Credenciales de prueba (después del plan): fichero aparte de agente-qa.config.json a
+  // propósito — ese sí se versiona, `agente-qa.credenciales.json` nunca debe hacerlo (ver proyecto.ts).
+
+  app.get("/api/credenciales", async (): Promise<ConfigCredenciales> => leerCredenciales(proyectoActivo));
+
+  app.post<{ Body: { variables?: { nombre: string; valor: string }[] } }>("/api/credenciales", async (req, reply) => {
+    const variables = req.body?.variables;
+    if (!Array.isArray(variables) || variables.some((v) => typeof v?.nombre !== "string" || typeof v?.valor !== "string")) {
+      await reply.status(400).send({ error: 'falta "variables" (lista de {nombre, valor})' });
+      return;
+    }
+    const siguiente: ConfigCredenciales = { schemaVersion: 1, variables };
+    await escribirCredenciales(proyectoActivo, siguiente);
+    await reply.send(siguiente);
+  });
+
+  // --- Doctor (Bloque 3), expuesto ahora también por API para la pestaña Configuración -----------
+
+  app.get("/api/doctor", async (): Promise<ResultadoDoctor> => ejecutarDoctor(proyectoActivo));
+
   // --- Ejecutar / Reparar (Bloque 7): lectura fiel del último reporte de Playwright --------------
   // `sugerencia` es solo la etiqueta del badge de Reparar (`reporter.ts`, regla 2 de la spec): la
   // clasificación real la hace el agente, no esta ruta.
@@ -100,6 +130,27 @@ export function buildApp(opts: AppOptions): FastifyInstance {
     return resultados
       .filter((resultado) => resultado.estado !== "passed")
       .map((resultado) => ({ ...resultado, sugerencia: sugerirVeredicto(resultado) }));
+  });
+
+  // `ruta`, si se pasa, limita a un único `.spec.ts` (botón por fila en Ejecutar); sin ella, corre
+  // toda la suite (botón "Ejecutar todos"). Se valida como un nombre de fichero suelto porque llega
+  // directo a un `spawn` con `shell: true` en Windows (ejecutorTests.ts): sin esto, un valor con
+  // `;`/`&&`/backticks sería inyección de comandos, no solo un path traversal como en
+  // `rutaGeneradaSegura` (que además exige el prefijo `tests/specs/`, distinto del valor que reporta
+  // Playwright en `ResultadoTest.ficheroSpec`).
+  function rutaSpecSegura(ruta: string): string | null {
+    return /^[a-zA-Z0-9_\-./]+\.spec\.ts$/.test(ruta) && !ruta.includes("..") ? ruta : null;
+  }
+
+  app.post<{ Body: { ruta?: string } }>("/api/tests/ejecutar", async (req, reply): Promise<void> => {
+    const rutaPedida = req.body?.ruta;
+    if (rutaPedida !== undefined && rutaSpecSegura(rutaPedida) === null) {
+      await reply.status(400).send({ error: "ruta de spec inválida" });
+      return;
+    }
+    const credenciales = Object.fromEntries((await leerCredenciales(proyectoActivo)).variables.map((v) => [v.nombre, v.valor]));
+    const resultado: ResultadoEjecucionPlaywright = await ejecutarFn(proyectoActivo, rutaPedida, credenciales);
+    await reply.send(resultado);
   });
 
   // --- Reports, Dashboard y trazabilidad (Bloque 8) -----------------------------------------------
@@ -128,6 +179,7 @@ export function buildApp(opts: AppOptions): FastifyInstance {
     }
     const runId = randomUUID();
     const config = await leerConfigRaiz(proyectoActivo);
+    const credenciales = await leerCredenciales(proyectoActivo);
     corridaActiva = {
       sesion: lanzarFn(texto, {
         cwd: proyectoActivo,
@@ -135,6 +187,7 @@ export function buildApp(opts: AppOptions): FastifyInstance {
         barreraActiva: config?.barrera,
         listaBlanca: config?.listaBlanca,
         resume: ultimaSesionId ?? undefined,
+        credenciales: credenciales.variables,
       }),
       runId,
     };
@@ -257,6 +310,65 @@ export function buildApp(opts: AppOptions): FastifyInstance {
   app.get("/api/generados", async () => {
     const [pages, specs] = await Promise.all([git.listarFicheros(pagesDir, ".page.ts"), git.listarFicheros(specsDir, ".spec.ts")]);
     return { pages, specs };
+  });
+
+  // `ruta` llega de la querystring como `tests/pages/<nombre>.page.ts` o `tests/specs/<nombre>.spec.ts`
+  // (mismo formato que ya usan diff/commit/descartar). A diferencia de esas rutas, que solo pasan
+  // `ruta` a un comando `git`, estas hacen `fs.readFile`/`writeFile` directo — sin esta validación,
+  // un `../../secreto.txt` se sale del proyecto igual que el path traversal ya cerrado en
+  // `nombreEscenarioSeguro`.
+  function rutaGeneradaSegura(ruta: string): string | null {
+    const normalizada = ruta.replaceAll("\\", "/");
+    const base = normalizada.startsWith("tests/pages/") && normalizada.endsWith(".page.ts")
+      ? pagesDir
+      : normalizada.startsWith("tests/specs/") && normalizada.endsWith(".spec.ts")
+        ? specsDir
+        : null;
+    if (!base) return null;
+    const resuelta = path.resolve(proyectoActivo, normalizada);
+    if (resuelta !== path.join(base, path.basename(resuelta))) return null;
+    return normalizada;
+  }
+
+  app.get<{ Querystring: { ruta?: string } }>("/api/generados/contenido", async (req, reply) => {
+    const ruta = req.query.ruta;
+    if (!ruta) {
+      await reply.status(400).send({ error: 'falta "ruta"' });
+      return;
+    }
+    const segura = rutaGeneradaSegura(ruta);
+    if (!segura) {
+      await reply.status(400).send({ error: "ruta de fichero inválida" });
+      return;
+    }
+    try {
+      const contenido = await fs.readFile(path.join(proyectoActivo, segura), "utf8");
+      await reply.send({ contenido });
+    } catch {
+      await reply.status(404).send({ error: `no existe ${segura}` });
+    }
+  });
+
+  app.put<{ Querystring: { ruta?: string }; Body: { contenido?: string } }>("/api/generados/contenido", async (req, reply) => {
+    const ruta = req.query.ruta;
+    if (!ruta) {
+      await reply.status(400).send({ error: 'falta "ruta"' });
+      return;
+    }
+    const segura = rutaGeneradaSegura(ruta);
+    if (!segura) {
+      await reply.status(400).send({ error: "ruta de fichero inválida" });
+      return;
+    }
+    const contenido = req.body?.contenido;
+    if (typeof contenido !== "string") {
+      await reply.status(400).send({ error: 'falta "contenido"' });
+      return;
+    }
+    const destino = path.join(proyectoActivo, segura);
+    await fs.mkdir(path.dirname(destino), { recursive: true });
+    await fs.writeFile(destino, contenido, "utf8");
+    await reply.send({ ok: true });
   });
 
   app.get<{ Querystring: { ruta?: string } }>("/api/generados/diff", async (req, reply) => {

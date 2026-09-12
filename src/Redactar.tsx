@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Panel } from "./Panel";
 import { guardarEscenario, obtenerEscenario, obtenerEscenarios, obtenerTrazabilidad } from "./api";
 import type { CoberturaEscenario } from "../shared/tipos";
@@ -41,7 +41,7 @@ function badgeDeFichero(escenarios: CoberturaEscenario[]): BadgeCobertura {
 // coste` de mentira para un agente que no existía. Ahora el agente existe y se lanza escribiendo
 // en el chat de la derecha — una segunda barra de "lanzar" sería redundante con esa caja de texto.
 
-export function Redactar({}: object) {
+export function Redactar({ corridaActiva }: { corridaActiva?: string | null }) {
   const [escenarios, setEscenarios] = useState<string[]>([]);
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
   const [contenido, setContenido] = useState("");
@@ -50,15 +50,12 @@ export function Redactar({}: object) {
   const [error, setError] = useState<string | null>(null);
   const [coberturaPorFichero, setCoberturaPorFichero] = useState<Map<string, CoberturaEscenario[]> | null>(null);
 
-  useEffect(() => {
+  const cargarLista = () => {
     void obtenerEscenarios()
       .then(setEscenarios)
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : String(err));
       });
-  }, []);
-
-  useEffect(() => {
     void obtenerTrazabilidad()
       .then((datos) => {
         const mapa = new Map<string, CoberturaEscenario[]>();
@@ -72,7 +69,22 @@ export function Redactar({}: object) {
       .catch(() => {
         setCoberturaPorFichero(null);
       });
-  }, []);
+  };
+
+  useEffect(cargarLista, []);
+
+  // El agente escribe ficheros .feature directamente en disco (sin pasar por `guardarEscenario` de
+  // esta pestaña) cuando genera un escenario desde la consola global. Sin esto, la lista de la
+  // izquierda se queda congelada en lo que había al abrir la pestaña — bug real reportado por el
+  // usuario. `corridaActiva` pasa de un id a `null` cuando el turno termina: ese flanco de bajada es
+  // la señal de "puede haber ficheros nuevos", así que se recarga la lista y la trazabilidad ahí.
+  const corridaActivaAnterior = useRef(corridaActiva ?? null);
+  useEffect(() => {
+    if (corridaActivaAnterior.current && !corridaActiva) {
+      cargarLista();
+    }
+    corridaActivaAnterior.current = corridaActiva ?? null;
+  }, [corridaActiva]);
 
   useEffect(() => {
     if (!seleccionado) {
@@ -134,7 +146,7 @@ export function Redactar({}: object) {
           )}
         </Panel>
 
-        <Panel tabId="redactar" panelId="detalle" titulo="Detalle del escenario" disposicionPorDefecto={{ x: 31.5, y: 0, w: 67.5, h: 100, z: 1 }}>
+        <Panel tabId="redactar" panelId="detalle" titulo="Detalle del escenario" disposicionPorDefecto={{ x: 31.5, y: 0, w: 68.5, h: 100, z: 1 }}>
           <div className="flex h-full flex-col gap-2 p-2">
             {!seleccionado ? (
               <p className="p-2 text-xs text-text-dim">Elige un escenario de la lista.</p>

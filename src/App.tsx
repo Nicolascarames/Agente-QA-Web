@@ -60,13 +60,12 @@ export default function App() {
   const corridaGlobal = useCorridaGlobal();
   const { corridaActiva, eventos, marcarCorridaActiva, agregarMensajeUsuario } = corridaGlobal;
 
-  // Dos bandas apiladas dentro de `<main>` (Bloque 3): cada una es su propio `[data-canvas]` de
-  // un viewport de alto menos la topbar, así los paneles flotantes de cada banda quedan acotados a
-  // ella. La altura de la topbar se mide en runtime (no se adivina) porque su contenido (el aviso
-  // "en curso") puede cambiar su alto real entre pestañas.
+  // Una sola fila dentro de `<main>`: la pestaña activa a la izquierda y la consola pegada al
+  // borde derecho, ambas del mismo alto (viewport menos la topbar) — así las secciones movibles
+  // de la pestaña y la consola caben las tres en pantalla sin scroll entre bandas. La altura de la
+  // topbar se mide en runtime (no se adivina) porque su contenido (el aviso "en curso") puede
+  // cambiar su alto real entre pestañas.
   const topbarRef = useRef<HTMLElement | null>(null);
-  const banda1Ref = useRef<HTMLDivElement | null>(null);
-  const banda2Ref = useRef<HTMLDivElement | null>(null);
   const [alturaTopbar, setAlturaTopbar] = useState(48);
 
   useLayoutEffect(() => {
@@ -189,41 +188,28 @@ export default function App() {
           </div>
         </header>
 
-        {/* Banda 1 — la pestaña activa. */}
-        {/* `scrollMarginTop: alturaTopbar` para que `scrollIntoView` (línea ~205) no deje
-            el borde superior de la banda tapado bajo la topbar `sticky top-0`. */}
-        <div ref={banda1Ref} className="relative" data-canvas="true" style={{ height: alturaBanda, scrollMarginTop: alturaTopbar }}>
-          <div key={pestana} className="relative h-full animate-page-fade overflow-hidden">
-            {contenidoPestana(pestana, corridaGlobal)}
+        {/* La pestaña activa (izquierda) y la consola global (derecha), en la misma fila y al
+            mismo alto — cada una mide su propio `[data-canvas]`: la pestaña trae el suyo anidado
+            (ver Redactar/Dashboard/etc.) tras su propio `p-4`; la consola no, así que este
+            contenedor le da el mismo `p-4` + `[data-canvas]` interior, para que el panel de la
+            consola quede al mismo margen del borde que los de cualquier otra pestaña. */}
+        <div className="flex" style={{ height: alturaBanda }}>
+          <div className="relative h-full w-[70%] shrink-0 overflow-hidden">
+            <div key={pestana} className="relative h-full w-full animate-page-fade overflow-hidden">
+              {contenidoPestana(pestana, corridaGlobal)}
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              banda2Ref.current?.scrollIntoView({ behavior: "smooth" });
-            }}
-            className="absolute bottom-3 right-3 z-10 rounded-6 border border-border-strong bg-bg-panel px-2.5 py-1 text-xs font-semibold text-text-strong shadow-[var(--sidebar-shadow)]"
-          >
-            ↓ Consola
-          </button>
-        </div>
 
-        {/* Banda 2 — la consola global. */}
-        <div ref={banda2Ref} className="relative" data-canvas="true" style={{ height: alturaBanda, scrollMarginTop: alturaTopbar }}>
-          <ConsolaGlobal
-            corridaActiva={corridaActiva}
-            eventos={eventos}
-            marcarCorridaActiva={marcarCorridaActiva}
-            agregarMensajeUsuario={agregarMensajeUsuario}
-          />
-          <button
-            type="button"
-            onClick={() => {
-              banda1Ref.current?.scrollIntoView({ behavior: "smooth" });
-            }}
-            className="absolute bottom-3 right-3 z-10 rounded-6 border border-border-strong bg-bg-panel px-2.5 py-1 text-xs font-semibold text-text-strong shadow-[var(--sidebar-shadow)]"
-          >
-            ↑ Arriba
-          </button>
+          <div className="flex h-full w-[30%] shrink-0 flex-col p-4">
+            <div className="relative flex-1" data-canvas="true">
+              <ConsolaGlobal
+                corridaActiva={corridaActiva}
+                eventos={eventos}
+                marcarCorridaActiva={marcarCorridaActiva}
+                agregarMensajeUsuario={agregarMensajeUsuario}
+              />
+            </div>
+          </div>
         </div>
       </main>
       </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Panel } from "./Panel";
 import { enviarComando, interrumpirCorrida, pararCorrida, responderPregunta } from "./api";
 import { esEventoTerminal } from "../shared/eventos";
@@ -44,7 +44,7 @@ function LineaAgenteAssistant({ evento }: { evento: EventoNdjson }) {
       {(contenido as BloqueContenidoAsistente[]).map((bloque, indice) => {
         if (bloque.type === "text" && bloque.text) {
           return (
-            <li key={indice} className="text-xs text-text-bright">
+            <li key={indice} className="text-xs text-ok">
               {bloque.text}
             </li>
           );
@@ -111,6 +111,10 @@ export function ConsolaGlobal({ corridaActiva, eventos, marcarCorridaActiva, agr
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [preguntaPendiente, setPreguntaPendiente] = useState<PreguntaAgente | null>(null);
+  // Opción con el foco del teclado en la pregunta activa: arranca en la primera (la que el propio
+  // modelo suele poner primero suele ser la recomendada, ver convención de AskUserQuestion).
+  const [opcionEnfocada, setOpcionEnfocada] = useState(0);
+  const listaRef = useRef<HTMLUListElement | null>(null);
 
   // La última pregunta sin responder, si la hay: el propio `canUseTool` del agente queda bloqueado
   // hasta que se llame a `responderPregunta`, así que basta con quedarse con la más reciente.
@@ -118,12 +122,53 @@ export function ConsolaGlobal({ corridaActiva, eventos, marcarCorridaActiva, agr
     const ultimo = eventos[eventos.length - 1];
     if (ultimo?.type === "agente.pregunta") {
       setPreguntaPendiente(ultimo.data as PreguntaAgente);
+      setOpcionEnfocada(0);
     }
   }, [eventos]);
 
   useEffect(() => {
     if (!corridaActiva) setPreguntaPendiente(null);
   }, [corridaActiva]);
+
+  // El chat siempre debe enseñar lo último, sin que el usuario tenga que bajar a mano — se recoloca
+  // al final en cada evento nuevo y también mientras "trabaja" (el indicador de pulso también empuja
+  // el alto de la lista).
+  useEffect(() => {
+    const nodo = listaRef.current;
+    if (nodo) nodo.scrollTop = nodo.scrollHeight;
+  }, [eventos, corridaActiva, preguntaPendiente]);
+
+  const opcionesAplanadas = preguntaPendiente ? preguntaPendiente.questions.flatMap((p) => p.options) : [];
+
+  // Navegación por teclado al estilo Claude Code: flechas o dígitos mueven/eligen la opción, Enter
+  // confirma la enfocada — todo desactivado mientras se escribe en la caja de texto libre, para no
+  // robarle las flechas/números a quien está corrigiendo la respuesta a mano.
+  useEffect(() => {
+    if (!preguntaPendiente || opcionesAplanadas.length === 0) return;
+    function manejarTeclado(e: KeyboardEvent) {
+      const activo = document.activeElement;
+      if (activo instanceof HTMLInputElement || activo instanceof HTMLTextAreaElement) return;
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+        e.preventDefault();
+        setOpcionEnfocada((i) => Math.min(i + 1, opcionesAplanadas.length - 1));
+      } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+        e.preventDefault();
+        setOpcionEnfocada((i) => Math.max(i - 1, 0));
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        const opcion = opcionesAplanadas[opcionEnfocada];
+        if (opcion) responder({ opcionesElegidas: [opcion.label] });
+      } else {
+        const digito = Number(e.key);
+        if (digito >= 1 && digito <= 9 && opcionesAplanadas[digito - 1]) {
+          e.preventDefault();
+          responder({ opcionesElegidas: [opcionesAplanadas[digito - 1].label] });
+        }
+      }
+    }
+    window.addEventListener("keydown", manejarTeclado);
+    return () => window.removeEventListener("keydown", manejarTeclado);
+  }, [preguntaPendiente, opcionEnfocada, opcionesAplanadas.length]);
 
   const manejarError = (err: unknown) => {
     setError(err instanceof Error ? err.message : String(err));
@@ -178,9 +223,9 @@ export function ConsolaGlobal({ corridaActiva, eventos, marcarCorridaActiva, agr
   };
 
   return (
-    <Panel tabId="global" panelId="consola" titulo="Consola" disposicionPorDefecto={{ x: 2, y: 4, w: 96, h: 90, z: 10 }}>
+    <Panel tabId="global" panelId="consola" titulo="Consola" disposicionPorDefecto={{ x: 0, y: 0, w: 100, h: 100, z: 10 }}>
       <div className="flex h-full flex-col gap-2">
-        <ul className="flex-1 overflow-auto">
+        <ul ref={listaRef} className="flex-1 overflow-auto">
           {eventos.length === 0 ? (
             <p className="text-text-dim">Sin eventos todavía: escribe un comando.</p>
           ) : (
@@ -193,36 +238,51 @@ export function ConsolaGlobal({ corridaActiva, eventos, marcarCorridaActiva, agr
             if (ultimo && (esEventoTerminal(ultimo.type) || ultimo.type === "agente.pregunta")) return null;
             return <p className="animate-pulse text-2xs text-text-dim">🤖 trabajando…</p>;
           })()}
-        {preguntaPendiente && (
-          <div className="flex flex-col gap-1.5 rounded-7 border border-accent bg-accent-bg p-2">
-            {preguntaPendiente.questions.map((pregunta, indice) => (
-              <div key={`${pregunta.header}-${String(indice)}`} className="flex flex-col gap-1">
-                <p className="text-xs font-bold text-text-bright">
-                  {pregunta.header}: {pregunta.question}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {pregunta.options.map((opcion) => (
-                    <button
-                      key={opcion.label}
-                      type="button"
-                      title={opcion.description}
-                      disabled={enviando}
-                      onClick={() => {
-                        responder({ opcionesElegidas: [opcion.label] });
-                      }}
-                      className="rounded-7 border border-border-soft bg-bg-sunken px-2 py-1 text-2xs text-text-bright disabled:opacity-50"
-                    >
-                      {opcion.label}
-                    </button>
-                  ))}
-                </div>
+        {preguntaPendiente &&
+          (() => {
+            let contadorGlobal = -1;
+            return (
+              <div className="flex flex-col gap-1.5 rounded-7 border border-accent bg-accent-bg p-2">
+                {preguntaPendiente.questions.map((pregunta, indice) => (
+                  <div key={`${pregunta.header}-${String(indice)}`} className="flex flex-col gap-1">
+                    <p className="text-xs font-bold text-text-bright">
+                      {pregunta.header}: {pregunta.question}
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {pregunta.options.map((opcion) => {
+                        contadorGlobal += 1;
+                        const miIndice = contadorGlobal;
+                        const enfocada = miIndice === opcionEnfocada;
+                        return (
+                          <button
+                            key={opcion.label}
+                            type="button"
+                            title={opcion.description}
+                            disabled={enviando}
+                            onClick={() => {
+                              responder({ opcionesElegidas: [opcion.label] });
+                            }}
+                            onMouseEnter={() => {
+                              setOpcionEnfocada(miIndice);
+                            }}
+                            className={`rounded-7 border px-2 py-1 text-2xs text-text-bright disabled:opacity-50 ${
+                              enfocada ? "border-accent bg-accent-bg ring-1 ring-accent" : "border-border-soft bg-bg-sunken"
+                            }`}
+                          >
+                            <span className="text-text-faint">{miIndice + 1}.</span> {opcion.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                <p className="text-2xs text-text-faint">↑↓ elegir · Enter confirmar · o escribe tu respuesta abajo</p>
               </div>
-            ))}
-          </div>
-        )}
+            );
+          })()}
         {error && <p className="text-xs text-danger">{error}</p>}
         {corridaActiva && <p className="text-2xs text-text-dim">se enviará al terminar el paso actual</p>}
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           <input
             value={comando}
             onChange={(e) => {
@@ -233,7 +293,7 @@ export function ConsolaGlobal({ corridaActiva, eventos, marcarCorridaActiva, agr
             }}
             disabled={enviando}
             placeholder={preguntaPendiente ? "Responde por texto libre…" : "Escribe un comando…"}
-            className="flex-1 rounded-7 border border-border-soft bg-bg-sunken px-2.5 py-1.5 text-sm text-text-bright disabled:opacity-50"
+            className="min-w-[120px] flex-1 rounded-7 border border-border-soft bg-bg-sunken px-2.5 py-1.5 text-sm text-text-bright disabled:opacity-50"
           />
           <button
             type="button"

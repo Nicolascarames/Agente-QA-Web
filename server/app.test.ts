@@ -103,7 +103,14 @@ describe("buildApp", () => {
     const app = buildApp({ proyectoInicial: proyecto, lanzarFn });
     const respuesta = await app.inject({ method: "POST", url: "/api/comando", payload: { texto: "hazme el page object del login" } });
     expect(respuesta.statusCode).toBe(200);
-    expect(lanzarFn).toHaveBeenCalledWith("hazme el page object del login", { cwd: proyecto });
+    expect(lanzarFn).toHaveBeenCalledWith("hazme el page object del login", {
+      cwd: proyecto,
+      entorno: undefined,
+      barreraActiva: undefined,
+      listaBlanca: undefined,
+      resume: undefined,
+      credenciales: [],
+    });
     expect(respuesta.json<RespuestaComando>().runId).toBeTruthy();
     await app.close();
   });
@@ -278,6 +285,59 @@ describe("buildApp", () => {
     await app.close();
   });
 
+  it("GET /api/generados/contenido devuelve el contenido crudo de un page/spec, 404 si no existe", async () => {
+    const app = buildApp({ proyectoInicial: proyecto });
+    const faltante = await app.inject({ method: "GET", url: "/api/generados/contenido?ruta=tests/specs/login.spec.ts" });
+    expect(faltante.statusCode).toBe(404);
+
+    await mkdir(path.join(proyecto, "tests", "specs"), { recursive: true });
+    await writeFile(path.join(proyecto, "tests", "specs", "login.spec.ts"), "test('login', () => {});\n", "utf8");
+    const respuesta = await app.inject({ method: "GET", url: "/api/generados/contenido?ruta=tests/specs/login.spec.ts" });
+    expect(respuesta.statusCode).toBe(200);
+    expect(respuesta.json<{ contenido: string }>().contenido).toBe("test('login', () => {});\n");
+    await app.close();
+  });
+
+  it("PUT /api/generados/contenido escribe el fichero, creando tests/pages/ si hace falta", async () => {
+    const app = buildApp({ proyectoInicial: proyecto });
+    const respuesta = await app.inject({
+      method: "PUT",
+      url: "/api/generados/contenido?ruta=tests/pages/login.page.ts",
+      payload: { contenido: "export class LoginPage {}\n" },
+    });
+    expect(respuesta.statusCode).toBe(200);
+    const leido = await app.inject({ method: "GET", url: "/api/generados/contenido?ruta=tests/pages/login.page.ts" });
+    expect(leido.json<{ contenido: string }>().contenido).toBe("export class LoginPage {}\n");
+    await app.close();
+  });
+
+  it("GET/PUT /api/generados/contenido rechazan una ruta fuera de tests/pages|specs (path traversal, extensión ajena)", async () => {
+    const app = buildApp({ proyectoInicial: proyecto });
+    const fueraDelProyecto = path.join(proyecto, "..", "secreto.txt");
+    await writeFile(fueraDelProyecto, "no deberías poder leer esto", "utf8");
+
+    const traversal = await app.inject({ method: "GET", url: "/api/generados/contenido?ruta=tests/specs/../../secreto.txt" });
+    expect(traversal.statusCode).toBe(400);
+
+    const extensionAjena = await app.inject({ method: "GET", url: "/api/generados/contenido?ruta=tests/specs/login.feature" });
+    expect(extensionAjena.statusCode).toBe(400);
+
+    const escritura = await app.inject({
+      method: "PUT",
+      url: "/api/generados/contenido?ruta=tests/specs/../../secreto.txt",
+      payload: { contenido: "pwned" },
+    });
+    expect(escritura.statusCode).toBe(400);
+
+    const sinRuta = await app.inject({ method: "GET", url: "/api/generados/contenido" });
+    expect(sinRuta.statusCode).toBe(400);
+
+    const contenidoTrasIntento = await readFile(fueraDelProyecto, "utf8");
+    expect(contenidoTrasIntento).toBe("no deberías poder leer esto");
+    await rm(fueraDelProyecto);
+    await app.close();
+  });
+
   it("GET /api/generados/diff devuelve el diff de un fichero nuevo sin trackear del proyecto", async () => {
     await git(proyecto, ["init", "-q"]);
     await git(proyecto, ["config", "user.email", "test@test.com"]);
@@ -379,6 +439,72 @@ describe("buildApp", () => {
     expect(conMarca.json<{ fichero: string; linea: number; motivo: string }[]>()).toEqual([
       { fichero: "tests/pages/login.page.ts", linea: 1, motivo: "sin atributo estable" },
     ]);
+    await app.close();
+  });
+
+  it("GET /api/credenciales devuelve variables: [] por defecto; POST las guarda y las relee", async () => {
+    const app = buildApp({ proyectoInicial: proyecto });
+    const vacio = await app.inject({ method: "GET", url: "/api/credenciales" });
+    expect(vacio.json()).toEqual({ schemaVersion: 1, variables: [] });
+
+    const guardado = await app.inject({
+      method: "POST",
+      url: "/api/credenciales",
+      payload: { variables: [{ nombre: "USUARIO", valor: "admin" }] },
+    });
+    expect(guardado.statusCode).toBe(200);
+
+    const releido = await app.inject({ method: "GET", url: "/api/credenciales" });
+    expect(releido.json()).toEqual({ schemaVersion: 1, variables: [{ nombre: "USUARIO", valor: "admin" }] });
+    await app.close();
+  });
+
+  it("POST /api/credenciales rechaza un body sin la forma {nombre, valor}[]", async () => {
+    const app = buildApp({ proyectoInicial: proyecto });
+    const respuesta = await app.inject({ method: "POST", url: "/api/credenciales", payload: { variables: [{ nombre: "X" }] } });
+    expect(respuesta.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it("GET /api/doctor devuelve las cuatro comprobaciones del doctor real", async () => {
+    const app = buildApp({ proyectoInicial: proyecto });
+    const respuesta = await app.inject({ method: "GET", url: "/api/doctor" });
+    expect(respuesta.statusCode).toBe(200);
+    const cuerpo = respuesta.json<{ ok: boolean; comprobaciones: { nombre: string; ok: boolean; mensaje: string }[] }>();
+    expect(cuerpo.comprobaciones).toHaveLength(4);
+    await app.close();
+  });
+
+  it("POST /api/tests/ejecutar rechaza una ruta que no sea un .spec.ts suelto (inyección/path traversal)", async () => {
+    const app = buildApp({ proyectoInicial: proyecto });
+    for (const ruta of ["../../evil.spec.ts", "a.spec.ts; rm -rf /", "a.spec.ts && echo hi", "a.ts"]) {
+      const respuesta = await app.inject({ method: "POST", url: "/api/tests/ejecutar", payload: { ruta } });
+      expect(respuesta.statusCode, `ruta rechazada: ${ruta}`).toBe(400);
+    }
+    await app.close();
+  });
+
+  it("POST /api/tests/ejecutar llama a ejecutarFn con la ruta pedida y las credenciales guardadas", async () => {
+    const ejecutarFn = vi.fn(() => Promise.resolve({ ok: true, codigo: 0, salida: "" }));
+    const app = buildApp({ proyectoInicial: proyecto, ejecutarFn });
+    await app.inject({
+      method: "POST",
+      url: "/api/credenciales",
+      payload: { variables: [{ nombre: "USUARIO", valor: "admin" }] },
+    });
+
+    const respuesta = await app.inject({ method: "POST", url: "/api/tests/ejecutar", payload: { ruta: "login.spec.ts" } });
+    expect(respuesta.statusCode).toBe(200);
+    expect(ejecutarFn).toHaveBeenCalledWith(proyecto, "login.spec.ts", { USUARIO: "admin" });
+    await app.close();
+  });
+
+  it("POST /api/tests/ejecutar sin ruta corre toda la suite (ruta undefined)", async () => {
+    const ejecutarFn = vi.fn(() => Promise.resolve({ ok: true, codigo: 0, salida: "" }));
+    const app = buildApp({ proyectoInicial: proyecto, ejecutarFn });
+    const respuesta = await app.inject({ method: "POST", url: "/api/tests/ejecutar", payload: {} });
+    expect(respuesta.statusCode).toBe(200);
+    expect(ejecutarFn).toHaveBeenCalledWith(proyecto, undefined, {});
     await app.close();
   });
 });

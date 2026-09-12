@@ -53,6 +53,12 @@ export interface OpcionesLanzar {
   /** Reanuda el hilo de conversación anterior (SDK `resume`), en memoria únicamente — si no se
    *  pasa, se lanza una conversación nueva. */
   resume?: string;
+  /** Credenciales de prueba de Configuración (`agente-qa.credenciales.json`, nunca versionado): el
+   *  agente necesita ver el VALOR para poder escribirlo en un formulario, así que van también al
+   *  `system prompt`, no solo al entorno — lo que sí protege `emitirSeguro` es que nunca salgan en
+   *  claro por el canal de eventos hacia el navegador (misma redacción de `barrera.ts` que ya
+   *  protegía secretos de `process.env`). */
+  credenciales?: { nombre: string; valor: string }[];
 }
 
 function mensajeUsuario(texto: string): SDKUserMessage {
@@ -168,9 +174,12 @@ export function lanzar(peticionInicial: string, opciones: OpcionesLanzar): Sesio
   const abortController = new AbortController();
   const colaMensajes = crearCola<SDKUserMessage>();
   const difusorEventos = crearDifusor<EventoAgente>();
-  // Todo lo que sale por el difusor pasa antes por la redacción de secretos (Bloque 5): ninguna
-  // credencial de `process.env` llega al modelo ni a un log vía SSE.
-  const emitirSeguro = (evento: EventoAgente) => difusorEventos.emitir({ ...evento, data: redactarSecretosProfundo(evento.data) });
+  const mapaCredenciales = Object.fromEntries((opciones.credenciales ?? []).map((c) => [c.nombre, c.valor]));
+  // Todo lo que sale por el difusor pasa antes por la redacción de secretos (Bloque 5, ampliada
+  // después del plan con `mapaCredenciales`): ninguna credencial de `process.env` ni de
+  // Configuración llega al navegador en claro vía SSE — sí al modelo, que las necesita para actuar.
+  const emitirSeguro = (evento: EventoAgente) =>
+    difusorEventos.emitir({ ...evento, data: redactarSecretosProfundo(evento.data, process.env, mapaCredenciales) });
   colaMensajes.push(mensajeUsuario(peticionInicial));
 
   // Una única pregunta pendiente a la vez: `responderPregunta` no recibe `requestId` (viene tal
@@ -217,16 +226,21 @@ export function lanzar(peticionInicial: string, opciones: OpcionesLanzar): Sesio
     });
   };
 
+  const appendCredenciales =
+    opciones.credenciales && opciones.credenciales.length > 0
+      ? `\n\nCredenciales de prueba disponibles para este proyecto (Configuración → Credenciales) — úsalas cuando la petición las necesite, no las pidas por chat si ya están aquí:\n${opciones.credenciales.map((c) => `- ${c.nombre}: ${c.valor}`).join("\n")}`
+      : "";
+
   const q: Query = queryFn({
     prompt: colaMensajes.iterable,
     options: {
       cwd: opciones.cwd,
       abortController,
       resume: opciones.resume,
-      mcpServers: { playwright: { command: "npx", args: ["@playwright/mcp@latest"] } },
+      mcpServers: { playwright: { command: "npx", args: ["@playwright/mcp@latest"], env: mapaCredenciales } },
       plugins: [{ type: "local", path: rutaSkill }],
       skills: ["qa"],
-      systemPrompt: { type: "preset", preset: "claude_code", append: ROL_QA },
+      systemPrompt: { type: "preset", preset: "claude_code", append: ROL_QA + appendCredenciales },
       // AskUserQuestion NO va aquí: comprobado en manual contra pruebas/sauce, el SDK emite el aviso
       // CLAUDE_SDK_CAN_USE_TOOL_SHADOWED — una entrada "pelada" en allowedTools se auto-aprueba antes
       // de consultar canUseTool, así que nunca llegaría a bloquearse para esperar la respuesta del

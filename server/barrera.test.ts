@@ -109,4 +109,18 @@ describe("redactarSecretos", () => {
     const env = { TOKEN_CORTO: "abc123", TOKEN_LARGO: "abc123456" };
     expect(redactarSecretos("visto: abc123456", env)).toBe("visto: «TOKEN_LARGO»");
   });
+
+  it("redacta credenciales de Configuración aunque su nombre no matchee PASSWORD/SECRET/TOKEN/KEY/CREDENCIAL", () => {
+    // "usuario_admin" no pasa el filtro de nombre que sí aplica a `env` — son datos de prueba que el
+    // propio usuario decidió llamar así, deben redactarse igual.
+    const credenciales = { usuario_admin: "standard_user", clave_admin: "secret_sauce" };
+    const texto = "he entrado con standard_user y secret_sauce";
+    expect(redactarSecretos(texto, {}, credenciales)).toBe("he entrado con «usuario_admin» y «clave_admin»");
+  });
+
+  it("combina env y credenciales en la misma pasada, valores largos primero entre ambos", () => {
+    const env = { API_TOKEN: "abcdef" };
+    const credenciales = { usuario: "abcdefghij" };
+    expect(redactarSecretos("visto: abcdefghij", env, credenciales)).toBe("visto: «usuario»");
+  });
 });

@@ -61,15 +61,18 @@ export function verificarLlamada(args: VerificarLlamadaArgs): ResultadoVerificac
 const PATRON_NOMBRE_SECRETO = /PASSWORD|SECRET|TOKEN|KEY|CREDENCIAL/i;
 
 /** Sustituye, dentro de `texto`, cualquier valor de `env` que parezca un secreto (por el nombre de
- *  su variable) por `«NOMBRE_VAR»`. Los valores más largos se sustituyen antes que los más cortos
- *  para que un valor corto no rompa a mitad uno más largo que lo contiene. */
-export function redactarSecretos(texto: string, env: NodeJS.ProcessEnv = process.env): string {
-  const secretos = Object.entries(env)
-    .filter((entrada): entrada is [string, string] => {
-      const [nombre, valor] = entrada;
-      return PATRON_NOMBRE_SECRETO.test(nombre) && typeof valor === "string" && valor.length >= 4;
-    })
-    .sort(([, a], [, b]) => b.length - a.length);
+ *  su variable) por `«NOMBRE_VAR»`, más cualquier valor de `credenciales` (Configuración → pestaña
+ *  de credenciales) SIN filtrar por nombre — a diferencia de `env`, esas variables las nombra el
+ *  usuario libremente ("usuario_admin" no matchea `PATRON_NOMBRE_SECRETO`, pero sigue siendo un dato
+ *  de prueba que no debe salir tal cual al chat). Los valores más largos se sustituyen antes que los
+ *  más cortos para que un valor corto no rompa a mitad uno más largo que lo contiene. */
+export function redactarSecretos(texto: string, env: NodeJS.ProcessEnv = process.env, credenciales: Record<string, string> = {}): string {
+  const deEnv = Object.entries(env).filter((entrada): entrada is [string, string] => {
+    const [nombre, valor] = entrada;
+    return PATRON_NOMBRE_SECRETO.test(nombre) && typeof valor === "string" && valor.length >= 4;
+  });
+  const deCredenciales = Object.entries(credenciales).filter((entrada): entrada is [string, string] => typeof entrada[1] === "string" && entrada[1].length >= 1);
+  const secretos = [...deEnv, ...deCredenciales].sort(([, a], [, b]) => b.length - a.length);
 
   let resultado = texto;
   for (const [nombre, valor] of secretos) {
@@ -80,11 +83,11 @@ export function redactarSecretos(texto: string, env: NodeJS.ProcessEnv = process
 
 /** Igual que `redactarSecretos`, pero recorre objetos/arrays aplicándolo a cada string hoja, sin
  *  mutar el valor original — para poder pasarle el `data` entero de un evento antes de emitirlo. */
-export function redactarSecretosProfundo(valor: unknown, env: NodeJS.ProcessEnv = process.env): unknown {
-  if (typeof valor === "string") return redactarSecretos(valor, env);
-  if (Array.isArray(valor)) return valor.map((elemento) => redactarSecretosProfundo(elemento, env));
+export function redactarSecretosProfundo(valor: unknown, env: NodeJS.ProcessEnv = process.env, credenciales: Record<string, string> = {}): unknown {
+  if (typeof valor === "string") return redactarSecretos(valor, env, credenciales);
+  if (Array.isArray(valor)) return valor.map((elemento) => redactarSecretosProfundo(elemento, env, credenciales));
   if (typeof valor === "object" && valor !== null) {
-    return Object.fromEntries(Object.entries(valor).map(([clave, v]) => [clave, redactarSecretosProfundo(v, env)]));
+    return Object.fromEntries(Object.entries(valor).map(([clave, v]) => [clave, redactarSecretosProfundo(v, env, credenciales)]));
   }
   return valor;
 }

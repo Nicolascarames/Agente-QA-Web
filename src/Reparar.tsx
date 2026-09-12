@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Panel } from "./Panel";
-import { commitGenerados, descartarGenerados, obtenerDiffGenerado, obtenerTestsRojos } from "./api";
+import { commitGenerados, descartarGenerados, guardarContenidoGenerado, obtenerContenidoGenerado, obtenerDiffGenerado, obtenerTestsRojos } from "./api";
 import type { ResultadoTestRojo, Sugerencia } from "../shared/tipos";
 
 // Bloque 7: misma geometría que dejó el Bloque 6 — izquierda 25 %, centro 46 % (arranca en 26.5 %),
@@ -87,7 +87,7 @@ export function Reparar({}: object) {
           tabId="reparar"
           panelId="detalle"
           titulo="Diagnóstico y propuesta"
-          disposicionPorDefecto={{ x: 31.5, y: 0, w: 67.5, h: 100, z: 1 }}
+          disposicionPorDefecto={{ x: 31.5, y: 0, w: 68.5, h: 100, z: 1 }}
         >
           {!rojoSeleccionado ? (
             <p className="text-xs text-text-dim">Selecciona un test en rojo de la lista.</p>
@@ -106,9 +106,30 @@ export function Reparar({}: object) {
 function PropuestaDiff({ test, onCambio }: { test: ResultadoTestRojo; onCambio: () => void }) {
   const [diff, setDiff] = useState<string | null>(null);
   const [errorDiff, setErrorDiff] = useState<string | null>(null);
+  const [contenido, setContenido] = useState("");
+  const [cargandoContenido, setCargandoContenido] = useState(true);
+  const [errorContenido, setErrorContenido] = useState<string | null>(null);
   const [procesando, setProcesando] = useState(false);
+  const [guardando, setGuardando] = useState(false);
 
-  useEffect(() => {
+  // Por separado a propósito, igual que en Generar.tsx: un repo destino sin `git` utilizable no
+  // debe impedir ver ni editar el contenido crudo, solo la sección de diff propuesto.
+  const cargarContenido = () => {
+    setCargandoContenido(true);
+    setErrorContenido(null);
+    obtenerContenidoGenerado(test.ficheroSpec)
+      .then((respuesta) => {
+        setContenido(respuesta.contenido);
+      })
+      .catch((err: unknown) => {
+        setErrorContenido(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => {
+        setCargandoContenido(false);
+      });
+  };
+
+  const cargarDiff = () => {
     setDiff(null);
     setErrorDiff(null);
     obtenerDiffGenerado(test.ficheroSpec)
@@ -116,9 +137,29 @@ function PropuestaDiff({ test, onCambio }: { test: ResultadoTestRojo; onCambio: 
         setDiff(respuesta.diff);
       })
       .catch((err: unknown) => {
+        setDiff("");
         setErrorDiff(err instanceof Error ? err.message : String(err));
       });
-  }, [test.ficheroSpec]);
+  };
+
+  const cargar = () => {
+    cargarContenido();
+    cargarDiff();
+  };
+
+  useEffect(cargar, [test.ficheroSpec]);
+
+  const guardar = () => {
+    setGuardando(true);
+    guardarContenidoGenerado(test.ficheroSpec, contenido)
+      .then(cargar)
+      .catch((err: unknown) => {
+        setErrorContenido(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => {
+        setGuardando(false);
+      });
+  };
 
   const aplicar = () => {
     setProcesando(true);
@@ -151,6 +192,26 @@ function PropuestaDiff({ test, onCambio }: { test: ResultadoTestRojo; onCambio: 
           {test.mensajeError}
         </pre>
       )}
+      <textarea
+        value={contenido}
+        onChange={(e) => {
+          setContenido(e.target.value);
+        }}
+        disabled={cargandoContenido}
+        spellCheck={false}
+        className="h-40 resize-none rounded-7 border border-border-soft bg-bg-sunken p-2.5 font-mono text-2xs text-text-bright disabled:opacity-50"
+      />
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={guardar}
+          disabled={guardando || cargandoContenido}
+          className="rounded-7 border border-accent bg-accent px-2.5 py-1.5 text-xs font-bold text-on-accent disabled:opacity-50"
+        >
+          {guardando ? "Guardando…" : "Guardar"}
+        </button>
+        {errorContenido && <p className="text-xs text-danger">{errorContenido}</p>}
+      </div>
       <div className="flex-1 overflow-auto rounded-8 border border-border-soft bg-bg-sunken p-2">
         {errorDiff ? (
           <p className="text-xs text-danger">{errorDiff}</p>

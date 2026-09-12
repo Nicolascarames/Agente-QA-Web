@@ -1,7 +1,8 @@
 # PRÓXIMOS PASOS — Agente-QA-Web
 
 Actualizado: 2026-09-12 (plan de nueve bloques completo; tres deudas cerradas; después del plan:
-continuidad de conversación y consola única)
+continuidad de conversación, consola única, contenido editable en Generar/Reparar, ejecutar tests
+desde la web, credenciales de prueba y diagnóstico del doctor en Configuración)
 
 Cola priorizada. **Una tarea = una línea.** El detalle vive en la spec.
 
@@ -77,6 +78,37 @@ Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`]
       además muestra tu propio mensaje al instante, narración legible del agente (no JSON en bruto),
       indicador de "trabajando" y un bloque resaltado al terminar el turno. Verificado en vivo contra
       `pruebas/sauce/`: dos mensajes seguidos, el segundo recuerda el primero. Detalle en `ESTADO.md`.
+- [x] **Contenido crudo editable en Generar y Reparar, no solo diff.** Cerrado 2026-09-12. Bug
+      reportado por el usuario: si un `.page.ts`/`.spec.ts` coincidía con el commit, esas pestañas
+      solo mostraban "sin cambios pendientes" sin enseñar el fichero. `GET/PUT
+      /api/generados/contenido?ruta=` + `<textarea>` editable, igual patrón que ya tenía Redactar
+      para `.feature`. De paso, contenido y diff se piden por separado (no con `Promise.all`) para
+      que un diff roto no bloquee ver/editar el fichero — verificado en vivo: `git.diff` falla en
+      `pruebas/sauce/` porque ese proyecto está fuera de git a propósito. Detalle en `ESTADO.md`.
+- [x] **`npm run dev` no arrancaba el backend de forma fiable en Windows.** Cerrado 2026-09-12. Bug
+      real reportado por el usuario (`/api/estado respondió 500`, luego `ECONNREFUSED`), no solo
+      procesos zombis: `concurrently` lanzando `tsx watch server/index.ts` con `stdio: "pipe"` nunca
+      arrancaba el proceso hijo que `tsx watch` respawnea, sin error visible. `scripts/dev.mjs`
+      reescrito sin `concurrently` (retirada de `package.json`): dos `spawn` directos con
+      `stdio: "inherit"`, verificado 3/3 con `npm run dev` real. Detalle en `ESTADO.md`.
+- [x] **Título del test = fichero, ejecutar tests desde Ejecutar, pasos+código juntos.** Cerrado
+      2026-09-12. Pedido por el usuario: el detalle de Ejecutar ya mostraba el `.spec.ts` en pequeño,
+      ahora es el título del panel; botón ▶ por fila y "Ejecutar todos" lanzan Playwright de verdad
+      (`server/ejecutorTests.ts`, `POST /api/tests/ejecutar`); el código del spec se ve junto a los
+      pasos del Gherkin, sin cambiar de pestaña. Detalle en `ESTADO.md`.
+- [x] **Configuración: URL editable, credenciales de prueba, diagnóstico del doctor.** Cerrado
+      2026-09-12. Pedido por el usuario ("todo lo que sea configurable... todo lo que mira doctor").
+      `appUrl` ganó control propio; nuevo fichero `agente-qa.credenciales.json` (nunca versionado,
+      `.gitignore` del proyecto destino actualizado solo) para usuario/contraseña o cualquier
+      variable libre, redactada del chat igual que un secreto; `GET /api/doctor` expone las cuatro
+      comprobaciones ya existentes. Detalle en `ESTADO.md`.
+- [x] **Redactar/Generar no refrescaban su lista tras generar desde la consola.** Cerrado 2026-09-12.
+      Bug real reportado por el usuario. Fix: recargan al detectar que `corridaActiva` pasó de un id
+      a `null` (fin de turno). Detalle en `ESTADO.md`.
+- [x] **Consola: scroll automático, respuestas en verde, preguntas con teclado.** Cerrado 2026-09-12.
+      Pedido por el usuario, estilo Claude Code: el chat baja solo al último evento; texto del agente
+      en verde claro; las opciones de `AskUserQuestion` se eligen con flechas/dígitos + Enter además
+      de click, con la primera como opción por defecto. Detalle en `ESTADO.md`.
 - [ ] **Publicar en npm** — cuando los nueve bloques estén implementados y validados contra webs
       reales. Hasta entonces se instala desde GitHub por SHA. Reservar `agente-qa` al publicar.
 
@@ -98,6 +130,11 @@ Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`]
       implementó `security find-generic-password` porque no hay máquina macOS a mano para verificar
       el nombre exacto del servicio, y adivinarlo daría falsos negativos silenciosos. Verificar y
       completar cuando haya acceso a macOS.
+- [ ] **"Ejecutar todos"/▶ por fila en Ejecutar es síncrono, sin progreso en vivo.** `POST
+      /api/tests/ejecutar` espera a que Playwright termine y devuelve el resultado entero de una vez
+      — no hay streaming paso a paso como en la consola del agente. Aceptable para una suite
+      pequeña; una suite grande bloquea la pestaña (spinner) hasta el final. Revisar si compensa
+      reusar el difusor de eventos de `server/agente.ts` para dar progreso en vivo.
 
 ### Cerradas 2026-09-12
 
