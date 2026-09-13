@@ -6,6 +6,11 @@ import { instalar } from "./instalar.js";
 
 const MARCADOR = "Generado por `agente-qa instalar`. No editar a mano: los cambios se pierden en la siguiente instalación.";
 
+// En Windows (`core.autocrlf=true`) los ficheros fuente llegan con CRLF, así que una aserción sobre
+// "---\nname: qa" falla aunque la cabecera esté donde debe. Peor: los `not.toContain` de abajo
+// pasarían siempre, incluso si la cabecera NO se hubiera recortado. Se normaliza antes de comparar.
+const sinCr = (contenido: string): string => contenido.replace(/\r\n/g, "\n");
+
 describe("instalar", () => {
   let proyecto: string;
 
@@ -31,15 +36,17 @@ describe("instalar", () => {
       ]),
     );
 
-    const skillMd = await readFile(path.join(proyecto, ".claude", "skills", "qa", "SKILL.md"), "utf8");
-    expect(skillMd).toContain("---\nname: qa");
+    const skillMd = sinCr(await readFile(path.join(proyecto, ".claude", "skills", "qa", "SKILL.md"), "utf8"));
+    // Al PRINCIPIO del fichero, no en cualquier sitio: si la cabecera no abre el fichero, Claude
+    // Code no la reconoce y la skill instalada no carga. Es el bug que escondían los CRLF.
+    expect(skillMd.startsWith("---\nname: qa")).toBe(true);
     expect(skillMd).toContain(MARCADOR);
 
-    const agentsMd = await readFile(path.join(proyecto, "AGENTS.md"), "utf8");
+    const agentsMd = sinCr(await readFile(path.join(proyecto, "AGENTS.md"), "utf8"));
     expect(agentsMd).not.toContain("---\nname: qa");
     expect(agentsMd).toContain(MARCADOR);
 
-    const copilotMd = await readFile(path.join(proyecto, ".github", "copilot-instructions.md"), "utf8");
+    const copilotMd = sinCr(await readFile(path.join(proyecto, ".github", "copilot-instructions.md"), "utf8"));
     expect(copilotMd).not.toContain("---\nname: qa");
     expect(copilotMd).toContain(MARCADOR);
     expect(copilotMd).toBe(agentsMd);

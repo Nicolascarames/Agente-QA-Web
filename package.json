@@ -1,23 +1,45 @@
 {
-  "name": "agente-qa-web",
+  "name": "qa-web-agent",
   "version": "0.1.0",
   "description": "Interfaz web local que convierte una frase en castellano en un test de Playwright ejecutado y en verde, vía el SDK de Claude.",
   "type": "module",
   "license": "MIT",
   "author": "Nicolascarames",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nicolascarames/Agente-QA-Web.git"
+  },
+  "homepage": "https://github.com/Nicolascarames/Agente-QA-Web#readme",
+  "bugs": {
+    "url": "https://github.com/Nicolascarames/Agente-QA-Web/issues"
+  },
+  "keywords": ["qa", "testing", "playwright", "gherkin", "bdd", "claude", "agent", "e2e"],
   "engines": {
     "node": ">=22"
   },
   "bin": {
+    "qa-web-agent": "bin/agente-qa.mjs",
     "agente-qa": "bin/agente-qa.mjs"
   },
+  "files": [
+    "bin",
+    "dist-client",
+    "dist-server",
+    "skill",
+    "scripts/bienvenida.mjs",
+    "README.md",
+    "!dist-server/**/*.test.*"
+  ],
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "build": "vite build && node scripts/comprobar-estilos.mjs && node scripts/limpiar-dist-server.mjs && tsc -p tsconfig.server.json",
     "start": "node dist-server/server/index.js",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.app.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepare": "npm run build",
+    "postinstall": "node scripts/bienvenida.mjs",
+    "postprepare": "node scripts/bienvenida.mjs --dev"
   },
   "overrides": {
     "rolldown": "1.2.3"

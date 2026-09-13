@@ -18,6 +18,8 @@
     "scripts/dev.mjs",
     "scripts/comprobar-estilos.mjs",
     "scripts/limpiar-dist-server.mjs",
+    "scripts/bienvenida.mjs",
+    "scripts/bienvenida.test.mjs",
     "bin/agente-qa.mjs"
   ]
 }

@@ -40,7 +40,11 @@ export interface ResultadoInstalar {
 }
 
 function separarFrontmatter(contenido: string): { frontmatter: string; cuerpo: string } {
-  const lineas = contenido.split("\n");
+  // Partir por /\r?\n/ y no por "\n": en Windows (`core.autocrlf=true`) la primera línea llega como
+  // "---\r", no reconocíamos la cabecera, y el SKILL.md generado salía con el comentario marcador
+  // ANTES del `---` — con la cabecera fuera del principio del fichero, Claude Code no la lee y la
+  // skill instalada no carga. Los `join("\n")` de abajo normalizan la salida a LF a propósito.
+  const lineas = contenido.split(/\r?\n/);
   if (lineas[0] !== "---") {
     return { frontmatter: "", cuerpo: contenido };
   }
