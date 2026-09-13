@@ -35,6 +35,11 @@ Cómo trabajar en este repo. Las decisiones de producto viven en la spec, no aqu
   herramienta local que usa el Claude Code del propio usuario queda fuera de la restricción de
   Anthropic sobre el login de claude.ai; la documentación no distingue ese caso. Era razonamiento
   mío presentado como hecho.
+- **Lo que `ESTADO.md` afirma de la interfaz no es prueba de que la interfaz lo haga.** Decía desde
+  el 12/9 que la consola daba «narración legible, no JSON en bruto»; la primera vez que se abrió el
+  navegador y se lanzó una petición real, volcaba el catálogo entero de herramientas MCP y un
+  `hook_started` por hook. Un comportamiento de UI solo se da por bueno viéndolo en vivo; escribirlo
+  en `ESTADO.md` no lo verifica.
 - **Una conclusión medida con el sistema roto no sobrevive al sistema nuevo.** El orden de
   localizadores tenía `getByTestId` primero porque el sistema anterior midió `getByRole` contra seis
   botones gemelos sin saber acotar por el contenedor padre. Con esa técnica disponible, la medición
