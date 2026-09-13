@@ -125,6 +125,17 @@ Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`]
 
 ## Deuda anotada
 
+- [ ] **Snapshot acotado (`browser_find`/`browser_snapshot({target})`) en vez del árbol
+      completo — vigilar si compensa con el tiempo.** Cambiado el §2 de
+      `skill/skills/qa/SKILL.md` (2026-09-12): medido a mano en `pruebas/sauce/` que un snapshot
+      acotado a una fila de producto pesa ~89% menos que el árbol completo (629 vs 5.637 bytes,
+      ~4 car./token) y que `browser_find` no siempre trae el `ref` accionable (se corta antes del
+      botón; hay que completar con `browser_snapshot({target})`). Medido el mecanismo aislado, no
+      una ejecución real de punta a punta: falta ver si acotar esconde algo relevante fuera del
+      target (un modal, un banner de cookies) y obliga a más intentos de reparación de los que
+      ahorra en tokens. Revisar tras un número real de ejecuciones — si genera más rojos que
+      antes, volver a exigir el árbol completo salvo para el caso de "reparar con mensaje de
+      error concreto".
 - [ ] **`doctor` no comprueba el llavero de macOS.** `comprobarCredenciales` (`server/doctor.ts`)
       solo mira el fichero `.credentials.json`; en macOS la sesión puede vivir en el llavero. No se
       implementó `security find-generic-password` porque no hay máquina macOS a mano para verificar

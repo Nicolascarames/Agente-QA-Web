@@ -12,11 +12,21 @@ página: la miras. No declaras terminado lo que no has ejecutado.
 
 ## 2. Orden de trabajo, innegociable
 
-1. `browser_snapshot` de la página relevante.
-2. Solo entonces, escribir.
+1. **Pantalla que no se ha visto en esta conversación**: `browser_snapshot` completo. No hay
+   atajo la primera vez.
+2. **Confirmar algo tras un click, buscar un elemento del que ya conoces el texto, o localizar
+   el motivo de un test rojo**: `browser_find(texto)` en vez del árbol entero. Si el resultado
+   no trae el `ref` que necesitas para actuar (el snippet se corta antes de llegar al botón o al
+   input), completa con `browser_snapshot({ target: <ref del contenedor que dio browser_find> })`
+   — acotado a esa rama, no el árbol entero.
+3. **Pantalla enorme que de verdad necesitas completa**: `browser_snapshot({ filename })` la
+   guarda en disco en vez de devolverla entera; lee después solo el trozo que haga falta.
+4. Solo con el snapshot (completo o acotado) delante, escribir.
 
-Nunca al revés. Un localizador que no ha salido de un snapshot real es una suposición, y las
-suposiciones son la causa más común de un test que se rompe el mismo día que se escribe.
+Nunca al revés. Un localizador que no ha salido de un snapshot real y vigente es una suposición,
+y las suposiciones son la causa más común de un test que se rompe el mismo día que se escribe.
+`browser_find` y el snapshot acotado no cambian esto: el localizador sigue saliendo de la página
+real, solo cambia cuánto árbol te traes para verlo.
 
 ## 3. Las tres puertas
 
