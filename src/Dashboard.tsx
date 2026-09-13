@@ -1,51 +1,36 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  obtenerActividad,
-  obtenerEstado,
-  obtenerFragiles,
-  obtenerHistorial,
-  obtenerTests,
-  obtenerTrazabilidad,
-  type ActividadDisponible,
-  type ActividadNoDisponible,
-} from "./api";
+import { obtenerEstado, obtenerFragiles, obtenerHistorial, obtenerTests, obtenerTrazabilidad } from "./api";
 import { Panel, type DisposicionPanel } from "./Panel";
 import type { CoberturaEscenario, ElementoFragil, EstadoProyecto, RegistroEjecucion, ResultadoTest } from "../shared/tipos";
 
 type CargaEstado = { estado: "cargando" } | { estado: "error"; mensaje: string } | { estado: "listo"; datos: EstadoProyecto };
 
-type CargaActividad =
-  | { estado: "cargando" }
-  | { estado: "listo"; datos: ActividadDisponible | ActividadNoDisponible };
-
 // Cada una de las seis cajas del Bloque 8 depende de un endpoint distinto: si uno falla, solo esa
-// caja se queda en guion, el resto de la vista sigue viva (criterio defensivo ya usado con
-// `obtenerActividad` más abajo).
+// caja se queda en guion, el resto de la vista sigue viva.
 type CargaBloque<T> = { estado: "cargando" } | { estado: "error" } | { estado: "listo"; datos: T };
 
-// Geometría de las seis cajas de estadística (Bloque 8), en dos filas de tres a todo el ancho del
-// contenedor (antes solo ocupaban la mitad izquierda, dejando un hueco vacío a la derecha). Debajo,
-// "En curso ahora"/"Actividad reciente" también a todo el ancho, en dos columnas. Separación
-// uniforme de 1.5 (GAP) en horizontal y vertical, sin dejar sobrante: cada fila/columna llega hasta
-// el borde del contenedor.
+// Geometría de las seis cajas de estadística (Bloque 8), en dos filas de tres a todo el ancho y
+// alto del contenedor. "En curso ahora"/"Actividad reciente" (paneles del sistema de configuración
+// anterior, `.agente-qa/` y `agente-qa-mcp metrics`, ninguno de los dos vuelve — ver ESTADO.md) se
+// retiraron: las seis cajas ocupan ahora las dos filas completas. Separación uniforme de 1.5 (GAP)
+// en horizontal y vertical, sin dejar sobrante: cada fila/columna llega hasta el borde del
+// contenedor.
 const GAP = 1.5;
 const COL_W = (100 - 2 * GAP) / 3;
+const FILA_H = (100 - GAP) / 2;
 const GEOMETRIA_STATS: DisposicionPanel[] = [0, 1, 2, 0, 1, 2].map((col, i) => ({
   x: col * (COL_W + GAP),
-  y: i < 3 ? 0 : 15.75,
+  y: i < 3 ? 0 : FILA_H + GAP,
   w: COL_W,
-  h: 14.25,
+  h: FILA_H,
   z: 1,
 }));
-const GEOMETRIA_CUR: DisposicionPanel = { x: 0, y: 31.5, w: (100 - GAP) / 2, h: 68.5, z: 1 };
-const GEOMETRIA_ACT: DisposicionPanel = { x: (100 - GAP) / 2 + GAP, y: 31.5, w: (100 - GAP) / 2, h: 68.5, z: 1 };
 
 // Etiquetas de las cajas, en el mismo orden que GEOMETRIA_STATS.
 const ETIQUETAS = ["Escenarios cubiertos", "Tests en verde", "Tests en rojo", "Última ejecución", "Coste acumulado", "Elementos frágiles"];
 
 export function Dashboard() {
   const [estado, setEstado] = useState<CargaEstado>({ estado: "cargando" });
-  const [actividad, setActividad] = useState<CargaActividad>({ estado: "cargando" });
   const [trazabilidad, setTrazabilidad] = useState<CargaBloque<CoberturaEscenario[]>>({ estado: "cargando" });
   const [tests, setTests] = useState<CargaBloque<ResultadoTest[]>>({ estado: "cargando" });
   const [historial, setHistorial] = useState<CargaBloque<RegistroEjecucion[]>>({ estado: "cargando" });
@@ -63,13 +48,6 @@ export function Dashboard() {
 
   useEffect(() => {
     void recargarEstado();
-    void obtenerActividad()
-      .then((datos) => {
-        setActividad({ estado: "listo", datos });
-      })
-      .catch(() => {
-        setActividad({ estado: "listo", datos: { disponible: false, motivo: "no se pudo consultar /api/actividad" } });
-      });
     void obtenerTrazabilidad()
       .then((datos) => {
         setTrazabilidad({ estado: "listo", datos });
@@ -171,22 +149,6 @@ export function Dashboard() {
               destacado={statBoxes[i]?.destacado}
             />
           ))}
-
-          <Panel tabId="dashboard" panelId="cur" titulo="En curso ahora" disposicionPorDefecto={GEOMETRIA_CUR}>
-            {estado.estado === "cargando" && <p className="text-text-dim">Cargando…</p>}
-            {estado.estado === "listo" && !estado.datos.agenteQaInicializado && (
-              <p className="text-accent-soft">No hay .agente-qa/ en este proyecto todavía.</p>
-            )}
-            {estado.estado === "listo" && estado.datos.agenteQaInicializado && (
-              <p className="text-text-dim">Sin ejecución en curso.</p>
-            )}
-          </Panel>
-
-          <Panel tabId="dashboard" panelId="act" titulo="Actividad reciente" disposicionPorDefecto={GEOMETRIA_ACT}>
-            {actividad.estado === "cargando" && <p className="text-text-dim">Cargando…</p>}
-            {actividad.estado === "listo" && !actividad.datos.disponible && <p className="text-accent">{actividad.datos.motivo}</p>}
-            {actividad.estado === "listo" && actividad.datos.disponible && <p className="text-text">{actividad.datos.eventos.length} eventos.</p>}
-          </Panel>
         </div>
       )}
     </div>

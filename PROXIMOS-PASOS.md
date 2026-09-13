@@ -1,8 +1,7 @@
 # PRÓXIMOS PASOS — Agente-QA-Web
 
-Actualizado: 2026-09-12 (plan de nueve bloques completo; tres deudas cerradas; después del plan:
-continuidad de conversación, consola única, contenido editable en Generar/Reparar, ejecutar tests
-desde la web, credenciales de prueba y diagnóstico del doctor en Configuración)
+Actualizado: 2026-09-13 (progreso en vivo al ejecutar, asistente de primer arranque, pestaña
+«Empezar», y ocho fallos corregidos tras probar la app entera contra SauceDemo real)
 
 Cola priorizada. **Una tarea = una línea.** El detalle vive en la spec.
 
@@ -109,8 +108,24 @@ Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`]
       Pedido por el usuario, estilo Claude Code: el chat baja solo al último evento; texto del agente
       en verde claro; las opciones de `AskUserQuestion` se eligen con flechas/dígitos + Enter además
       de click, con la primera como opción por defecto. Detalle en `ESTADO.md`.
-- [ ] **Publicar en npm** — cuando los nueve bloques estén implementados y validados contra webs
-      reales. Hasta entonces se instala desde GitHub por SHA. Reservar `agente-qa` al publicar.
+- [x] **Instalación guiada: el asistente de primer arranque y la pestaña «Empezar».** Cerrado
+      2026-09-13. Piezas 2 y 4 de
+      [`docs/superpowers/specs/2026-09-12-instalacion-guiada-y-publicacion.md`](docs/superpowers/specs/2026-09-12-instalacion-guiada-y-publicacion.md):
+      `server/asistente.ts` (IO inyectable, 9 pasos en el repo del usuario y 4 para desarrollar este,
+      idempotente, sin preguntar si no hay TTY); `npx agente-qa` sin config asiste y luego levanta la
+      web; `npx agente-qa iniciar` y `npm run empezar` lo repiten; README reordenado. Además, pedido
+      por el usuario y fuera de la spec: octava pestaña **Empezar** en la web (estado de preparación
+      en vivo, tres primeros pasos con botón que escribe el ejemplo en la consola, qué hace cada
+      pestaña), auto-seleccionada la primera vez y descartable. Detalle en `ESTADO.md`.
+- [x] **Ocho fallos encontrados probando la app entera en vivo.** Cerrado 2026-09-13. La consola
+      volcaba JSON crudo y duplicaba el mensaje final; Dashboard y Reports arrastraban tres paneles
+      del sistema retirado; ejecutar tests desde la web no entraba en el historial; el fichero de
+      setup de Playwright daba 400; faltaba el favicon. Detalle en `ESTADO.md`.
+- [ ] **Publicar en npm** — Piezas 1 y 3 de la spec de instalación guiada. La 1 (empaquetado) está
+      hecha; falta la 3: `.github/workflows/ci.yml` y `publicar.yml`, más los cuatro pasos manuales
+      (esperar a que npm libere el nombre, repo público, publicar la 1.0.0 a mano, configurar el
+      trusted publisher). Ojo: `package.json` dice hoy `qa-web-agent` y `0.1.0`; la spec decide
+      `agente-qa` y `1.0.0` — hay que cerrar esa discrepancia antes de publicar.
 
 ---
 
@@ -136,16 +151,32 @@ Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`]
       ahorra en tokens. Revisar tras un número real de ejecuciones — si genera más rojos que
       antes, volver a exigir el árbol completo salvo para el caso de "reparar con mensaje de
       error concreto".
+      **Primera medida real (2026-09-13)**: un ciclo completo contra SauceDemo (frase → `.feature` →
+      page object ampliado → `.spec.ts` → verde) costó $0.42 en 25 turnos y **cero intentos de
+      reparación**, verde a la primera. La banda de coste de los ciclos del 12/9 era $0.13–$0.44, así
+      que no empeora. **No es concluyente**: no se pudo confirmar desde la consola si el agente llamó
+      a `browser_snapshot` con `target` o sin él. Eso ya no bloquea — la consola pinta ahora los
+      parámetros de cada herramienta (arreglado el mismo día), así que la próxima ejecución real sí
+      es medible. Anotar 3-4 ciclos más y decidir.
+- [ ] **El panel de salida en vivo de Ejecutar queda apretado dentro del panel de la lista**, y las
+      listas de Redactar/Generar/Ejecutar se cortan en horizontal por debajo de ~1100px de ancho. A
+      1440px (el ancho con el que se validó la maqueta) se ve bien. Decisión de diseño pendiente:
+      mover la salida en vivo al panel de detalle o dejarla donde está.
+- [ ] **El resumen de resultado de herramienta en la consola muestra solo la primera línea.** Un
+      `Glob` que devuelve tres ficheros se pinta como `← Glob: tests\pages\login.page.ts`, que se lee
+      como si hubiera devuelto uno. Mejor sería contar (`← Glob: 3 resultados`) cuando el resultado
+      tiene varias líneas. Cosmético, en `src/ConsolaGlobal.tsx` (`resumenResultadoHerramienta`).
 - [ ] **`doctor` no comprueba el llavero de macOS.** `comprobarCredenciales` (`server/doctor.ts`)
       solo mira el fichero `.credentials.json`; en macOS la sesión puede vivir en el llavero. No se
       implementó `security find-generic-password` porque no hay máquina macOS a mano para verificar
       el nombre exacto del servicio, y adivinarlo daría falsos negativos silenciosos. Verificar y
       completar cuando haya acceso a macOS.
-- [ ] **"Ejecutar todos"/▶ por fila en Ejecutar es síncrono, sin progreso en vivo.** `POST
-      /api/tests/ejecutar` espera a que Playwright termine y devuelve el resultado entero de una vez
-      — no hay streaming paso a paso como en la consola del agente. Aceptable para una suite
-      pequeña; una suite grande bloquea la pestaña (spinner) hasta el final. Revisar si compensa
-      reusar el difusor de eventos de `server/agente.ts` para dar progreso en vivo.
+### Cerradas 2026-09-13
+
+- [x] **"Ejecutar todos"/▶ por fila era síncrono, sin progreso en vivo.** `ejecutarPlaywright` trocea
+      stdout por líneas (sin ANSI) hacia un difusor propio y `GET /api/tests/eventos` las sirve por
+      SSE; la pestaña las pinta según salen. Verificado en vivo: 3 → 14 → 20 líneas en los tres
+      primeros segundos de una corrida real. Detalle en `ESTADO.md`.
 
 ### Cerradas 2026-09-12
 

@@ -22,77 +22,215 @@ interface BloqueContenidoAsistente {
   type: string;
   text?: string;
   name?: string;
+  input?: unknown;
+  id?: string;
 }
 
-function LineaVolcadoCrudo({ evento }: { evento: EventoNdjson }) {
-  return (
-    <li className="border-b border-border pb-1.5 text-xs text-text-faint">
-      <span className="text-text-ghost">{evento.ts}</span> <span className="text-accent-soft">{evento.type}</span>{" "}
-      <span className="text-text-faint">[{evento.agent}]</span>
-      <pre className="whitespace-pre-wrap break-all text-2xs text-text-dim">{serializarDatos(evento.data)}</pre>
-    </li>
-  );
+/** Forma real de un bloque `tool_result` dentro de `message.content` de un `agente.user`
+ *  (`ToolResultBlockParam` del SDK): `content` es el texto que ve el modelo, no el `tool_use_result`
+ *  estructurado — ese si es JSON crudo por tool y por eso no se usa aquí. */
+interface BloqueResultadoHerramienta {
+  type: string;
+  tool_use_id?: string;
+  content?: unknown;
+  is_error?: boolean;
 }
 
-function LineaAgenteAssistant({ evento }: { evento: EventoNdjson }) {
-  const contenido = (evento.data as { message?: { content?: unknown } } | undefined)?.message?.content;
-  if (!Array.isArray(contenido) || contenido.length === 0) {
-    return <LineaVolcadoCrudo evento={evento} />;
+function textoDeContenidoToolResult(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .filter((b): b is { type?: string; text?: string } => typeof b === "object" && b !== null)
+      .filter((b) => b.type === "text" && typeof b.text === "string")
+      .map((b) => b.text as string)
+      .join("\n");
   }
-  return (
-    <>
-      {(contenido as BloqueContenidoAsistente[]).map((bloque, indice) => {
-        if (bloque.type === "text" && bloque.text) {
-          return (
-            <li key={indice} className="text-xs text-ok">
-              {bloque.text}
-            </li>
-          );
-        }
-        if (bloque.type === "tool_use") {
-          return (
-            <li key={indice} className="text-2xs text-text-dim">
-              → usando {bloque.name}
-            </li>
-          );
-        }
-        return null;
-      })}
-    </>
-  );
+  return "";
 }
 
-function LineaEvento({ evento }: { evento: EventoNdjson }) {
+/** Resumen de una línea de un `tool_result`, en vez de la línea muda "agente.user" (ruido puro en
+ *  ejecuciones largas: una por cada llamada a herramienta) o el objeto entero. Antepone el nombre de
+ *  la herramienta cuando se conoce (correlado por `tool_use_id` con el `tool_use` que lo pidió). */
+export function resumenResultadoHerramienta(bloque: BloqueResultadoHerramienta, nombreHerramienta?: string): string {
+  const prefijo = nombreHerramienta ? `${nombreHerramienta}: ` : "";
+  const contenidoTexto = textoDeContenidoToolResult(bloque.content).trim();
+  const primeraLinea = contenidoTexto.split("\n")[0] ?? "";
+  if (bloque.is_error) return `← ${prefijo}error: ${primeraLinea || "sin detalle"}`;
+  if (!contenidoTexto) return `← ${prefijo}ok`;
+  return `← ${prefijo}${primeraLinea}`;
+}
+
+/** `{ id, nombre }` de cada `tool_use` de un `agente.assistant`, para poder nombrar su `tool_result`
+ *  (que llega después, como `agente.user`, correlado solo por `tool_use_id`) — sin esto el resumen
+ *  de resultado no sabría si fue un `Glob` o un `Bash`. */
+export function extraerToolUseIds(evento: EventoNdjson): { id: string; nombre: string }[] {
+  if (evento.type !== "agente.assistant") return [];
+  const contenido = (evento.data as { message?: { content?: unknown } } | undefined)?.message?.content;
+  if (!Array.isArray(contenido)) return [];
+  return (contenido as BloqueContenidoAsistente[])
+    .filter((b): b is BloqueContenidoAsistente & { id: string } => b.type === "tool_use" && typeof b.id === "string")
+    .map((b) => ({ id: b.id, nombre: b.name ?? "?" }));
+}
+
+/** Un `tool_use` legible: nombre + sus parámetros — sin esto no se puede saber desde la consola,
+ *  p.ej., si `browser_snapshot` se llamó con `target` o sin él (deuda técnica abierta del proyecto). */
+export function formatearParametrosHerramienta(input: unknown): string {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return "";
+  const entradas = Object.entries(input as Record<string, unknown>);
+  if (entradas.length === 0) return "";
+  return entradas.map(([clave, valor]) => `${clave}: ${typeof valor === "string" ? valor : JSON.stringify(valor)}`).join(", ");
+}
+
+/** Texto (concatenado) de los bloques `text` de un mensaje `agente.assistant`, o `null` si el
+ *  evento no es de ese tipo o no trae texto — sirve para detectar cuándo `result` del bloque de fin
+ *  de turno repite palabra por palabra lo que ya se pintó como burbuja del asistente. */
+export function extraerTextoAsistente(evento: EventoNdjson): string | null {
+  if (evento.type !== "agente.assistant") return null;
+  const contenido = (evento.data as { message?: { content?: unknown } } | undefined)?.message?.content;
+  if (!Array.isArray(contenido)) return null;
+  const texto = (contenido as BloqueContenidoAsistente[])
+    .filter((b) => b.type === "text" && b.text)
+    .map((b) => b.text)
+    .join("\n");
+  return texto || null;
+}
+
+/** Resumen legible de un evento `agente.system` (mensaje `system` del SDK), o `null` si es puro
+ *  andamiaje (hooks de arranque/fin de turno, progreso interno) que no aporta nada a una persona
+ *  leyendo la consola y por tanto no se pinta. `init` sí se resume — sin enumerar el catálogo
+ *  completo de herramientas MCP, solo cuántas hay. */
+export function resumenEventoSistema(data: unknown): string | null {
+  const d = (data ?? {}) as { subtype?: string; model?: string; tools?: unknown[] };
+  if (d.subtype === "init") {
+    const numHerramientas = Array.isArray(d.tools) ? d.tools.length : 0;
+    return `Sesión iniciada — modelo ${d.model ?? "desconocido"}, ${String(numHerramientas)} herramientas disponibles.`;
+  }
+  return null;
+}
+
+/** Texto del bloque resaltado de fin de turno. Bug real: `result` del mensaje `result` del SDK trae
+ *  el mismo texto que ya emitió el último `agente.assistant` como burbuja — pintarlo tal cual lo
+ *  duplica en pantalla. Si coincide con lo último dicho por el asistente se sustituye por un
+ *  genérico; si no coincide (típicamente un error, que no viene de ningún bloque de texto previo) se
+ *  conserva, porque ahí sí es información nueva. */
+export function textoBloqueFinal(evento: EventoNdjson, ultimoTextoAsistente: string | null): string {
+  const esError = evento.type === "operation.error";
+  const { result } = (evento.data as { result?: string } | undefined) ?? {};
+  if (esError) return result ?? "Ha ocurrido un error — mira el detalle.";
+  if (result && result === ultimoTextoAsistente) return "Terminado.";
+  return result ?? "Terminado.";
+}
+
+/** Cómo pintar un evento: una lista (un `agente.assistant` puede traer varios bloques) de
+ *  instrucciones de render puras, sin JSX — así se pueden testear sin montar React. Ningún tipo de
+ *  evento sin rama propia cae ya en un volcado JSON: el `default` es una línea corta con el tipo. */
+export type ItemLinea =
+  | { tipo: "usuario"; texto: string }
+  | { tipo: "textoAsistente"; texto: string }
+  | { tipo: "usoHerramienta"; nombre: string; parametros: string }
+  | { tipo: "resultadoHerramienta"; texto: string }
+  | { tipo: "finTurno"; error: boolean; texto: string }
+  | { tipo: "rawStdout"; texto: string }
+  | { tipo: "corto"; etiqueta: string; ts: string; agent: string };
+
+export function describirEvento(
+  evento: EventoNdjson,
+  ultimoTextoAsistente: string | null,
+  nombresPorToolUseId: Record<string, string> = {}
+): ItemLinea[] {
   if (evento.type === "raw.stdout") {
     const datos = evento.data as { linea?: unknown };
     const linea = typeof datos?.linea === "string" ? datos.linea : serializarDatos(evento.data);
-    return <li className="text-xs text-text-dim">{linea}</li>;
+    return [{ tipo: "rawStdout", texto: linea }];
   }
   if (evento.type === "usuario.mensaje") {
     const { texto } = evento.data as { texto: string };
-    return (
-      <li className="ml-auto max-w-[80%] rounded-7 border border-accent bg-accent-bg px-2.5 py-1.5 text-xs text-text-bright">
-        {texto}
-      </li>
-    );
+    return [{ tipo: "usuario", texto }];
   }
   if (evento.type === "agente.assistant") {
-    return <LineaAgenteAssistant evento={evento} />;
+    const contenido = (evento.data as { message?: { content?: unknown } } | undefined)?.message?.content;
+    if (!Array.isArray(contenido) || contenido.length === 0) {
+      return [{ tipo: "corto", etiqueta: evento.type, ts: evento.ts, agent: evento.agent }];
+    }
+    const items: ItemLinea[] = [];
+    for (const bloque of contenido as BloqueContenidoAsistente[]) {
+      if (bloque.type === "text" && bloque.text) {
+        items.push({ tipo: "textoAsistente", texto: bloque.text });
+      } else if (bloque.type === "tool_use") {
+        items.push({ tipo: "usoHerramienta", nombre: bloque.name ?? "?", parametros: formatearParametrosHerramienta(bloque.input) });
+      }
+    }
+    return items;
   }
   if (evento.type === "operation.completed" || evento.type === "operation.error") {
-    const esError = evento.type === "operation.error";
-    const { result } = (evento.data as { result?: string } | undefined) ?? {};
-    return (
-      <li
-        className={`rounded-7 border px-2.5 py-1.5 text-xs font-semibold ${
-          esError ? "border-danger bg-bg-sunken text-danger" : "border-accent bg-accent-bg text-text-bright"
-        }`}
-      >
-        {result ?? (esError ? "Ha ocurrido un error — mira el detalle." : "Terminado.")}
-      </li>
-    );
+    return [{ tipo: "finTurno", error: evento.type === "operation.error", texto: textoBloqueFinal(evento, ultimoTextoAsistente) }];
   }
-  return <LineaVolcadoCrudo evento={evento} />;
+  if (evento.type === "agente.system") {
+    const resumen = resumenEventoSistema(evento.data);
+    return resumen ? [{ tipo: "corto", etiqueta: resumen, ts: evento.ts, agent: evento.agent }] : [];
+  }
+  // Andamiaje del SDK, igual que los hooks de `agente.system`: informa a herramientas de
+  // orquestación, no a la persona que lee la consola.
+  if (evento.type === "agente.rate_limit_event") {
+    return [];
+  }
+  if (evento.type === "agente.user") {
+    const contenido = (evento.data as { message?: { content?: unknown } } | undefined)?.message?.content;
+    const bloquesResultado = Array.isArray(contenido)
+      ? (contenido as BloqueResultadoHerramienta[]).filter((b) => b.type === "tool_result")
+      : [];
+    // La mayoría de `agente.user` son tool_result — pero no todos por contrato del SDK ("chiefly"),
+    // así que sin ninguno cae al mismo corto genérico que cualquier tipo sin rama propia.
+    if (bloquesResultado.length === 0) {
+      return [{ tipo: "corto", etiqueta: evento.type, ts: evento.ts, agent: evento.agent }];
+    }
+    return bloquesResultado.map((bloque) => ({
+      tipo: "resultadoHerramienta",
+      texto: resumenResultadoHerramienta(bloque, bloque.tool_use_id ? nombresPorToolUseId[bloque.tool_use_id] : undefined),
+    }));
+  }
+  return [{ tipo: "corto", etiqueta: evento.type, ts: evento.ts, agent: evento.agent }];
+}
+
+function LineaItem({ item }: { item: ItemLinea }) {
+  switch (item.tipo) {
+    case "usuario":
+      return (
+        <li className="ml-auto max-w-[80%] rounded-7 border border-accent bg-accent-bg px-2.5 py-1.5 text-xs text-text-bright">
+          {item.texto}
+        </li>
+      );
+    case "textoAsistente":
+      return <li className="text-xs text-ok">{item.texto}</li>;
+    case "usoHerramienta":
+      return (
+        <li className="text-2xs text-text-dim">
+          → usando {item.nombre}
+          {item.parametros ? `(${item.parametros})` : ""}
+        </li>
+      );
+    case "resultadoHerramienta":
+      return <li className="text-2xs text-text-dim">{item.texto}</li>;
+    case "finTurno":
+      return (
+        <li
+          className={`rounded-7 border px-2.5 py-1.5 text-xs font-semibold ${
+            item.error ? "border-danger bg-bg-sunken text-danger" : "border-accent bg-accent-bg text-text-bright"
+          }`}
+        >
+          {item.texto}
+        </li>
+      );
+    case "rawStdout":
+      return <li className="text-xs text-text-dim">{item.texto}</li>;
+    case "corto":
+      return (
+        <li className="text-2xs text-text-faint">
+          <span className="text-text-ghost">{item.ts}</span> <span className="text-accent-soft">{item.etiqueta}</span>{" "}
+          <span className="text-text-faint">[{item.agent}]</span>
+        </li>
+      );
+  }
 }
 
 export interface ConsolaGlobalProps {
@@ -252,7 +390,25 @@ export function ConsolaGlobal({
           {eventos.length === 0 ? (
             <p className="text-text-dim">Sin eventos todavía: escribe un comando.</p>
           ) : (
-            eventos.map((evento, indice) => <LineaEvento key={`${evento.runId}-${String(indice)}`} evento={evento} />)
+            (() => {
+              // Acumuladores mutables a propósito, mismo patrón que `contadorGlobal` más abajo: hace
+              // falta el texto del último `agente.assistant` visto para no repetirlo en el bloque de
+              // fin de turno (ver `textoBloqueFinal`), y el nombre de cada `tool_use` por su id para
+              // poder nombrar su `tool_result`, que llega después como `agente.user` sin más pista
+              // que ese id (ver `extraerToolUseIds`).
+              let ultimoTextoAsistente: string | null = null;
+              const nombresPorToolUseId: Record<string, string> = {};
+              return eventos.flatMap((evento, indiceEvento) => {
+                const items = describirEvento(evento, ultimoTextoAsistente, nombresPorToolUseId);
+                ultimoTextoAsistente = extraerTextoAsistente(evento) ?? ultimoTextoAsistente;
+                for (const { id, nombre } of extraerToolUseIds(evento)) {
+                  nombresPorToolUseId[id] = nombre;
+                }
+                return items.map((item, indiceItem) => (
+                  <LineaItem key={`${evento.runId}-${String(indiceEvento)}-${String(indiceItem)}`} item={item} />
+                ));
+              });
+            })()
           )}
         </ul>
         {corridaActiva &&

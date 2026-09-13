@@ -15,13 +15,15 @@ import type { ResultadoTest } from "../shared/tipos";
 // va pintando las líneas del reporter `list` de Playwright según salen, para que el spinner ciego de
 // antes tenga progreso real debajo.
 
-/** Nombre de fichero suelto a partir de lo que reporte Playwright en `ficheroSpec` (puede venir con
- *  ruta completa según el `testDir` del repo destino): la convención de esta app (Bloque 8,
- *  trazabilidad) es que el `.spec.ts` vive siempre en `tests/specs/<nombre>`, así que reconstruir la
- *  ruta por el nombre base es más fiable que confiar en el formato exacto que reportó Playwright. */
+/** Ruta bajo `tests/` a partir de lo que reporte Playwright en `ficheroSpec` — relativa a `testDir`
+ *  (`./tests` en la convención de esta app), p.ej. `specs/login.spec.ts` o, para el fichero de
+ *  setup, `setup/auth.setup.ts`. Bug real corregido: esta función forzaba siempre el prefijo
+ *  `tests/specs/` descartando la subcarpeta real, así que un test de setup pedía
+ *  `tests/specs/auth.setup.ts` (404/400 — no existe ahí) en vez de `tests/setup/auth.setup.ts`,
+ *  donde vive de verdad. Solo antepone `tests/` si Playwright no lo trae ya. */
 function rutaSpecDesdeFichero(ficheroSpec: string): string {
-  const nombre = ficheroSpec.split(/[\\/]/).pop() ?? ficheroSpec;
-  return `tests/specs/${nombre}`;
+  const normalizada = ficheroSpec.replaceAll("\\", "/");
+  return normalizada.startsWith("tests/") ? normalizada : `tests/${normalizada}`;
 }
 
 const ICONO_ESTADO: Record<ResultadoTest["estado"], string> = {

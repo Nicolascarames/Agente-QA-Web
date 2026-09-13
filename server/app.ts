@@ -10,7 +10,7 @@ import { leerConfigRaiz, escribirConfigRaiz, leerCredenciales, escribirCredencia
 import * as git from "./git.js";
 import { leerReporte, sugerirVeredicto } from "./reporter.js";
 import { cruzarTrazabilidad } from "./trazabilidad.js";
-import { leerHistorial } from "./costes.js";
+import { leerHistorial, registrarEjecucion } from "./costes.js";
 import { listarFragiles } from "./fragiles.js";
 import { ejecutarDoctor } from "./doctor.js";
 import { ejecutarPlaywright } from "./ejecutorTests.js";
@@ -86,12 +86,6 @@ export function buildApp(opts: AppOptions): FastifyInstance {
   // El estado no se guarda: se deriva del disco en cada petición.
   app.get("/api/estado", async () => leerEstadoProyecto(proyectoActivo));
 
-  // Pendiente del Bloque 1 de Agente-QA-MCP (`agente-qa-mcp metrics --last N --json`):
-  // hoy el CLI no emite NDJSON de actividad, así que no hay nada honesto que devolver.
-  app.get("/api/actividad", async (_req, reply) => {
-    await reply.status(501).send({ error: "pendiente del Bloque 1: agente-qa-mcp metrics --last N --json" });
-  });
-
   // Alcance: una instancia por repo (decisión cerrada en ESTADO.md) — sin selector ni recientes.
   app.get("/api/proyecto", (): EstadoProyectoActivo => ({ actual: proyectoActivo }));
 
@@ -159,6 +153,7 @@ export function buildApp(opts: AppOptions): FastifyInstance {
     // Canal paralelo para la pestaña Ejecutar (`GET /api/tests/eventos`): el contrato de esta
     // respuesta no cambia, esto solo da progreso en vivo mientras Playwright corre.
     difusorTests.emitir({ tipo: "inicio", ruta: rutaPedida });
+    const inicio = Date.now();
     let resultado: ResultadoEjecucionPlaywright | undefined;
     try {
       resultado = await ejecutarFn(proyectoActivo, rutaPedida, credenciales, (texto) => {
@@ -167,6 +162,27 @@ export function buildApp(opts: AppOptions): FastifyInstance {
     } finally {
       difusorTests.emitir({ tipo: "fin", ok: resultado?.ok ?? false, codigo: resultado?.codigo ?? null });
     }
+    // Historial (Bloque 8, `server/costes.ts`): antes solo se enganchaba tras un turno del agente
+    // (`operation.completed`/`operation.error` en `agente.ts`), así que una ejecución lanzada desde
+    // aquí no dejaba rastro — ni el "última ejecución"/"coste acumulado" del Dashboard ni el flaky de
+    // Reports se enteraban. No hay coste de LLM ni turnos en esta vía (no pasa por el SDK): se
+    // registran como 0, honesto en vez de inventar un número — el resto del contrato de
+    // `RegistroEjecucion` (que Dashboard/Reports ya suman/recorren) sigue cumpliéndose igual.
+    // `resultados` sale de releer el reporte de Playwright ya actualizado por esta corrida, filtrado
+    // al spec pedido cuando lo hay (botón por fila), para no atribuir a esta ejecución tests que no
+    // corrieron ahora.
+    const reporte = await leerReporte(proyectoActivo);
+    const resultadosEjecucion = (rutaPedida ? reporte.filter((r) => r.ficheroSpec === rutaPedida) : reporte).map((r) => ({
+      nombre: r.nombre,
+      ficheroSpec: r.ficheroSpec,
+      estado: r.estado,
+    }));
+    await registrarEjecucion(proyectoActivo, {
+      costeUsd: 0,
+      duracionMs: Date.now() - inicio,
+      numTurnos: 0,
+      resultados: resultadosEjecucion,
+    });
     await reply.send(resultado);
   });
 
@@ -304,6 +320,7 @@ export function buildApp(opts: AppOptions): FastifyInstance {
   const featuresDir = path.join(proyectoActivo, "tests", "features");
   const pagesDir = path.join(proyectoActivo, "tests", "pages");
   const specsDir = path.join(proyectoActivo, "tests", "specs");
+  const setupDir = path.join(proyectoActivo, "tests", "setup");
 
   app.get("/api/escenarios", async () => git.listarFicheros(featuresDir, ".feature"));
 
@@ -351,8 +368,10 @@ export function buildApp(opts: AppOptions): FastifyInstance {
     return { pages, specs };
   });
 
-  // `ruta` llega de la querystring como `tests/pages/<nombre>.page.ts` o `tests/specs/<nombre>.spec.ts`
-  // (mismo formato que ya usan diff/commit/descartar). A diferencia de esas rutas, que solo pasan
+  // `ruta` llega de la querystring como `tests/pages/<nombre>.page.ts`, `tests/specs/<nombre>.spec.ts`
+  // o `tests/setup/<nombre>.setup.ts` (mismo formato que ya usan diff/commit/descartar para los dos
+  // primeros; el tercero se añadió porque Ejecutar lista también el fichero de setup de Playwright
+  // que reporta el JSON, y pedía su contenido con 400). A diferencia de esas rutas, que solo pasan
   // `ruta` a un comando `git`, estas hacen `fs.readFile`/`writeFile` directo — sin esta validación,
   // un `../../secreto.txt` se sale del proyecto igual que el path traversal ya cerrado en
   // `nombreEscenarioSeguro`.
@@ -362,7 +381,9 @@ export function buildApp(opts: AppOptions): FastifyInstance {
       ? pagesDir
       : normalizada.startsWith("tests/specs/") && normalizada.endsWith(".spec.ts")
         ? specsDir
-        : null;
+        : normalizada.startsWith("tests/setup/") && normalizada.endsWith(".setup.ts")
+          ? setupDir
+          : null;
     if (!base) return null;
     const resuelta = path.resolve(proyectoActivo, normalizada);
     if (resuelta !== path.join(base, path.basename(resuelta))) return null;

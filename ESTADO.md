@@ -1,10 +1,8 @@
 # ESTADO — Agente-QA-Web
 
-Actualizado: 2026-09-12 (plan de nueve bloques completo; tres deudas cerradas: reporter JSON,
-trazabilidad de nombres, `TS5055` en build; después del plan: continuidad de conversación con
-`resume`, consola única, una sola fila en pantalla, contenido crudo editable en Generar/Reparar,
-lanzar Playwright de verdad desde Ejecutar, credenciales de prueba y diagnóstico del doctor en
-Configuración, refresco automático de listas y consola con scroll/color/teclado)
+Actualizado: 2026-09-13 (progreso en vivo al ejecutar tests, asistente de primer arranque en la
+terminal, pestaña «Empezar» en la web, y ocho fallos corregidos tras probar la app entera contra
+SauceDemo real)
 
 ## Qué es esto
 
@@ -31,11 +29,15 @@ y el usuario acepta o rechaza. Quien juzga es Playwright, ejecutando el test.
 
 ## Qué funciona hoy
 
-**Los nueve bloques del plan están cerrados.** Queda lo de después del plan (publicar en npm,
-gated a validar contra webs reales) y la deuda anotada en `PROXIMOS-PASOS.md`.
-`npx agente-qa` (o `node bin/agente-qa.mjs` en local) arranca sobre `process.cwd()`, crea
-`agente-qa.config.json` en la raíz preguntando solo la URL base si no existe, y levanta la web
-mostrando ese repo. El subcomando `doctor` comprueba sesión/SDK/Node/Playwright y sale con el
+**Los nueve bloques del plan están cerrados**, y también la instalación guiada. Queda publicar en
+npm (Pieza 3 de su spec) y la deuda anotada en `PROXIMOS-PASOS.md`.
+`npx agente-qa` (o `node bin/agente-qa.mjs` en local) arranca sobre `process.cwd()`. La primera vez
+—cuando no existe `agente-qa.config.json`— corre el asistente, que comprueba Node, sesión de Claude,
+binario del SDK y Playwright, pregunta la URL base, el entorno y la barrera, ofrece guardar
+credenciales de prueba e instalar la skill, y después levanta la web; a partir de ahí arranca
+directo. `npx agente-qa iniciar` repite el asistente a mano y `npm run empezar` hace lo propio para
+desarrollar este repo. En la web, la pestaña «Empezar» recoge lo mismo en vivo para quien no ha
+leído nada. El subcomando `doctor` comprueba sesión/SDK/Node/Playwright y sale con el
 código correspondiente. La consola global lanza el agente de verdad (SDK de Claude Code) sobre el
 repo activo: escribes una petición, se ejecuta con Playwright MCP y la skill de QA, y los eventos
 llegan por SSE. Un segundo mensaje reanuda la conversación anterior (`resume` del SDK, `session_id`
@@ -88,6 +90,11 @@ Ejecutar (lista con título = `.spec.ts`, botón ▶ por fila y "Ejecutar todos"
 | Elementos frágiles: cuenta los comentarios `// FRÁGIL: <motivo>` reales de la skill en `tests/pages/` y `tests/specs/`; ruta `GET /api/fragiles` | `server/fragiles.ts` |
 | Dashboard con seis cajas (escenarios cubiertos, verdes, rojos, última ejecución, coste acumulado, frágiles); Reports con datos reales (pass rate, flaky de las últimas 5 ejecuciones, fallos agrupados por `mensajeError`, historial); badge de cobertura por fichero en Redactar | `src/Dashboard.tsx`, `src/Reports.tsx`, `src/Redactar.tsx` |
 | `agente-qa instalar`: genera `.claude/skills/qa/` (con referencias), `AGENTS.md` y `.github/copilot-instructions.md` desde `skill/skills/qa/SKILL.md`; marcador de propiedad para no pisar ficheros ajenos sin confirmar; `--solo claude\|codex\|copilot` | `server/instalar.ts`, subcomando en `bin/agente-qa.mjs` |
+| Difusor genérico (cola por suscriptor + emisión a todos), sacado de `agente.ts` para poder tener dos canales SSE independientes sin acoplarlos | `server/difusor.ts` |
+| Progreso en vivo de Playwright: `ejecutarPlaywright` acepta `onLinea`, trocea stdout por `\r?\n`, quita códigos ANSI y vuelca el resto al cerrar; `POST /api/tests/ejecutar` emite `inicio`/`linea`/`fin` y `GET /api/tests/eventos` los sirve por SSE (no se cierra con evento terminal: se limpia al desconectar el cliente) | `server/ejecutorTests.ts`, `server/app.ts`, `shared/tipos.ts` (`EventoTest`), `src/api.ts`, `src/Ejecutar.tsx` |
+| Asistente de primer arranque, IO inyectable como `doctor`/`instalar`: nueve pasos en el repo del usuario, cuatro para desarrollar este; la rama se elige por el `name` del `package.json` del `cwd`; idempotente (cada paso detecta lo ya hecho) y sin preguntar si no hay TTY | `server/asistente.ts`, subcomando `iniciar` en `bin/agente-qa.mjs`, script `empezar` |
+| Pestaña «Empezar»: estado de preparación, tres primeros pasos y tabla de pestañas; `decidirPestanaInicial` y `construirTextoEjemplo` son funciones puras testeadas; el botón de ejemplo escribe en la consola vía `borradorConsola`/`onBorradorAplicado` en `App.tsx`, sin acoplar los dos componentes | `src/Empezar.tsx`, `src/App.tsx`, `src/ConsolaGlobal.tsx` |
+| Formateo de eventos de la consola: funciones puras (`describirEvento`, `formatearParametrosHerramienta`, `extraerTextoAsistente`, `resumenEventoSistema`, `textoBloqueFinal`) — el andamiaje del SDK no se pinta, las llamadas a herramienta muestran nombre y parámetros, y ningún tipo cae nunca a un volcado JSON | `src/ConsolaGlobal.tsx` |
 
 Nada de esto se toca por debajo del alcance real necesario para los bloques siguientes.
 
@@ -108,10 +115,11 @@ dieron tres tests verdes a la primera y estables en dos ejecuciones seguidas:
 `claude` lanzado ahí la descubra solo — el mismo mecanismo que generaliza `agente-qa instalar`
 (Bloque 9) para cualquier repo destino.
 
-### Las siete pestañas — qué muestra cada una hoy
+### Las ocho pestañas — qué muestra cada una hoy
 
 | Pestaña | Qué muestra |
 |---|---|
+| **Empezar** | Estado de preparación en vivo (las cuatro del `doctor` + URL base + credenciales), tres primeros pasos con un botón que escribe la petición de ejemplo en la consola, y qué hace cada pestaña. Auto-seleccionada la primera vez; descartable |
 | **Redactar** | Los `.feature`, editables, con badge de cobertura por fichero. La primera puerta: corriges el escenario antes de que se escriba código |
 | **Generar** | Los `.page.ts` y `.spec.ts`, contenido completo editable, y debajo el visor de diff con aceptar/descartar cuando hay cambios pendientes |
 | **Ejecutar** | Tests con su estado, título = `.spec.ts`, botón ▶ por fila y "Ejecutar todos" (lanza Playwright de verdad), y el detalle junta los pasos del Gherkin con el código del spec |
@@ -120,7 +128,7 @@ dieron tres tests verdes a la primera y estables en dos ejecuciones seguidas:
 | **Dashboard** | Escenarios cubiertos, verdes, rojos, última ejecución, coste acumulado, elementos frágiles |
 | **Configuración** | URL base, entorno y barrera de escrituras; credenciales de prueba; diagnóstico en vivo del `doctor` |
 
-Las siete son de solo lectura sobre el repo: la única conversación con el agente vive en la consola
+Las ocho son de solo lectura sobre el repo: la única conversación con el agente vive en la consola
 global, a la derecha de la misma ventana, no en las pestañas. Pestaña activa (70 % de ancho) y
 consola (30 %) están siempre las dos a la vista, sin scroll entre ellas — cada pestaña reserva ese
 70 % como el 100 % de su propio lienzo de paneles movibles, así que sus geometrías por defecto (en
@@ -169,8 +177,14 @@ que ocupan.
 | `npm run dev` no arrancaba el servidor de forma fiable en Windows — bug real, no solo procesos zombis (2026-09-12) | Reportado por el usuario: tras cerrar los procesos huérfanos, `npm run dev` seguía sin levantar el backend (`ECONNREFUSED`/500 en `/api/*`). Aislado y reproducido de forma determinista (10/10) fuera de este repo: `concurrently` lanzando `tsx watch server/index.ts` con Windows nunca llega a arrancar el proceso hijo que `tsx watch` respawnea en cada cambio — sin error, sin log, sin puerto abierto. La causa no es `concurrently` en sí sino su `stdio: "pipe"` (necesario para prefijar `[vite]`/`[server]`): reproducido el mismo fallo con `spawn` directo y `stdio: "pipe"` + reenvío manual, sin `concurrently` de por medio. Con `stdio: "inherit"` arranca siempre a la primera (3/3 verificado con `npm run dev` real, incluida comprobación en navegador). Fix en `scripts/dev.mjs`: dos `spawn` directos con `stdio: "inherit"`, sin `concurrently` (dependencia retirada de `package.json`). Se pierde el prefijo `[vite]`/`[server]` por línea — los dos procesos comparten la misma consola sin distinguir |
 | Credenciales de prueba: fichero aparte de `agente-qa.config.json`, nunca versionado (después del plan, 2026-09-12) | `agente-qa.config.json` SÍ se versiona (decisión del Bloque 3). Guardar ahí una contraseña real las mandaría al historial de git del repo destino en el primer `git add -A` descuidado. Se creó `agente-qa.credenciales.json` aparte, y `escribirCredenciales` (`server/proyecto.ts`) añade la línea al `.gitignore` del proyecto destino la primera vez que se guarda algo — no se puede asumir que ese repo ya la tenga. Además, `redactarSecretos`/`redactarSecretosProfundo` (`server/barrera.ts`) redactaban antes solo valores de `process.env` cuyo NOMBRE matcheaba `PASSWORD\|SECRET\|TOKEN\|KEY\|CREDENCIAL`: una credencial nombrada libremente por el usuario (p.ej. `usuario_admin`) no habría pasado ese filtro. Se añadió un segundo parámetro (`credenciales: Record<string,string>`) que redacta esos valores SIN filtrar por nombre |
 | Cómo llegan las credenciales al agente (después del plan, 2026-09-12) | El modelo necesita ver el VALOR para poder escribirlo en un formulario (no hay forma de que `browser_type` rellene "la variable X" sin que el modelo la conozca), así que van también al `system prompt` (`systemPrompt.append` en `server/agente.ts`), no solo al `env` del MCP de Playwright. Lo que protege la redacción de `barrera.ts` es que no salgan en claro por el canal de eventos SSE hacia el navegador — no que el modelo no las vea, las necesita para actuar |
-| "Ejecutar todos" / botón por fila en Ejecutar es síncrono, sin progreso en vivo (después del plan, 2026-09-12) | `POST /api/tests/ejecutar` espera a que el proceso de Playwright termine y devuelve el resultado entero; no hay streaming paso a paso como en la consola del agente (eso reutilizaría el mismo difusor de eventos que ya usa una sesión de agente, fuera de alcance de esta petición). Aceptable para una suite pequeña; una suite grande bloquea la pestaña hasta que termina — anotado en `PROXIMOS-PASOS.md` |
+| ~~"Ejecutar todos" / botón por fila en Ejecutar es síncrono, sin progreso en vivo~~ (2026-09-12) — **superado el 2026-09-13** | Era cierto: `POST /api/tests/ejecutar` esperaba a que Playwright terminara y una suite grande dejaba la pestaña con un spinner ciego. Resuelto con el canal SSE propio (ver la fila "Progreso en vivo de los tests"). El POST sigue devolviendo el resultado entero; lo que se añadió es el stream |
 | §2 de la skill: snapshot acotado en vez del árbol completo (2026-09-12) | Se descartó construir una "memoria" de localizadores tipo el `map.json` retirado en el Bloque 2 (`agente-qa-contract`/`server/mapa.ts`) — ese caché ya se probó y salió mal: dos fuentes de verdad que se desincronizan. En su lugar, spike medido directamente contra `pruebas/sauce/` (sin correr el agente completo, para no gastar dinero midiendo si se ahorra dinero): un snapshot acotado a una fila de producto (`browser_snapshot({target})`) pesa ~89% menos que el árbol completo (629 vs 5.637 bytes). Hallazgo real: `browser_find` por sí solo no siempre trae el `ref` accionable (corta el contexto antes del botón), así que la vía fiable es `browser_find` para ubicar el contenedor + `browser_snapshot({target})` sobre ese ref. `SKILL.md` §2 reescrito: árbol completo solo la primera vez que se ve una pantalla; acotado para confirmar tras un click, buscar un elemento conocido o reparar un rojo. El principio no cambia: el localizador sigue saliendo de la página real, nunca de un fichero cacheado. **Pendiente de verificar con uso real** si acotar esconde algo relevante y genera más reparaciones de las que ahorra — anotado en `PROXIMOS-PASOS.md` |
+| Progreso en vivo de los tests: canal SSE propio, no el difusor del agente (2026-09-13) | Se sacó `crearCola`/`crearDifusor` a `server/difusor.ts` y `POST /api/tests/ejecutar` emite a una instancia aparte. Mezclarlo con el difusor del agente habría metido líneas de Playwright en el hilo de la conversación y obligado a que `/api/eventos` distinguiera dos orígenes. El contrato del POST no cambió: sigue devolviendo el resultado entero, el stream es un añadido. `/api/tests/eventos` no se cierra con evento terminal (una sesión de tests no tiene "fin de conversación"): se limpia cuando el cliente desconecta |
+| Node mínimo real: 22, no 18 (2026-09-13) | `server/doctor.ts` fijaba `NODE_MINIMO = 18` mientras `package.json` (`engines`), el README y el paso 1 del asistente exigen 22. Con Node 20 el `doctor` daba un ✅ falso y la app fallaba después por otro sitio. Corregido el mínimo y los dos tests que fijaban el contrato antiguo |
+| La consola volcaba JSON crudo y duplicaba el mensaje final (2026-09-13) | Encontrado probando la app entera en vivo, pese a que este fichero afirmaba lo contrario desde el 12/9. Causa 1: `LineaEvento` no tenía rama para `agente.system` ni `agente.user`, así que caían al volcado crudo — incluido el catálogo entero de herramientas MCP del evento `init` y todos los `hook_started` de los hooks del usuario. Causa 2: el mensaje `result` del SDK **repite literalmente el texto final del asistente** (confirmado en los tipos del propio SDK), y se pintaba además de la burbuja ya pintada. Fix en el render, no censurando datos: el andamiaje del SDK se resume o se calla, las llamadas a herramienta muestran nombre y parámetros, el bloque resaltado de cierre se conserva pero dice "Terminado." si el texto ya salió, y un tipo sin rama propia cae a una línea corta — nunca al objeto. Que los parámetros de herramienta se vean era además requisito para poder medir la deuda del snapshot acotado |
+| Paneles muertos del sistema retirado, borrados (2026-09-13) | Encontrados en la prueba en vivo: el Dashboard pintaba «En curso ahora» buscando `.agente-qa/` (carpeta borrada entera en el Bloque 3) y «Actividad reciente» con el texto marcador literal `pendiente del Bloque 1: agente-qa-mcp metrics --last N --json` contra `/api/actividad`, un stub 501; Reports reservaba una banda entera para «Filtros» («llegan más adelante»). Borrados los tres con su fetch, su función de `src/api.ts`, la ruta stub y `src/AccionDeshabilitada.tsx` (sin usos tras el borrado), recolocando las geometrías con la regla del `GAP` único |
+| Ejecutar tests desde la web sí entra en el historial, con coste 0 (2026-09-13) | Bug real: tras lanzar los cinco tests con "Ejecutar todos", el Dashboard seguía diciendo que la última ejecución era del día anterior, porque `server/costes.ts` solo se enganchaba a `operation.completed`/`error` del agente. Ahora `POST /api/tests/ejecutar` registra también, reusando `registrarEjecucion`. Una corrida lanzada desde la web no pasa por el SDK: se guarda `costeUsd: 0, numTurnos: 0` — honesto; inventar un coste no lo sería. Los `resultados` salen de releer `test-results/results.json`, filtrados al spec pedido cuando se usa el botón ▶ de una fila, para no atribuir tests que no corrieron |
+| Prefijo de ruta del spec: la causa estaba en el cliente, no en el reporter (2026-09-13) | `GET /api/generados/contenido?ruta=tests/specs/auth.setup.ts` daba 400 y la pestaña Ejecutar decía "No se pudo cargar el código de este spec". `rutaSpecDesdeFichero` (`src/Ejecutar.tsx`) forzaba `tests/specs/` para cualquier fichero, pero Playwright reporta rutas relativas a `testDir` (`setup/auth.setup.ts`, `specs/x.spec.ts`) y el setup vive en `tests/setup/`. Arreglado el prefijo en el cliente y ampliado `rutaGeneradaSegura` para aceptar `tests/setup/*.setup.ts` **sin aflojar** la protección de path traversal del Bloque 6 — verificado en vivo: el setup da 200, y `evil.ts` y tres formas de traversal siguen dando 400 |
 
 ---
 

@@ -72,17 +72,23 @@ ahí lo que quieres probar, en castellano y en una sola frase con todo lo necesa
 - **Puedes seguir la conversación**: un segundo mensaje recuerda lo que hablasteis antes, no hace
   falta repetir el contexto desde cero.
 
-Las siete pestañas de la izquierda muestran lo que el agente va dejando en el repo. No tienen su
+**La primera vez que abres la app aterrizas en la pestaña «Empezar»**, que te dice si te falta algo
+por configurar y qué escribir primero. Cuando ya no la necesites, el botón «No volver a mostrar esta
+pestaña al abrir» hace que la app arranque donde arrancaba antes; la pestaña sigue ahí por si
+quieres volver.
+
+Las ocho pestañas de la izquierda muestran lo que el agente va dejando en el repo. No tienen su
 propia caja de texto de chat (toda la conversación va a la consola), pero en Redactar, Generar y
 Reparar el contenido de cada fichero se ve completo y es editable a mano, guardes o no cambios; las
 listas se refrescan solas en cuanto el agente termina un turno, no hace falta recargar la página:
 
 | Pestaña | Qué muestra |
 |---|---|
+| **Empezar** | Si te falta algo por configurar (sesión, Playwright, URL, credenciales) y cómo se arregla; tus tres primeros pasos, con un botón que escribe la petición de ejemplo en la consola; y qué hace cada pestaña |
 | **Dashboard** | Escenarios cubiertos, verdes, rojos, última ejecución, coste acumulado, elementos frágiles |
 | **Redactar** | Los `.feature` generados, editables a mano, con badge de cobertura por fichero |
 | **Generar** | Los `.page.ts` y `.spec.ts`, contenido completo editable, con el visor de diff debajo (Aceptar/Descartar) cuando hay cambios pendientes frente al commit |
-| **Ejecutar** | La lista de tests (título = fichero `.spec.ts`) con botón ▶ por fila y un "▶ Ejecutar todos" arriba para lanzar Playwright de verdad desde la web; el detalle junta los pasos del Gherkin con el código del spec, en la misma pestaña |
+| **Ejecutar** | La lista de tests (título = fichero `.spec.ts`) con botón ▶ por fila y un "▶ Ejecutar todos" arriba para lanzar Playwright de verdad desde la web, viendo la salida aparecer línea a línea mientras corre; el detalle junta los pasos del Gherkin con el código del spec, en la misma pestaña |
 | **Reparar** | Solo los tests en rojo: veredicto sugerido (fallo del test o de la app), el `.spec.ts` completo editable, y el diff de corrección propuesto (Aplicar y reejecutar/Rechazar) |
 | **Reports** | Historial de ejecuciones, fallos agrupados por causa, tests inestables, pass rate |
 | **Configuración** | URL base, entorno y barrera de escrituras; credenciales de prueba (usuario/contraseña o cualquier variable con nombre libre); diagnóstico en vivo de las cuatro comprobaciones del `doctor` |

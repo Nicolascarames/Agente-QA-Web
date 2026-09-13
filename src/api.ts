@@ -15,17 +15,6 @@ import type {
   ResultadoTestRojo,
 } from "../shared/tipos";
 
-/** true si la respuesta es el 501 documentado de /api/actividad; false si es cualquier otro fallo. */
-export interface ActividadNoDisponible {
-  disponible: false;
-  motivo: string;
-}
-
-export interface ActividadDisponible {
-  disponible: true;
-  eventos: unknown[];
-}
-
 async function pedirJson<T>(url: string, init?: RequestInit): Promise<T> {
   const respuesta = await fetch(url, init);
   if (!respuesta.ok && respuesta.status !== 501) {
@@ -36,19 +25,6 @@ async function pedirJson<T>(url: string, init?: RequestInit): Promise<T> {
 
 export function obtenerEstado(): Promise<EstadoProyecto> {
   return pedirJson<EstadoProyecto>("/api/estado");
-}
-
-export async function obtenerActividad(): Promise<ActividadDisponible | ActividadNoDisponible> {
-  const respuesta = await fetch("/api/actividad");
-  if (respuesta.status === 501) {
-    const cuerpo = (await respuesta.json()) as { error: string };
-    return { disponible: false, motivo: cuerpo.error };
-  }
-  if (!respuesta.ok) {
-    return { disponible: false, motivo: `/api/actividad respondió ${String(respuesta.status)}` };
-  }
-  const eventos = (await respuesta.json()) as unknown[];
-  return { disponible: true, eventos };
 }
 
 /** Alcance: una instancia por repo (decisión cerrada en ESTADO.md) — sin selector ni recientes. */

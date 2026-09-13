@@ -1,24 +1,24 @@
 import { useEffect, useState } from "react";
-import { AccionDeshabilitada } from "./AccionDeshabilitada";
 import { Panel } from "./Panel";
 import { obtenerHistorial, obtenerTests, obtenerTestsRojos } from "./api";
 import type { RegistroEjecucion, ResultadoTest, ResultadoTestRojo } from "../shared/tipos";
 
-// Tres filas a todo el ancho y alto del contenedor, separación uniforme de 1.5 (GAP): tres cajas
-// de estadística arriba, "Filtros" a ancho completo en medio y "Fallos agrupados"/"Historial"
-// repartiendo el resto en dos columnas — antes las tres filas dejaban entre 2 y 4 de hueco
-// desigual y las dos últimas no llegaban al borde inferior. Filtrar (`filt`) sigue fuera de
-// alcance: no hay ningún control de filtrado que implementar todavía.
-const MOTIVO_FILTROS = "Los filtros llegan más adelante.";
+// Dos filas a todo el ancho y alto del contenedor, separación uniforme de 1.5 (GAP): tres cajas de
+// estadística arriba y "Fallos agrupados"/"Historial" repartiendo el resto en dos columnas debajo.
+// El panel "Filtros" (banda vacía sin ningún control real que mostrar) se retiró — ver ESTADO.md —
+// y la fila inferior creció para ocupar el hueco que dejaba, llegando igual que antes hasta el
+// borde inferior sin sobrante.
 const GAP = 1.5;
 const COL_W = (100 - 2 * GAP) / 3;
 const MITAD = (100 - GAP) / 2;
+const FILA_STATS_H = 36.5;
+const FILA_INF_Y = FILA_STATS_H + GAP;
+const FILA_INF_H = 100 - FILA_INF_Y;
 
 const ETIQUETAS_STATS = ["Pass rate", "Flaky tests", "Fallos abiertos"];
-const GEOMETRIA_STATS = [0, 1, 2].map((col) => ({ x: col * (COL_W + GAP), y: 0, w: COL_W, h: 36.5, z: 1 }));
-const GEOMETRIA_FILT = { x: 0, y: 38, w: 100, h: 16, z: 1 };
-const GEOMETRIA_CAUSES = { x: 0, y: 55.5, w: MITAD, h: 44.5, z: 1 };
-const GEOMETRIA_HIST = { x: MITAD + GAP, y: 55.5, w: MITAD, h: 44.5, z: 1 };
+const GEOMETRIA_STATS = [0, 1, 2].map((col) => ({ x: col * (COL_W + GAP), y: 0, w: COL_W, h: FILA_STATS_H, z: 1 }));
+const GEOMETRIA_CAUSES = { x: 0, y: FILA_INF_Y, w: MITAD, h: FILA_INF_H, z: 1 };
+const GEOMETRIA_HIST = { x: MITAD + GAP, y: FILA_INF_Y, w: MITAD, h: FILA_INF_H, z: 1 };
 
 /** Verde=passed, rojo=failed+timedOut: mismo criterio que Dashboard.tsx y `server/reporter.ts`
  *  (que trata "interrupted" como fallo). */
@@ -105,10 +105,6 @@ export function Reports() {
 
         <Panel tabId="reports" panelId="s2" titulo={ETIQUETAS_STATS[2]} disposicionPorDefecto={GEOMETRIA_STATS[2]}>
           <div className="flex h-full items-center justify-center text-3xl font-extrabold text-text-bright">{fallosAbiertos ?? "-"}</div>
-        </Panel>
-
-        <Panel tabId="reports" panelId="filt" titulo="🔎 Filtros" disposicionPorDefecto={GEOMETRIA_FILT}>
-          <AccionDeshabilitada motivo={MOTIVO_FILTROS} />
         </Panel>
 
         <Panel tabId="reports" panelId="causes" titulo="Fallos agrupados por causa" disposicionPorDefecto={GEOMETRIA_CAUSES}>

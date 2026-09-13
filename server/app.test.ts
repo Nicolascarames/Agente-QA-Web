@@ -64,14 +64,6 @@ describe("buildApp", () => {
     await app.close();
   });
 
-  it("GET /api/actividad devuelve 501 explicando la dependencia del Bloque 1", async () => {
-    const app = buildApp({ proyectoInicial: proyecto });
-    const respuesta = await app.inject({ method: "GET", url: "/api/actividad" });
-    expect(respuesta.statusCode).toBe(501);
-    expect(respuesta.json<{ error: string }>().error).toContain("Bloque 1");
-    await app.close();
-  });
-
   it("GET /api/proyecto devuelve el proyecto activo, sin recientes (una instancia por repo)", async () => {
     const app = buildApp({ proyectoInicial: proyecto });
     const respuesta = await app.inject({ method: "GET", url: "/api/proyecto" });
@@ -338,6 +330,21 @@ describe("buildApp", () => {
     await app.close();
   });
 
+  it("GET /api/generados/contenido acepta tests/setup/*.setup.ts, y sigue rechazando el traversal", async () => {
+    const app = buildApp({ proyectoInicial: proyecto });
+
+    await mkdir(path.join(proyecto, "tests", "setup"), { recursive: true });
+    await writeFile(path.join(proyecto, "tests", "setup", "auth.setup.ts"), "setup('auth', async () => {});\n", "utf8");
+    const respuesta = await app.inject({ method: "GET", url: "/api/generados/contenido?ruta=tests/setup/auth.setup.ts" });
+    expect(respuesta.statusCode).toBe(200);
+    expect(respuesta.json<{ contenido: string }>().contenido).toBe("setup('auth', async () => {});\n");
+
+    const traversal = await app.inject({ method: "GET", url: "/api/generados/contenido?ruta=tests/setup/../../secreto.txt" });
+    expect(traversal.statusCode).toBe(400);
+
+    await app.close();
+  });
+
   it("GET /api/generados/diff devuelve el diff de un fichero nuevo sin trackear del proyecto", async () => {
     await git(proyecto, ["init", "-q"]);
     await git(proyecto, ["config", "user.email", "test@test.com"]);
@@ -505,6 +512,21 @@ describe("buildApp", () => {
     const respuesta = await app.inject({ method: "POST", url: "/api/tests/ejecutar", payload: {} });
     expect(respuesta.statusCode).toBe(200);
     expect(ejecutarFn).toHaveBeenCalledWith(proyecto, undefined, {}, expect.any(Function));
+    await app.close();
+  });
+
+  it("POST /api/tests/ejecutar registra la ejecución en el historial, sin inventar coste ni turnos", async () => {
+    const ejecutarFn = vi.fn(() => Promise.resolve({ ok: true, codigo: 0, salida: "" }));
+    const app = buildApp({ proyectoInicial: proyecto, ejecutarFn });
+
+    await app.inject({ method: "POST", url: "/api/tests/ejecutar", payload: {} });
+
+    const historial = await app.inject({ method: "GET", url: "/api/historial" });
+    const registros = historial.json<{ costeUsd: number; numTurnos: number; resultados: unknown[] }[]>();
+    expect(registros).toHaveLength(1);
+    // Esta vía no pasa por el SDK: no hay coste de LLM ni turnos que reportar. 0 es honesto, no
+    // inventado — a diferencia de una ejecución del agente (`server/agente.ts`), que sí trae ambos.
+    expect(registros[0]).toMatchObject({ costeUsd: 0, numTurnos: 0, resultados: [] });
     await app.close();
   });
 });
