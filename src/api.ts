@@ -6,6 +6,7 @@ import type {
   EstadoCorridaActiva,
   EstadoProyecto,
   EstadoProyectoActivo,
+  EventoTest,
   RegistroEjecucion,
   ResultadoDoctor,
   ResultadoEjecucionPlaywright,
@@ -205,6 +206,23 @@ export function ejecutarTests(ruta?: string): Promise<ResultadoEjecucionPlaywrig
     headers: { "content-type": "application/json" },
     body: JSON.stringify(ruta ? { ruta } : {}),
   });
+}
+
+/** Progreso en vivo de `ejecutarTests` (líneas del reporter `list` de Playwright según van
+ *  saliendo): canal paralelo a la respuesta del POST, que no cambia. Devuelve la función para
+ *  cerrar la suscripción — llamarla al terminar la ejecución y al desmontar. */
+export function suscribirseEventosTests(onEvento: (evento: EventoTest) => void): () => void {
+  const fuente = new EventSource("/api/tests/eventos");
+  fuente.onmessage = (mensaje: MessageEvent<string>) => {
+    try {
+      onEvento(JSON.parse(mensaje.data) as EventoTest);
+    } catch {
+      // línea corrupta o no-JSON: se ignora, no rompe el resto del stream.
+    }
+  };
+  return () => {
+    fuente.close();
+  };
 }
 
 // --- Reports, Dashboard y trazabilidad (Bloque 8) -----------------------------------------------

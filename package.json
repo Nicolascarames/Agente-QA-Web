@@ -34,6 +34,7 @@
     "dev": "node scripts/dev.mjs",
     "build": "vite build && node scripts/comprobar-estilos.mjs && node scripts/limpiar-dist-server.mjs && tsc -p tsconfig.server.json",
     "start": "node dist-server/server/index.js",
+    "empezar": "node bin/agente-qa.mjs iniciar",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.app.json --noEmit",
     "test": "vitest run",

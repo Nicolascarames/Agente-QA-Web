@@ -21,8 +21,18 @@ export type { ResultadoEjecucionPlaywright } from "../shared/tipos.js";
  * hardcodeado (buena práctica para no dejar secretos en el código versionado), la ejecución real
  * necesita esas mismas variables presentes o el test fallaría por credenciales ausentes, no por un
  * fallo real de la aplicación.
+ *
+ * `onLinea`, si se pasa, recibe cada línea completa de `stdout`/`stderr` (reporter `list` de
+ * Playwright) tal como va saliendo, sin códigos ANSI — es el canal en vivo de `GET
+ * /api/tests/eventos`; `salida` (el resultado devuelto) se sigue acumulando exactamente igual que
+ * antes, el contrato de esta función no cambia para quien no pase `onLinea`.
  */
-export function ejecutarPlaywright(rootDir: string, rutaSpec?: string, credenciales: Record<string, string> = {}): Promise<ResultadoEjecucionPlaywright> {
+export function ejecutarPlaywright(
+  rootDir: string,
+  rutaSpec?: string,
+  credenciales: Record<string, string> = {},
+  onLinea?: (linea: string) => void
+): Promise<ResultadoEjecucionPlaywright> {
   return new Promise((resolve) => {
     const args = ["playwright", "test", "--reporter=list,json"];
     if (rutaSpec) args.push(rutaSpec);
@@ -34,16 +44,28 @@ export function ejecutarPlaywright(rootDir: string, rutaSpec?: string, credencia
     });
 
     let salida = "";
+    let bufferLinea = "";
+    function volcarLineas(fragmento: string) {
+      bufferLinea += fragmento;
+      const lineas = bufferLinea.split(/\r?\n/);
+      bufferLinea = lineas.pop() ?? "";
+      for (const linea of lineas) onLinea?.(linea.replace(/\[[0-9;]*[A-Za-z]/g, ""));
+    }
     proceso.stdout?.on("data", (fragmento: Buffer) => {
-      salida += fragmento.toString();
+      const texto = fragmento.toString();
+      salida += texto;
+      volcarLineas(texto);
     });
     proceso.stderr?.on("data", (fragmento: Buffer) => {
-      salida += fragmento.toString();
+      const texto = fragmento.toString();
+      salida += texto;
+      volcarLineas(texto);
     });
     proceso.on("error", (err) => {
       resolve({ ok: false, codigo: null, salida: `No se pudo lanzar Playwright: ${err.message}` });
     });
     proceso.on("close", (codigo) => {
+      if (bufferLinea !== "") onLinea?.(bufferLinea.replace(/\[[0-9;]*[A-Za-z]/g, ""));
       resolve({ ok: codigo === 0, codigo, salida });
     });
   });

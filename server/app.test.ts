@@ -495,7 +495,7 @@ describe("buildApp", () => {
 
     const respuesta = await app.inject({ method: "POST", url: "/api/tests/ejecutar", payload: { ruta: "login.spec.ts" } });
     expect(respuesta.statusCode).toBe(200);
-    expect(ejecutarFn).toHaveBeenCalledWith(proyecto, "login.spec.ts", { USUARIO: "admin" });
+    expect(ejecutarFn).toHaveBeenCalledWith(proyecto, "login.spec.ts", { USUARIO: "admin" }, expect.any(Function));
     await app.close();
   });
 
@@ -504,7 +504,7 @@ describe("buildApp", () => {
     const app = buildApp({ proyectoInicial: proyecto, ejecutarFn });
     const respuesta = await app.inject({ method: "POST", url: "/api/tests/ejecutar", payload: {} });
     expect(respuesta.statusCode).toBe(200);
-    expect(ejecutarFn).toHaveBeenCalledWith(proyecto, undefined, {});
+    expect(ejecutarFn).toHaveBeenCalledWith(proyecto, undefined, {}, expect.any(Function));
     await app.close();
   });
 });

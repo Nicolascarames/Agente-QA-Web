@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { obtenerProyecto } from "./api";
 import { Dashboard } from "./Dashboard";
 import { Configuracion } from "./Configuracion";
+import { Empezar } from "./Empezar";
 import { Redactar } from "./Redactar";
 import { Generar } from "./Generar";
 import { Ejecutar } from "./Ejecutar";
@@ -10,15 +11,25 @@ import { Reports } from "./Reports";
 import { useCorridaGlobal, type EstadoCorridaGlobal } from "./useCorridaGlobal";
 import { ConsolaGlobal } from "./ConsolaGlobal";
 
-// Las siete pestañas de ESTADO.md — nada más. Bloque 2: fuera Explorar (el mapeador antiguo) y
-// fuera Motor/Instalar (la guía integrada, atada al mismo catálogo del CLI que se borró con él).
-type Pestana = "Dashboard" | "Configuración" | "Redactar" | "Generar" | "Ejecutar" | "Reparar" | "Reports";
+// Las siete pestañas de ESTADO.md más "Empezar" (guía de primeros pasos). Bloque 2: fuera Explorar
+// (el mapeador antiguo) y fuera Motor/Instalar (la guía integrada, atada al mismo catálogo del CLI
+// que se borró con él) — "Empezar" es su reemplazo, ya dentro del catálogo de pestañas actual.
+type Pestana = "Empezar" | "Dashboard" | "Configuración" | "Redactar" | "Generar" | "Ejecutar" | "Reparar" | "Reports";
+
+// Wiring propio de "Empezar": no forma parte de `EstadoCorridaGlobal` (esa es la consola de chat,
+// esto es "escribe un texto en la consola" y "recuerda que ya vi la guía"), así que viaja aparte.
+interface WiringEmpezar {
+  escribirEnConsola: (texto: string) => void;
+  descartarGuia: () => void;
+}
 
 // Redactar/Generar (Bloque 6) y Ejecutar/Reparar (Bloque 7) traen cada una su propio chat ligero
 // que reutiliza el mismo estado de corrida que la consola global de la banda 2, así que las cuatro
 // necesitan las mismas tres piezas que recibe `<ConsolaGlobal>`.
-function contenidoPestana(pestana: Pestana, corrida: EstadoCorridaGlobal) {
+function contenidoPestana(pestana: Pestana, corrida: EstadoCorridaGlobal, wiringEmpezar: WiringEmpezar) {
   switch (pestana) {
+    case "Empezar":
+      return <Empezar onEscribirEjemplo={wiringEmpezar.escribirEnConsola} onGuiaDescartada={wiringEmpezar.descartarGuia} />;
     case "Dashboard":
       return <Dashboard />;
     case "Configuración":
@@ -37,7 +48,8 @@ function contenidoPestana(pestana: Pestana, corrida: EstadoCorridaGlobal) {
 }
 
 // Grupos e iconos de la barra lateral. "Operaciones" son las cinco puertas de trabajo;
-// "Proyecto" son las dos pantallas de lectura/ajuste del proyecto activo.
+// "Proyecto" son las tres pantallas de lectura/ajuste del proyecto activo (Empezar delante: es la
+// primera parada de quien no ha leído nada).
 const NAV_OPERACIONES: { pestana: Pestana; icon: string }[] = [
   { pestana: "Dashboard", icon: "📊" },
   { pestana: "Redactar", icon: "✍️" },
@@ -46,14 +58,45 @@ const NAV_OPERACIONES: { pestana: Pestana; icon: string }[] = [
   { pestana: "Reparar", icon: "🔧" },
 ];
 const NAV_PROYECTO: { pestana: Pestana; icon: string }[] = [
+  { pestana: "Empezar", icon: "🚀" },
   { pestana: "Reports", icon: "📈" },
   { pestana: "Configuración", icon: "⚙️" },
 ];
 
+// Clave de localStorage que marca que ya se ha visto la guía — puesta solo por el botón "No volver
+// a mostrar" de Empezar.tsx. Envuelta en try/catch en todos sus usos: localStorage puede lanzar
+// (modo privado, cuota agotada).
+const CLAVE_GUIA_DESCARTADA = "agente-qa:guia-descartada";
+
+/** Pura: qué pestaña abre la app según lo que hubiera en `CLAVE_GUIA_DESCARTADA`. Extraída (en vez
+ *  de inline en el `useState`) para poder testearla sin montar la app entera. */
+export function decidirPestanaInicial(guiaDescartada: string | null): Pestana {
+  return guiaDescartada ? "Dashboard" : "Empezar";
+}
+
+function leerGuiaDescartada(): string | null {
+  try {
+    return window.localStorage.getItem(CLAVE_GUIA_DESCARTADA);
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
-  const [pestana, setPestana] = useState<Pestana>("Dashboard");
+  const [pestana, setPestana] = useState<Pestana>(() => decidirPestanaInicial(leerGuiaDescartada()));
   const [proyectoActual, setProyectoActual] = useState<string>("");
   const [sidebarAbierta, setSidebarAbierta] = useState(false);
+  // Borrador que Empezar quiere dejar escrito (no enviado) en la consola global — null cuando no
+  // hay nada pendiente. Vive aquí porque `<Empezar>` y `<ConsolaGlobal>` no se conocen entre sí.
+  const [borradorConsola, setBorradorConsola] = useState<string | null>(null);
+
+  const descartarGuia = () => {
+    try {
+      window.localStorage.setItem(CLAVE_GUIA_DESCARTADA, "1");
+    } catch {
+      // No es crítico: si falla, la guía volverá a abrirse la próxima vez, nada más.
+    }
+  };
 
   // El indicador "● en curso" y el panel de consola global comparten el mismo hook: vive aquí
   // (nunca se desmonta al cambiar de pestaña).
@@ -196,7 +239,10 @@ export default function App() {
         <div className="flex" style={{ height: alturaBanda }}>
           <div className="relative h-full w-[70%] shrink-0 overflow-hidden">
             <div key={pestana} className="relative h-full w-full animate-page-fade overflow-hidden">
-              {contenidoPestana(pestana, corridaGlobal)}
+              {contenidoPestana(pestana, corridaGlobal, {
+                escribirEnConsola: setBorradorConsola,
+                descartarGuia,
+              })}
             </div>
           </div>
 
@@ -207,6 +253,10 @@ export default function App() {
                 eventos={eventos}
                 marcarCorridaActiva={marcarCorridaActiva}
                 agregarMensajeUsuario={agregarMensajeUsuario}
+                borradorConsola={borradorConsola}
+                onBorradorAplicado={() => {
+                  setBorradorConsola(null);
+                }}
               />
             </div>
           </div>

@@ -14,6 +14,7 @@ import { leerHistorial } from "./costes.js";
 import { listarFragiles } from "./fragiles.js";
 import { ejecutarDoctor } from "./doctor.js";
 import { ejecutarPlaywright } from "./ejecutorTests.js";
+import { crearDifusor } from "./difusor.js";
 import { esEventoTerminal } from "../shared/eventos.js";
 import type {
   ConfigRaiz,
@@ -23,6 +24,7 @@ import type {
   EstadoCorridaActiva,
   EstadoProyectoActivo,
   EventoNdjson,
+  EventoTest,
   RegistroEjecucion,
   ResultadoDoctor,
   ResultadoEjecucionPlaywright,
@@ -52,8 +54,13 @@ export interface AppOptions {
   /** Inyectable para test — por defecto `ejecutarPlaywright()` real de `ejecutorTests.ts`, que lanza
    *  un proceso de verdad. Sin esto, testear `/api/tests/ejecutar` lanzaría Playwright en serio en
    *  cada corrida de `npm test`. */
-  ejecutarFn?: typeof ejecutarPlaywright;
+  ejecutarFn?: (rootDir: string, rutaSpec?: string, credenciales?: Record<string, string>, onLinea?: (linea: string) => void) => Promise<ResultadoEjecucionPlaywright>;
 }
+
+/** Difusor del progreso en vivo de `/api/tests/ejecutar` (`GET /api/tests/eventos`): a nivel de
+ *  módulo, no de instancia de `buildApp`, porque como `corridaActiva` de la consola global — una
+ *  ejecución de tests a la vez por repo, sin base de datos. */
+const difusorTests = crearDifusor<EventoTest>();
 
 const dirActual = path.dirname(fileURLToPath(import.meta.url));
 // tsconfig.server.json no fija rootDir: preserva la estructura de carpetas, así que este fichero
@@ -149,8 +156,40 @@ export function buildApp(opts: AppOptions): FastifyInstance {
       return;
     }
     const credenciales = Object.fromEntries((await leerCredenciales(proyectoActivo)).variables.map((v) => [v.nombre, v.valor]));
-    const resultado: ResultadoEjecucionPlaywright = await ejecutarFn(proyectoActivo, rutaPedida, credenciales);
+    // Canal paralelo para la pestaña Ejecutar (`GET /api/tests/eventos`): el contrato de esta
+    // respuesta no cambia, esto solo da progreso en vivo mientras Playwright corre.
+    difusorTests.emitir({ tipo: "inicio", ruta: rutaPedida });
+    let resultado: ResultadoEjecucionPlaywright | undefined;
+    try {
+      resultado = await ejecutarFn(proyectoActivo, rutaPedida, credenciales, (texto) => {
+        difusorTests.emitir({ tipo: "linea", texto });
+      });
+    } finally {
+      difusorTests.emitir({ tipo: "fin", ok: resultado?.ok ?? false, codigo: resultado?.codigo ?? null });
+    }
     await reply.send(resultado);
+  });
+
+  // Progreso en vivo de `/api/tests/ejecutar` (líneas del reporter `list` de Playwright): a
+  // diferencia de `/api/eventos`, no hay un evento terminal que cierre la conexión — se queda
+  // abierta entre ejecuciones y se limpia solo cuando el cliente desconecta.
+  app.get("/api/tests/eventos", (_req, reply) => {
+    reply.hijack();
+    reply.raw.writeHead(200, {
+      "content-type": "text/event-stream",
+      "cache-control": "no-cache",
+      connection: "keep-alive",
+    });
+
+    const suscripcion = difusorTests.suscribirse()[Symbol.asyncIterator]();
+    reply.raw.on("close", () => {
+      void suscripcion.return?.();
+    });
+    void (async () => {
+      for (let resultado = await suscripcion.next(); !resultado.done; resultado = await suscripcion.next()) {
+        reply.raw.write(`data: ${JSON.stringify(resultado.value)}\n\n`);
+      }
+    })();
   });
 
   // --- Reports, Dashboard y trazabilidad (Bloque 8) -----------------------------------------------

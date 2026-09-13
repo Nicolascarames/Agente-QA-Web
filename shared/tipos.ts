@@ -82,6 +82,13 @@ export interface EventoNdjson {
   data: unknown;
 }
 
+/** Canal paralelo de `POST /api/tests/ejecutar` (Ejecutar): el contrato de esa respuesta no cambia,
+ *  esto solo da progreso en vivo por `GET /api/tests/eventos` mientras Playwright corre. */
+export type EventoTest =
+  | { tipo: "inicio"; ruta?: string }
+  | { tipo: "linea"; texto: string }
+  | { tipo: "fin"; ok: boolean; codigo: number | null };
+
 // --- Ejecutar / Reparar (Bloque 7): resultados reales del último reporte de Playwright ---------
 // Viven aquí, no en server/reporter.ts, porque src/api.ts (tsconfig.app.json) no puede importar de
 // server/ (tsconfig.server.json) — server/reporter.ts los re-exporta para conservar su forma

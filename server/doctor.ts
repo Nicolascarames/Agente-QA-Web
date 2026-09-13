@@ -82,7 +82,7 @@ export async function comprobarBinarioSdk(
   };
 }
 
-const NODE_MINIMO = 18;
+const NODE_MINIMO = 22;
 
 export function comprobarNode(version: string = process.versions.node): ResultadoComprobacion {
   const nombre = "Versión de Node";

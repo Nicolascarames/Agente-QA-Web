@@ -4,9 +4,10 @@
 // compilado (`npm run build` primero): mismo criterio que `"start": "node dist-server/server/index.js"`.
 import { createInterface } from "node:readline/promises";
 import { buildApp } from "../dist-server/server/app.js";
+import { ejecutarAsistente } from "../dist-server/server/asistente.js";
 import { ejecutarDoctor } from "../dist-server/server/doctor.js";
 import { instalar } from "../dist-server/server/instalar.js";
-import { configRaizPath, escribirConfigRaiz, leerConfigRaiz } from "../dist-server/server/proyecto.js";
+import { leerConfigRaiz } from "../dist-server/server/proyecto.js";
 
 const DESTINOS_INSTALAR = ["claude", "codex", "copilot"];
 
@@ -50,26 +51,18 @@ async function correrInstalar(cwd) {
   process.exit(resultado.escritos.length > 0 || resultado.omitidos.length === 0 ? 0 : 1);
 }
 
-async function preguntarUrlBase() {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  try {
-    const respuesta = await rl.question("URL base de la aplicación a probar: ");
-    return respuesta.trim();
-  } finally {
-    rl.close();
+/**
+ * El asistente (Pieza 2) trae sus propios valores por defecto para preguntar/escribir/esTty — ya
+ * conectados a la terminal real —, así que aquí no hace falta reenviar ninguno. Si `continuar` es
+ * false, el asistente ya imprimió todo lo necesario (rama B, o un paso no arreglable): termina el
+ * proceso aquí mismo con su código de salida.
+ * @param {string} cwd
+ */
+async function correrAsistente(cwd) {
+  const resultado = await ejecutarAsistente(cwd);
+  if (!resultado.continuar) {
+    process.exit(resultado.codigoSalida);
   }
-}
-
-/** @param {string} cwd */
-async function asegurarConfigRaiz(cwd) {
-  const existente = await leerConfigRaiz(cwd);
-  if (existente) return existente;
-
-  const appUrl = await preguntarUrlBase();
-  const config = { schemaVersion: 1, appUrl };
-  await escribirConfigRaiz(cwd, config);
-  console.log(`Creado ${configRaizPath(cwd)}`);
-  return config;
 }
 
 async function main() {
@@ -86,7 +79,14 @@ async function main() {
     return;
   }
 
-  await asegurarConfigRaiz(cwd);
+  if (comando === "iniciar") {
+    // A mano: repite el asistente aunque ya exista `agente-qa.config.json` (es idempotente, cada
+    // paso ya hecho se salta solo).
+    await correrAsistente(cwd);
+  } else if (!(await leerConfigRaiz(cwd))) {
+    // Primera vez (Pieza 2): sin config, el asistente guía antes de levantar la web.
+    await correrAsistente(cwd);
+  }
 
   const app = buildApp({ proyectoInicial: cwd });
   const puerto = Number(process.env.PORT) || 3939;

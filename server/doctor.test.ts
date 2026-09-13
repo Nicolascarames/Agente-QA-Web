@@ -5,15 +5,15 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { comprobarBinarioSdk, comprobarCredenciales, comprobarNode, comprobarPlaywright, ejecutarDoctor } from "./doctor.js";
 
 describe("comprobarNode", () => {
-  it("ok con Node 18 o superior", () => {
+  it("ok con Node 22 o superior", () => {
     expect(comprobarNode("22.5.0").ok).toBe(true);
-    expect(comprobarNode("18.0.0").ok).toBe(true);
+    expect(comprobarNode("24.0.0").ok).toBe(true);
   });
 
-  it("falla con Node menor de 18 y lo dice en el mensaje", () => {
-    const resultado = comprobarNode("16.20.0");
+  it("falla con Node menor de 22 y lo dice en el mensaje", () => {
+    const resultado = comprobarNode("18.20.0");
     expect(resultado.ok).toBe(false);
-    expect(resultado.mensaje).toContain("16.20.0");
+    expect(resultado.mensaje).toContain("18.20.0");
   });
 });
 

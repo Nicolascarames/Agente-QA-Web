@@ -1,98 +1,52 @@
 # Agente-QA-Web
 
+## Qué es esto
+
 Escribes en castellano lo que quieres probar. Sale un test de Playwright que **ya se ha ejecutado y
-está verde**.
+está verde**. Todo pasa por una consola de chat en una web local: sin YAML ni configuración manual
+de Playwright, el agente redacta el escenario, genera el `.spec.ts`, lo ejecuta y, si falla, propone
+la corrección.
 
-> Esta guía es para levantar la app y probarla a mano en cada sesión. El estado interno del proyecto
-> (qué bloques están cerrados, decisiones tomadas) vive en `ESTADO.md`; la cola de trabajo en
-> `PROXIMOS-PASOS.md`. Esta página no se toca para eso — solo para "cómo arranco esto y qué hago".
+> El estado interno del proyecto (qué bloques están cerrados, decisiones tomadas) vive en
+> `ESTADO.md`; la cola de trabajo en `PROXIMOS-PASOS.md`. Esta página no se toca para eso — solo
+> para "cómo arranco esto y qué hago".
 
-## Qué necesitas antes de empezar
+## Usarlo en tu web
 
-- **Node.js 22 o superior.**
-- **Claude Code con sesión iniciada** en este ordenador (`claude login` una vez). Se usa tu
-  suscripción: no hace falta `ANTHROPIC_API_KEY` ni ninguna clave en el repo.
-- **Playwright** en el repo donde vayas a generar/ejecutar tests (`npx playwright install` si hace
-  falta).
-
-Para comprobar las tres cosas de golpe: ver el apartado "El doctor" más abajo.
-
-## Levantar la app en local (modo desarrollo, este repo)
-
-Desde la raíz de este repo:
+Necesitas Node.js 22+ y una sesión de Claude Code iniciada en el ordenador (`claude login`, una vez
+— usa tu suscripción, no hace falta `ANTHROPIC_API_KEY` ni ninguna clave en el repo). Desde la raíz
+del repo de la aplicación que quieres probar:
 
 ```bash
-npm install                 # una vez
-npm run dev -- --project <ruta-a-un-repo-con-tests>
+npx agente-qa
 ```
 
-Ejemplo real usando el proyecto de pruebas incluido:
+La primera vez, un asistente te lleva de la mano: comprueba Node, la sesión de Claude Code y
+Playwright (lo instala si le dices que sí), pregunta la URL base de tu aplicación y si es un entorno
+de pruebas o uno real (para encender la barrera de escrituras), si quieres guardar un usuario de
+prueba, y si quieres instalar la skill para usarla también desde tu propia terminal sin pasar por la
+web. Cada pregunta tiene un valor por defecto seguro; puedes repetirlo cuando quieras con:
 
 ```bash
-npm run dev -- --project "C:\GitHub\Agente-QA-Web\pruebas\sauce"
+npx agente-qa iniciar
 ```
 
-Esto levanta **dos procesos**: Vite (cliente, `http://localhost:5173`) y Fastify (servidor,
-`http://localhost:3939`, con `/api/*` proxeado desde Vite). Abre `http://localhost:5173` en el
-navegador. Los dos procesos escriben a la misma consola sin prefijo (`[vite]`/`[server]`): si ves
-solo el arranque de Vite y nada del servidor, tarda unos segundos en aparecer, es normal.
-
-**Si la página carga pero todo lo que empieza por `/api/` falla** (Dashboard vacío, consola sin
-respuesta, "Error: /api/estado respondió 500"): el servidor (puerto 3939) no arrancó o quedó
-zombi. Compruébalo con:
-
-```bash
-curl http://localhost:3939/api/proyecto
-```
-
-Si no responde nada, casi siempre son procesos `node` huérfanos de una sesión anterior (`npm run
-dev` no imprime nada al morir, sigue "abierto" sin escuchar en el puerto). Ciérralos todos y vuelve
-a lanzar `npm run dev` limpio:
-
-```bash
-# PowerShell
-Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
-```
-
-Si tras eso sigue sin arrancar, arranca el servidor aparte, en otra terminal, para ver el error real:
-
-```bash
-npx tsx server/index.ts
-```
-
-## Usarlo de verdad, sobre un repo cualquiera (no este)
-
-Una vez publicado el paquete, será `npx agente-qa`. Hasta entonces, desde la raíz de **este** repo
-pero apuntando a otro:
-
-```bash
-node bin/agente-qa.mjs          # arranca sobre process.cwd() — ejecútalo DESDE el repo destino
-```
-
-o, para probar sin moverte de aquí, usa `pruebas/sauce/` (repo de pruebas contra
-[SauceDemo](https://www.saucedemo.com), ya montado, fuera de git):
-
-```bash
-cd pruebas/sauce
-node ../../bin/agente-qa.mjs
-```
-
-La primera vez pregunta la URL base y crea `agente-qa.config.json` en la raíz de ese repo; las
-siguientes veces no repregunta.
+Las siguientes veces (o si ya existe `agente-qa.config.json`), `npx agente-qa` arranca la web
+directamente, sin volver a preguntar.
 
 ### El doctor
 
 ```bash
-node bin/agente-qa.mjs doctor
+npx agente-qa doctor
 ```
 
 Comprueba sesión de Claude Code, binario del SDK, versión de Node y Playwright. Si algo falta, te da
-el comando exacto para arreglarlo.
+el comando exacto para arreglarlo. Es el mismo diagnóstico que ves en la pestaña Configuración.
 
 ### Instalar la skill en otro repo (para usarla desde su propia terminal, sin la web)
 
 ```bash
-node bin/agente-qa.mjs instalar
+npx agente-qa instalar
 ```
 
 Genera `.claude/skills/qa/`, `AGENTS.md` y `.github/copilot-instructions.md` en el repo destino.
@@ -158,7 +112,47 @@ Al ejecutar tests desde la pestaña **Ejecutar**, esas mismas variables se pasan
 del proceso de Playwright — si el `.spec.ts` las lee con `process.env.<NOMBRE>` en vez de tenerlas
 escritas a fuego, la ejecución real las encuentra igual.
 
-## Verificación del propio código de este repo
+## Desarrollar este proyecto
+
+```bash
+git clone https://github.com/Nicolascarames/Agente-QA-Web.git
+cd Agente-QA-Web
+npm install
+npm run empezar
+```
+
+`npm run empezar` repite los mismos pasos 1–3 del asistente de arriba (Node, sesión, binario del
+SDK), compila si hace falta y te deja elegir `pruebas/sauce/` (repo de pruebas contra
+[SauceDemo](https://www.saucedemo.com), ya montado, fuera de git) como proyecto de tests antes de
+levantar **dos procesos**: Vite (cliente, `http://localhost:5173`) y Fastify (servidor,
+`http://localhost:3939`, con `/api/*` proxeado desde Vite). Abre `http://localhost:5173` en el
+navegador. Los dos procesos escriben a la misma consola sin prefijo (`[vite]`/`[server]`): si ves
+solo el arranque de Vite y nada del servidor, tarda unos segundos en aparecer, es normal.
+
+**Si la página carga pero todo lo que empieza por `/api/` falla** (Dashboard vacío, consola sin
+respuesta, "Error: /api/estado respondió 500"): el servidor (puerto 3939) no arrancó o quedó
+zombi. Compruébalo con:
+
+```bash
+curl http://localhost:3939/api/proyecto
+```
+
+Si no responde nada, casi siempre son procesos `node` huérfanos de una sesión anterior (ni `npm run
+empezar` ni `npm run dev` imprimen nada al morir, siguen "abiertos" sin escuchar en el puerto).
+Ciérralos todos y vuelve a lanzar limpio:
+
+```bash
+# PowerShell
+Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
+```
+
+Si tras eso sigue sin arrancar, arranca el servidor aparte, en otra terminal, para ver el error real:
+
+```bash
+npx tsx server/index.ts
+```
+
+### Verificación del propio código de este repo
 
 ```bash
 npm run lint

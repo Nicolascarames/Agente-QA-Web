@@ -100,13 +100,25 @@ export interface ConsolaGlobalProps {
   eventos: EventoNdjson[];
   marcarCorridaActiva: (etiqueta: string | null) => void;
   agregarMensajeUsuario: (texto: string) => void;
+  /** Empezar (Bloque «primeros pasos»): texto que otra pestaña quiere dejar escrito aquí sin
+   *  enviarlo. `null` cuando no hay nada pendiente — App.tsx es quien lo posee, esta consola no
+   *  conoce a quien lo pide. */
+  borradorConsola: string | null;
+  onBorradorAplicado: () => void;
 }
 
 /**
  * Bloque 4: la caja de texto lanza el agente de verdad vía el SDK. Enviar ya no bloquea si hay una
  * corrida activa — encola en la misma sesión (el CLI la atiende al terminar el turno en curso).
  */
-export function ConsolaGlobal({ corridaActiva, eventos, marcarCorridaActiva, agregarMensajeUsuario }: ConsolaGlobalProps) {
+export function ConsolaGlobal({
+  corridaActiva,
+  eventos,
+  marcarCorridaActiva,
+  agregarMensajeUsuario,
+  borradorConsola,
+  onBorradorAplicado,
+}: ConsolaGlobalProps) {
   const [comando, setComando] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -115,6 +127,17 @@ export function ConsolaGlobal({ corridaActiva, eventos, marcarCorridaActiva, agr
   // modelo suele poner primero suele ser la recomendada, ver convención de AskUserQuestion).
   const [opcionEnfocada, setOpcionEnfocada] = useState(0);
   const listaRef = useRef<HTMLUListElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // El botón "Escribir el ejemplo en la consola" de Empezar rellena esta caja sin enviarla: solo
+  // escribe, enfoca y avisa a App.tsx para que limpie el borrador (si no, se reescribiría en cada
+  // render).
+  useEffect(() => {
+    if (borradorConsola === null) return;
+    setComando(borradorConsola);
+    inputRef.current?.focus();
+    onBorradorAplicado();
+  }, [borradorConsola, onBorradorAplicado]);
 
   // La última pregunta sin responder, si la hay: el propio `canUseTool` del agente queda bloqueado
   // hasta que se llame a `responderPregunta`, así que basta con quedarse con la más reciente.
@@ -284,6 +307,7 @@ export function ConsolaGlobal({ corridaActiva, eventos, marcarCorridaActiva, agr
         {corridaActiva && <p className="text-2xs text-text-dim">se enviará al terminar el paso actual</p>}
         <div className="flex flex-wrap gap-1.5">
           <input
+            ref={inputRef}
             value={comando}
             onChange={(e) => {
               setComando(e.target.value);

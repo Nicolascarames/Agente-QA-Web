@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Panel } from "./Panel";
-import { ejecutarTests, obtenerContenidoGenerado, obtenerTests } from "./api";
+import { ejecutarTests, obtenerContenidoGenerado, obtenerTests, suscribirseEventosTests } from "./api";
 import type { ResultadoTest } from "../shared/tipos";
 
 // Bloque 7: mismos tres paneles que el Bloque 6 dejó vacíos (misma geometría — izquierda 25 %,
@@ -10,9 +10,10 @@ import type { ResultadoTest } from "../shared/tipos";
 // Después del plan: el Bloque 7 decidió que esta pestaña solo LEÍA el reporte (`server/reporter.ts`)
 // porque "no hay runner de Playwright en el servidor" — el usuario pidió poder lanzar los tests
 // desde aquí, así que ese runner existe ahora (`server/ejecutorTests.ts`, botón por fila y "Ejecutar
-// todos"). Sigue sin haber progreso en vivo paso a paso: `ejecutarTests` espera a que el proceso
-// termine y esta pestaña recarga `/api/tests` con el reporte ya escrito, igual que si se hubiera
-// lanzado a mano desde una terminal.
+// todos"). `ejecutarTests` (el POST) sigue esperando a que el proceso termine y devolviendo todo de
+// golpe — ese contrato no cambia — pero mientras tanto `suscribirseEventosTests` (canal SSE paralelo)
+// va pintando las líneas del reporter `list` de Playwright según salen, para que el spinner ciego de
+// antes tenga progreso real debajo.
 
 /** Nombre de fichero suelto a partir de lo que reporte Playwright en `ficheroSpec` (puede venir con
  *  ruta completa según el `testDir` del repo destino): la convención de esta app (Bloque 8,
@@ -51,8 +52,20 @@ export function Ejecutar({}: object) {
   // `null` = nada en marcha; "" = "Ejecutar todos"; cualquier otra cosa = la ruta de ese spec suelto.
   const [ejecutando, setEjecutando] = useState<string | null>(null);
   const [salidaEjecucion, setSalidaEjecucion] = useState<string | null>(null);
+  const [lineasEnVivo, setLineasEnVivo] = useState<string[]>([]);
   const [codigoSpec, setCodigoSpec] = useState<string | null>(null);
   const [cargandoCodigo, setCargandoCodigo] = useState(false);
+  const salidaEnVivoRef = useRef<HTMLPreElement | null>(null);
+  // Guarda la función de cierre de la suscripción SSE en curso, para poder desuscribirse también al
+  // desmontar el componente (navegar fuera de la pestaña a media ejecución), no solo al terminar.
+  const desuscribirseRef = useRef<(() => void) | null>(null);
+
+  // Mismo patrón de auto-scroll que `ConsolaGlobal`: la salida siempre enseña la última línea sin
+  // que el usuario tenga que bajar a mano.
+  useEffect(() => {
+    const nodo = salidaEnVivoRef.current;
+    if (nodo) nodo.scrollTop = nodo.scrollHeight;
+  }, [lineasEnVivo]);
 
   const cargarTests = () => {
     setCargando(true);
@@ -94,6 +107,10 @@ export function Ejecutar({}: object) {
     setEjecutando(ruta ?? "");
     setError(null);
     setSalidaEjecucion(null);
+    setLineasEnVivo([]);
+    desuscribirseRef.current = suscribirseEventosTests((evento) => {
+      if (evento.tipo === "linea") setLineasEnVivo((actual) => [...actual, evento.texto]);
+    });
     ejecutarTests(ruta)
       .then((resultado) => {
         if (!resultado.ok) setSalidaEjecucion(resultado.salida);
@@ -102,8 +119,21 @@ export function Ejecutar({}: object) {
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : String(err));
       })
-      .finally(() => setEjecutando(null));
+      .finally(() => {
+        desuscribirseRef.current?.();
+        desuscribirseRef.current = null;
+        setEjecutando(null);
+      });
   };
+
+  // Sin esto, navegar fuera de la pestaña a media ejecución deja el `EventSource` abierto
+  // indefinidamente (`ejecutar` solo se desuscribe en su propio `finally`, que no llega a correr si
+  // el componente ya no está montado para verlo).
+  useEffect(() => {
+    return () => {
+      desuscribirseRef.current?.();
+    };
+  }, []);
 
   return (
     <div className="flex h-full flex-col gap-2.5 p-4">
@@ -125,6 +155,14 @@ export function Ejecutar({}: object) {
             >
               {ejecutando === "" ? "Ejecutando toda la suite…" : "▶ Ejecutar todos"}
             </button>
+            {(ejecutando !== null || lineasEnVivo.length > 0) && (
+              <pre
+                ref={salidaEnVivoRef}
+                className="max-h-32 overflow-auto whitespace-pre-wrap break-all rounded-7 border border-border-soft bg-bg-sunken p-2 text-2xs text-text-dim"
+              >
+                {lineasEnVivo.length > 0 ? lineasEnVivo.join("\n") : "Esperando salida de Playwright…"}
+              </pre>
+            )}
             {cargando ? (
               <p className="text-xs text-text-dim">Cargando…</p>
             ) : error ? (
