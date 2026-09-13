@@ -7,6 +7,18 @@ Cola priorizada. **Una tarea = una línea.** El detalle vive en la spec.
 
 Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`](docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md)
 
+## Dónde lo dejamos (2026-09-13)
+
+El plan de nueve bloques y la instalación guiada están cerrados, y la app se probó entera contra
+SauceDemo real: el ciclo frase → `.feature` → page object → `.spec.ts` → verde funciona de punta a
+punta. **Lo único grande que queda es publicar en npm** (Pieza 3 de su spec: los dos workflows y los
+cuatro pasos manuales). Antes de tocar eso hay que decidir una cosa que está a medias:
+`package.json` dice hoy `qa-web-agent` / `0.1.0` y la spec decide `agente-qa` / `1.0.0`. npm liberó
+el nombre `agente-qa` el 2026-09-13 sobre las 13:26 (hora peninsular); las versiones `0.1.0`–`0.1.6`
+de ese nombre no se pueden reutilizar nunca.
+
+Lo demás de la lista es deuda menor, ninguna bloquea nada.
+
 ---
 
 # EL PLAN — nueve bloques, en este orden
@@ -166,6 +178,17 @@ Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`]
       `Glob` que devuelve tres ficheros se pinta como `← Glob: tests\pages\login.page.ts`, que se lee
       como si hubiera devuelto uno. Mejor sería contar (`← Glob: 3 resultados`) cuando el resultado
       tiene varias líneas. Cosmético, en `src/ConsolaGlobal.tsx` (`resumenResultadoHerramienta`).
+- [ ] **El asistente no puede ayudar a quien aún no ha compilado.** `bin/agente-qa.mjs` importa de
+      `dist-server/`, así que el paso «¿está compilado?» de la rama B llega tarde: si falta
+      `dist-server/`, el import revienta antes. Hoy no muerde (el hook `prepare` compila en
+      `npm install`, y el tarball de npm lleva `dist-server/` dentro), y es preexistente — afecta
+      igual a `doctor` e `instalar`. Si alguna vez se rompe el `prepare`, el mensaje de error será
+      incomprensible: convendría que `bin/` detecte la ausencia de `dist-server/` y lo diga antes de
+      importar nada.
+- [ ] **Restos del sistema anterior: `estado`/`obtenerEstado`/`agenteQaInicializado`** (`server/estado.ts`,
+      `shared/tipos.ts`). El Dashboard solo usa `/api/estado` para un mensaje de error genérico.
+      Revisar si queda algo vivo ahí o se puede borrar como se borraron `/api/actividad` y
+      `AccionDeshabilitada` el 2026-09-13.
 - [ ] **`doctor` no comprueba el llavero de macOS.** `comprobarCredenciales` (`server/doctor.ts`)
       solo mira el fichero `.credentials.json`; en macOS la sesión puede vivir en el llavero. No se
       implementó `security find-generic-password` porque no hay máquina macOS a mano para verificar
