@@ -79,12 +79,19 @@ export function extraerToolUseIds(evento: EventoNdjson): { id: string; nombre: s
 
 const NOMBRES_HERRAMIENTA_ESCRITURA = new Set(["Write", "Edit"]);
 
-/** Ruta del último fichero que el agente escribió o modificó (`Write`/`Edit`), buscando hacia atrás
- *  en `eventos` — para saber a qué pestaña saltar cuando llega la pregunta de confirmación (Pieza
- *  3). `null` si no ha escrito nada todavía en esta conversación. */
+/** Ruta del último fichero que el agente escribió o modificó (`Write`/`Edit`) EN ESTE TURNO que
+ *  mapea a alguna pestaña, buscando hacia atrás en `eventos` — para saber a qué pestaña saltar
+ *  cuando llega la pregunta de confirmación (Pieza 3). `eventos` acumula toda la conversación
+ *  (`useCorridaGlobal.ts`), así que el escaneo se corta en el `usuario.mensaje` más reciente (el
+ *  límite de turno: lo pone tanto un mensaje nuevo como la respuesta a una pregunta anterior, ver
+ *  `responder()` más abajo) para no saltar a un fichero de un turno viejo. Ignora también
+ *  escrituras que no mapean a ninguna pestaña (p.ej. `tests/setup/*.setup.ts`) y sigue buscando
+ *  más atrás dentro del mismo turno, en vez de rendirse en la primera que no encaja. `null` si no
+ *  hay ninguna escritura relevante en el turno actual. */
 export function rutaUltimoFicheroEscrito(eventos: EventoNdjson[]): string | null {
   for (let i = eventos.length - 1; i >= 0; i -= 1) {
     const evento = eventos[i];
+    if (evento.type === "usuario.mensaje") break;
     if (evento.type !== "agente.assistant") continue;
     const contenido = (evento.data as { message?: { content?: unknown } } | undefined)?.message?.content;
     if (!Array.isArray(contenido)) continue;
@@ -93,7 +100,7 @@ export function rutaUltimoFicheroEscrito(eventos: EventoNdjson[]): string | null
       const bloque = bloques[j];
       if (bloque.type === "tool_use" && bloque.name && NOMBRES_HERRAMIENTA_ESCRITURA.has(bloque.name)) {
         const rutaFichero = (bloque.input as { file_path?: unknown } | undefined)?.file_path;
-        if (typeof rutaFichero === "string") return rutaFichero;
+        if (typeof rutaFichero === "string" && pestanaParaRuta(rutaFichero)) return rutaFichero;
       }
     }
   }
