@@ -257,6 +257,7 @@ export default function App() {
                 onBorradorAplicado={() => {
                   setBorradorConsola(null);
                 }}
+                onAbrirPestana={setPestana}
               />
             </div>
           </div>
