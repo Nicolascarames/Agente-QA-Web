@@ -3,7 +3,7 @@ import { Panel } from "./Panel";
 import { guardarCredenciales, guardarConfig, obtenerConfig, obtenerCredenciales, obtenerDoctor } from "./api";
 import type { ConfigRaiz, CredencialVariable, ResultadoComprobacion } from "../shared/tipos";
 
-const CONFIG_VACIA: ConfigRaiz = { schemaVersion: 1, appUrl: "", entorno: "pruebas", barrera: false, listaBlanca: [] };
+const CONFIG_VACIA: ConfigRaiz = { schemaVersion: 1, appUrl: "", entorno: "pruebas", barrera: false, listaBlanca: [], puertas: "escenario" };
 
 // GAP=1.5 entre los tres paneles, mismo patrón que Dashboard/Reports (ver ESTADO.md): cada uno
 // llega exacto a 0/100 sin dejar huecos ni sobrar ancho.

@@ -34,7 +34,7 @@ import type {
 
 /** Defaults de `ConfigRaiz` cuando `agente-qa.config.json` todavía no existe o no tiene `appUrl`
  *  (Bloque 5): el panel de Configuración necesita algo que pintar antes de que el usuario guarde nada. */
-const CONFIG_RAIZ_POR_DEFECTO: ConfigRaiz = { schemaVersion: 1, appUrl: "", entorno: "pruebas", barrera: false, listaBlanca: [] };
+const CONFIG_RAIZ_POR_DEFECTO: ConfigRaiz = { schemaVersion: 1, appUrl: "", entorno: "pruebas", barrera: false, listaBlanca: [], puertas: "escenario" };
 
 /** Extrae `session_id` de un evento del agente si lo trae, para poder reanudar la conversación
  *  (`resume`) en el siguiente `/api/comando` sin acoplarse a la forma completa del mensaje del SDK. */

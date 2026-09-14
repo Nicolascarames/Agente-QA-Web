@@ -21,7 +21,7 @@ function depsBase(overrides: Partial<DependenciasAsistente> = {}): Partial<Depen
       comprobarPlaywright: () => Promise.resolve({ nombre: "Playwright en el proyecto", ...OK }),
     },
     proyecto: {
-      leerConfigRaiz: () => Promise.resolve({ schemaVersion: 1, appUrl: "https://ejemplo.test", entorno: "pruebas", barrera: false, listaBlanca: [] }),
+      leerConfigRaiz: () => Promise.resolve({ schemaVersion: 1, appUrl: "https://ejemplo.test", entorno: "pruebas", barrera: false, listaBlanca: [], puertas: "escenario" }),
       escribirConfigRaiz: () => Promise.resolve(),
       leerCredenciales: () => Promise.resolve({ schemaVersion: 1, variables: [] }),
       escribirCredenciales: () => Promise.resolve(),

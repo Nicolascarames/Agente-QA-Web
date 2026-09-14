@@ -11,12 +11,19 @@ export interface EstadoProyectoActivo {
  *  (interruptor de la barrera de escrituras) y `listaBlanca` (URLs permitidas con la barrera activa).
  *  Este fichero SÍ se versiona (`server/proyecto.ts`): nunca va aquí un secreto, por eso las
  *  credenciales de prueba viven aparte, en `ConfigCredenciales`. */
+/** Cuántas veces para el agente a pedir confirmación con `AskUserQuestion` en un ciclo completo
+ *  (Pieza 2 de docs/superpowers/specs/2026-09-14-puertas-de-confirmacion-con-botones.md). El
+ *  default es "escenario": la mínima interrupción — una sola parada tras el `.feature`, y el resto
+ *  del ciclo sigue solo hasta el test en verde. */
+export type PoliticaPuertas = "escenario" | "escenario-y-codigo" | "por-artefacto" | "por-fichero";
+
 export interface ConfigRaiz {
   schemaVersion: 1;
   appUrl: string;
   entorno: string;
   barrera: boolean;
   listaBlanca: string[];
+  puertas: PoliticaPuertas;
 }
 
 /** Un par nombre/valor que el agente puede usar en pruebas (usuario, contraseña, o cualquier otra

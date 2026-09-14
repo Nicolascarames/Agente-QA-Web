@@ -61,6 +61,7 @@ describe("leerConfigRaiz / escribirConfigRaiz", () => {
       entorno: "produccion",
       barrera: true,
       listaBlanca: ["http://localhost:3000"],
+      puertas: "por-artefacto",
     });
     expect(await leerConfigRaiz(proyecto)).toEqual({
       schemaVersion: 1,
@@ -68,10 +69,11 @@ describe("leerConfigRaiz / escribirConfigRaiz", () => {
       entorno: "produccion",
       barrera: true,
       listaBlanca: ["http://localhost:3000"],
+      puertas: "por-artefacto",
     });
   });
 
-  it("rellena entorno/barrera/listaBlanca con sus defaults si faltan en el JSON leído", async () => {
+  it("rellena entorno/barrera/listaBlanca/puertas con sus defaults si faltan en el JSON leído", async () => {
     await writeFile(configRaizPath(proyecto), JSON.stringify({ schemaVersion: 1, appUrl: "http://localhost:3000" }), "utf8");
     expect(await leerConfigRaiz(proyecto)).toEqual({
       schemaVersion: 1,
@@ -79,7 +81,18 @@ describe("leerConfigRaiz / escribirConfigRaiz", () => {
       entorno: "pruebas",
       barrera: false,
       listaBlanca: [],
+      puertas: "escenario",
     });
+  });
+
+  it("descarta un valor de puertas que no es ninguna política válida y usa el default", async () => {
+    await writeFile(
+      configRaizPath(proyecto),
+      JSON.stringify({ schemaVersion: 1, appUrl: "http://localhost:3000", puertas: "cada-hora" }),
+      "utf8"
+    );
+    const config = await leerConfigRaiz(proyecto);
+    expect(config?.puertas).toBe("escenario");
   });
 });
 

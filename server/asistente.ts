@@ -188,7 +188,7 @@ async function ejecutarRamaA(cwd: string, deps: DependenciasAsistente): Promise<
         .map((url) => url.trim())
         .filter((url) => url.length > 0);
     }
-    config = { schemaVersion: 1, appUrl, entorno: esReal ? "real" : "pruebas", barrera: esReal, listaBlanca };
+    config = { schemaVersion: 1, appUrl, entorno: esReal ? "real" : "pruebas", barrera: esReal, listaBlanca, puertas: "escenario" };
     await proyecto.escribirConfigRaiz(cwd, config);
     escribir(`Creado ${configRaizPath(cwd)}`);
   }
