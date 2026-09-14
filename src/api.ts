@@ -4,7 +4,6 @@ import type {
   ConfigRaiz,
   ElementoFragil,
   EstadoCorridaActiva,
-  EstadoProyecto,
   EstadoProyectoActivo,
   EventoTest,
   RegistroEjecucion,
@@ -21,10 +20,6 @@ async function pedirJson<T>(url: string, init?: RequestInit): Promise<T> {
     throw new Error(`${url} respondió ${String(respuesta.status)}`);
   }
   return (await respuesta.json()) as T;
-}
-
-export function obtenerEstado(): Promise<EstadoProyecto> {
-  return pedirJson<EstadoProyecto>("/api/estado");
 }
 
 /** Alcance: una instancia por repo (decisión cerrada en ESTADO.md) — sin selector ni recientes. */

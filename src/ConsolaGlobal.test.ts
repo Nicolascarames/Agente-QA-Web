@@ -63,7 +63,9 @@ describe("describirEvento — bug 1: nada de JSON crudo por defecto", () => {
       message: { content: [{ type: "tool_result", tool_use_id: "t1", content: "a.feature\nb.feature\nc.feature", is_error: false }] },
     });
     const items = describirEvento(e, null, { t1: "Glob" });
-    expect(items).toEqual([{ tipo: "resultadoHerramienta", texto: "← Glob: a.feature" }]);
+    // Tres líneas: se cuenta ("3 resultados"), no se enseña solo la primera como si fuera la única
+    // (ver test de resumenResultadoHerramienta más abajo para el detalle de esta regla).
+    expect(items).toEqual([{ tipo: "resultadoHerramienta", texto: "← Glob: 3 resultados" }]);
   });
 
   it("un tool_result en error se marca como tal, no se confunde con éxito", () => {
@@ -83,6 +85,17 @@ describe("describirEvento — bug 1: nada de JSON crudo por defecto", () => {
 
   it("resumenResultadoHerramienta sin nombre conocido no revienta, solo omite el prefijo", () => {
     expect(resumenResultadoHerramienta({ type: "tool_result", content: "ok" })).toBe("← ok");
+  });
+
+  it("resumenResultadoHerramienta con una sola línea la muestra tal cual", () => {
+    expect(resumenResultadoHerramienta({ type: "tool_result", content: "tests\\pages\\login.page.ts" }, "Glob")).toBe(
+      "← Glob: tests\\pages\\login.page.ts"
+    );
+  });
+
+  it("resumenResultadoHerramienta con varias líneas cuenta en vez de mostrar solo la primera", () => {
+    const contenido = "tests\\pages\\login.page.ts\ntests\\pages\\inventory.page.ts\ntests\\specs\\login.spec.ts";
+    expect(resumenResultadoHerramienta({ type: "tool_result", content: contenido }, "Glob")).toBe("← Glob: 3 resultados");
   });
 });
 

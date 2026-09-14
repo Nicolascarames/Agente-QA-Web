@@ -1,21 +1,26 @@
 # PRÓXIMOS PASOS — Agente-QA-Web
 
-Actualizado: 2026-09-13 (progreso en vivo al ejecutar, asistente de primer arranque, pestaña
-«Empezar», y ocho fallos corregidos tras probar la app entera contra SauceDemo real)
+Actualizado: 2026-09-14 (probado el paquete tal cual se instalaría desde npm: barrera de escrituras
+y credenciales en claro corregidas, consola con bocadillos, deuda técnica cerrada, snapshot acotado
+cerrado con conclusión)
 
 Cola priorizada. **Una tarea = una línea.** El detalle vive en la spec.
 
 Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`](docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md)
 
-## Dónde lo dejamos (2026-09-13)
+## Dónde lo dejamos (2026-09-14)
 
-El plan de nueve bloques y la instalación guiada están cerrados, y la app se probó entera contra
-SauceDemo real: el ciclo frase → `.feature` → page object → `.spec.ts` → verde funciona de punta a
-punta. **Lo único grande que queda es publicar en npm** (Pieza 3 de su spec: los dos workflows y los
-cuatro pasos manuales). Antes de tocar eso hay que decidir una cosa que está a medias:
-`package.json` dice hoy `qa-web-agent` / `0.1.0` y la spec decide `agente-qa` / `1.0.0`. npm liberó
-el nombre `agente-qa` el 2026-09-13 sobre las 13:26 (hora peninsular); las versiones `0.1.0`–`0.1.6`
-de ese nombre no se pueden reutilizar nunca.
+El plan de nueve bloques y la instalación guiada siguen cerrados. Antes de publicar en npm, se probó
+el paquete completo tal cual lo instalaría un usuario real (`npm pack` + `npm install` del tarball en
+un repo consumidor limpio, fuera de este repo): el ciclo frase → `.feature` → page object →
+`.spec.ts` → verde funciona de punta a punta, y las ocho pestañas se comportan como documenta
+`ESTADO.md`. La prueba encontró y se corrigieron dos fallos reales — uno de ellos serio, la barrera
+de escrituras nunca se ejecutaba — y se cerró la deuda técnica acumulada (detalle de ambas cosas en
+`ESTADO.md`, tabla de decisiones). **Lo único grande que sigue quedando es publicar en npm** (Pieza 3
+de su spec: los dos workflows y los cuatro pasos manuales). Antes de tocar eso hay que decidir una
+cosa que está a medias: `package.json` dice hoy `qa-web-agent` / `0.1.0` y la spec decide
+`agente-qa` / `1.0.0`. npm liberó el nombre `agente-qa` el 2026-09-13 sobre las 13:26 (hora
+peninsular); las versiones `0.1.0`–`0.1.6` de ese nombre no se pueden reutilizar nunca.
 
 Lo demás de la lista es deuda menor, ninguna bloquea nada.
 
@@ -133,6 +138,13 @@ Lo demás de la lista es deuda menor, ninguna bloquea nada.
       volcaba JSON crudo y duplicaba el mensaje final; Dashboard y Reports arrastraban tres paneles
       del sistema retirado; ejecutar tests desde la web no entraba en el historial; el fichero de
       setup de Playwright daba 400; faltaba el favicon. Detalle en `ESTADO.md`.
+- [x] **Dos fallos reales (uno de seguridad) probando el paquete tal cual se instalaría desde npm.**
+      Cerrado 2026-09-14. `npm pack` + `npm install` del tarball en un repo consumidor limpio, fuera
+      de este repo: la barrera de escrituras nunca se ejecutaba (`mcp__playwright__*` pelado en
+      `allowedTools`, el mismo problema ya arreglado para `AskUserQuestion` pero no replicado aquí) y
+      las credenciales quedaban en claro en `.feature`/`.spec.ts` generados (la plantilla canónica
+      enseñaba el patrón). Los dos corregidos y verificados (build/typecheck/lint/153 tests en verde).
+      Detalle en `ESTADO.md`.
 - [ ] **Publicar en npm** — Piezas 1 y 3 de la spec de instalación guiada. La 1 (empaquetado) está
       hecha; falta la 3: `.github/workflows/ci.yml` y `publicar.yml`, más los cuatro pasos manuales
       (esperar a que npm libere el nombre, repo público, publicar la 1.0.0 a mano, configurar el
@@ -152,48 +164,45 @@ Lo demás de la lista es deuda menor, ninguna bloquea nada.
 
 ## Deuda anotada
 
-- [ ] **Snapshot acotado (`browser_find`/`browser_snapshot({target})`) en vez del árbol
-      completo — vigilar si compensa con el tiempo.** Cambiado el §2 de
-      `skill/skills/qa/SKILL.md` (2026-09-12): medido a mano en `pruebas/sauce/` que un snapshot
-      acotado a una fila de producto pesa ~89% menos que el árbol completo (629 vs 5.637 bytes,
-      ~4 car./token) y que `browser_find` no siempre trae el `ref` accionable (se corta antes del
-      botón; hay que completar con `browser_snapshot({target})`). Medido el mecanismo aislado, no
-      una ejecución real de punta a punta: falta ver si acotar esconde algo relevante fuera del
-      target (un modal, un banner de cookies) y obliga a más intentos de reparación de los que
-      ahorra en tokens. Revisar tras un número real de ejecuciones — si genera más rojos que
-      antes, volver a exigir el árbol completo salvo para el caso de "reparar con mensaje de
-      error concreto".
-      **Primera medida real (2026-09-13)**: un ciclo completo contra SauceDemo (frase → `.feature` →
-      page object ampliado → `.spec.ts` → verde) costó $0.42 en 25 turnos y **cero intentos de
-      reparación**, verde a la primera. La banda de coste de los ciclos del 12/9 era $0.13–$0.44, así
-      que no empeora. **No es concluyente**: no se pudo confirmar desde la consola si el agente llamó
-      a `browser_snapshot` con `target` o sin él. Eso ya no bloquea — la consola pinta ahora los
-      parámetros de cada herramienta (arreglado el mismo día), así que la próxima ejecución real sí
-      es medible. Anotar 3-4 ciclos más y decidir.
 - [ ] **El panel de salida en vivo de Ejecutar queda apretado dentro del panel de la lista**, y las
       listas de Redactar/Generar/Ejecutar se cortan en horizontal por debajo de ~1100px de ancho. A
       1440px (el ancho con el que se validó la maqueta) se ve bien. Decisión de diseño pendiente:
-      mover la salida en vivo al panel de detalle o dejarla donde está.
-- [ ] **El resumen de resultado de herramienta en la consola muestra solo la primera línea.** Un
-      `Glob` que devuelve tres ficheros se pinta como `← Glob: tests\pages\login.page.ts`, que se lee
-      como si hubiera devuelto uno. Mejor sería contar (`← Glob: 3 resultados`) cuando el resultado
-      tiene varias líneas. Cosmético, en `src/ConsolaGlobal.tsx` (`resumenResultadoHerramienta`).
-- [ ] **El asistente no puede ayudar a quien aún no ha compilado.** `bin/agente-qa.mjs` importa de
-      `dist-server/`, así que el paso «¿está compilado?» de la rama B llega tarde: si falta
-      `dist-server/`, el import revienta antes. Hoy no muerde (el hook `prepare` compila en
-      `npm install`, y el tarball de npm lleva `dist-server/` dentro), y es preexistente — afecta
-      igual a `doctor` e `instalar`. Si alguna vez se rompe el `prepare`, el mensaje de error será
-      incomprensible: convendría que `bin/` detecte la ausencia de `dist-server/` y lo diga antes de
-      importar nada.
-- [ ] **Restos del sistema anterior: `estado`/`obtenerEstado`/`agenteQaInicializado`** (`server/estado.ts`,
-      `shared/tipos.ts`). El Dashboard solo usa `/api/estado` para un mensaje de error genérico.
-      Revisar si queda algo vivo ahí o se puede borrar como se borraron `/api/actividad` y
-      `AccionDeshabilitada` el 2026-09-13.
+      mover la salida en vivo al panel de detalle o dejarla donde está. El usuario la está revisando
+      directamente (2026-09-14).
 - [ ] **`doctor` no comprueba el llavero de macOS.** `comprobarCredenciales` (`server/doctor.ts`)
       solo mira el fichero `.credentials.json`; en macOS la sesión puede vivir en el llavero. No se
       implementó `security find-generic-password` porque no hay máquina macOS a mano para verificar
       el nombre exacto del servicio, y adivinarlo daría falsos negativos silenciosos. Verificar y
       completar cuando haya acceso a macOS.
+- [ ] **El Gherkin propuesto no siempre pasa por Redactar antes de confirmarse.** `SKILL.md` §3 pide
+      escribir el `.feature` en disco antes de pedir confirmación y no repetir el Gherkin completo en
+      la consola (2026-09-14). Verificado en tres ciclos reales: cuando hay una elección real de
+      redacción (qué frase exacta, qué producto), el agente prefiere `AskUserQuestion` con el Gherkin
+      inline **antes** de escribir el fichero — la puerta en sí se respeta (no toca `tests/pages/`/
+      `tests/specs/` sin confirmar), pero la revisión en Redactar no llega a ejercerse porque
+      `AskUserQuestion` resuelve todo en el mismo turno. Decidir si se fuerza a escribir siempre
+      primero (incluso con ambigüedad de redacción) o se acepta esta vía como equivalente. Detalle en
+      `ESTADO.md`.
+
+### Cerradas 2026-09-14
+
+- [x] **Snapshot acotado (`browser_find`/`browser_snapshot({target})`) en vez del árbol completo.**
+      Seis ciclos reales medidos en total: 6/6 verdes a la primera, cero reparaciones, sin síntoma de
+      que acotar esconda algo relevante. **Decisión: se mantiene tal cual, cerrado.** Detalle en
+      `ESTADO.md`.
+- [x] **El resumen de resultado de herramienta en la consola mostraba solo la primera línea.**
+      `resumenResultadoHerramienta` cuenta ahora (`← Glob: 3 resultados`) en vez de mostrar solo la
+      primera línea. Detalle en `ESTADO.md`.
+- [x] **El asistente no podía ayudar a quien aún no había compilado.** `bin/agente-qa.mjs` detecta
+      `dist-server/` ausente antes de importar nada (los `import` estáticos se evaluaban antes que
+      cualquier comprobación propia) y da un mensaje claro en vez de un `ERR_MODULE_NOT_FOUND` en
+      crudo. Detalle en `ESTADO.md`.
+- [x] **Restos del sistema anterior: `estado`/`obtenerEstado`/`agenteQaInicializado`.** Confirmado
+      muerto de verdad (comprobaba `.agente-qa/`/`e2e/`/`playwright-report/`, estructura que ya no
+      existe); el Dashboard solo usaba el fallo para un mensaje de error genérico. Borrado entero,
+      junto con `ActividadNoDisponible` (mismo resto de la purga del 2026-09-13, sin usos). Detalle
+      en `ESTADO.md`.
+
 ### Cerradas 2026-09-13
 
 - [x] **"Ejecutar todos"/▶ por fila era síncrono, sin progreso en vivo.** `ejecutarPlaywright` trocea

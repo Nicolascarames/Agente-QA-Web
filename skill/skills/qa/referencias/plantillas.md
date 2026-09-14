@@ -17,10 +17,13 @@ en los `test.step` del `.spec.ts` — así se cruzan entre sí (trazabilidad, Bl
 Característica: Añadir un producto al carrito
 
   Escenario: Añadir la mochila Sauce Labs Backpack al carrito
-    Dado que he iniciado sesión como standard_user
+    Dado que he iniciado sesión con el usuario de pruebas
     Cuando añado "Sauce Labs Backpack" al carrito
     Entonces el contador del carrito muestra "1"
 ```
+
+Nótese que el escenario nombra el rol de la credencial ("el usuario de pruebas"), nunca su valor —
+ver la sección de credenciales de `SKILL.md`.
 
 ## `.page.ts` — Page Object con métodos de intención
 
@@ -85,7 +88,7 @@ test.describe('Añadir un producto al carrito', () => {
   test('añade la mochila Sauce Labs Backpack y el contador sube a 1', async ({ page }) => {
     const inventario = new InventoryPage(page);
 
-    await test.step('Dado que he iniciado sesión como standard_user', async () => {
+    await test.step('Dado que he iniciado sesión con el usuario de pruebas', async () => {
       // La sesión ya viene de storageState (proyecto de setup); aquí solo se confirma
       // que se arranca en la pantalla correcta.
       await page.goto('/inventory.html');
@@ -114,15 +117,20 @@ Un proyecto de setup hace login **una vez** y guarda la sesión. Los demás proy
 import { test as setup, expect } from '@playwright/test';
 import { LoginPage } from '../pages/login.page';
 
-const authFile = '.auth/standard_user.json';
+const authFile = '.auth/usuario-pruebas.json';
 
-setup('iniciar sesión como standard_user', async ({ page }) => {
+// Sin fallback a un valor literal: si falta la variable, el setup falla con un error explícito
+// en vez de arrancar con una credencial hardcodeada (ver sección de credenciales de SKILL.md).
+const usuario = process.env.SAUCE_USERNAME;
+const contrasena = process.env.SAUCE_PASSWORD;
+if (!usuario || !contrasena) {
+  throw new Error('Faltan las credenciales de prueba: SAUCE_USERNAME / SAUCE_PASSWORD.');
+}
+
+setup('iniciar sesión con el usuario de pruebas', async ({ page }) => {
   await page.goto('/');
   const login = new LoginPage(page);
-  await login.login(
-    process.env.SAUCE_USERNAME ?? 'standard_user',
-    process.env.SAUCE_PASSWORD ?? 'secret_sauce',
-  );
+  await login.login(usuario, contrasena);
   await expect(page).toHaveURL(/inventory\.html/);
   await page.context().storageState({ path: authFile });
 });

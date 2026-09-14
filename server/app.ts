@@ -4,7 +4,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Fastify, { type FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
-import { leerEstadoProyecto } from "./estado.js";
 import { lanzar, type SesionAgente } from "./agente.js";
 import { leerConfigRaiz, escribirConfigRaiz, leerCredenciales, escribirCredenciales } from "./proyecto.js";
 import * as git from "./git.js";
@@ -82,9 +81,6 @@ export function buildApp(opts: AppOptions): FastifyInstance {
   // Último session_id visto por el difusor de eventos, para reanudar la conversación en el
   // próximo /api/comando — en memoria, se pierde al reiniciar el servidor, decisión explícita.
   let ultimaSesionId: string | null = null;
-
-  // El estado no se guarda: se deriva del disco en cada petición.
-  app.get("/api/estado", async () => leerEstadoProyecto(proyectoActivo));
 
   // Alcance: una instancia por repo (decisión cerrada en ESTADO.md) — sin selector ni recientes.
   app.get("/api/proyecto", (): EstadoProyectoActivo => ({ actual: proyectoActivo }));

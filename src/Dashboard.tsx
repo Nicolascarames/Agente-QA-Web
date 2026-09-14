@@ -1,9 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
-import { obtenerEstado, obtenerFragiles, obtenerHistorial, obtenerTests, obtenerTrazabilidad } from "./api";
+import { useEffect, useState } from "react";
+import { obtenerFragiles, obtenerHistorial, obtenerTests, obtenerTrazabilidad } from "./api";
 import { Panel, type DisposicionPanel } from "./Panel";
-import type { CoberturaEscenario, ElementoFragil, EstadoProyecto, RegistroEjecucion, ResultadoTest } from "../shared/tipos";
-
-type CargaEstado = { estado: "cargando" } | { estado: "error"; mensaje: string } | { estado: "listo"; datos: EstadoProyecto };
+import type { CoberturaEscenario, ElementoFragil, RegistroEjecucion, ResultadoTest } from "../shared/tipos";
 
 // Cada una de las seis cajas del Bloque 8 depende de un endpoint distinto: si uno falla, solo esa
 // caja se queda en guion, el resto de la vista sigue viva.
@@ -30,24 +28,12 @@ const GEOMETRIA_STATS: DisposicionPanel[] = [0, 1, 2, 0, 1, 2].map((col, i) => (
 const ETIQUETAS = ["Escenarios cubiertos", "Tests en verde", "Tests en rojo", "Última ejecución", "Coste acumulado", "Elementos frágiles"];
 
 export function Dashboard() {
-  const [estado, setEstado] = useState<CargaEstado>({ estado: "cargando" });
   const [trazabilidad, setTrazabilidad] = useState<CargaBloque<CoberturaEscenario[]>>({ estado: "cargando" });
   const [tests, setTests] = useState<CargaBloque<ResultadoTest[]>>({ estado: "cargando" });
   const [historial, setHistorial] = useState<CargaBloque<RegistroEjecucion[]>>({ estado: "cargando" });
   const [fragiles, setFragiles] = useState<CargaBloque<ElementoFragil[]>>({ estado: "cargando" });
 
-  const recargarEstado = useCallback(() => {
-    return obtenerEstado()
-      .then((datos) => {
-        setEstado({ estado: "listo", datos });
-      })
-      .catch((err: unknown) => {
-        setEstado({ estado: "error", mensaje: err instanceof Error ? err.message : String(err) });
-      });
-  }, []);
-
   useEffect(() => {
-    void recargarEstado();
     void obtenerTrazabilidad()
       .then((datos) => {
         setTrazabilidad({ estado: "listo", datos });
@@ -76,7 +62,7 @@ export function Dashboard() {
       .catch(() => {
         setFragiles({ estado: "error" });
       });
-  }, [recargarEstado]);
+  }, []);
 
   // statBoxes[i] corresponde a ETIQUETAS[i]/GEOMETRIA_STATS[i]. Cada caja depende de su propio
   // endpoint (Bloque 8): mientras carga muestra el shimmer, y si el endpoint falló muestra un
@@ -133,24 +119,20 @@ export function Dashboard() {
 
   return (
     <div className="flex h-full w-full flex-col overflow-auto p-4">
-      {estado.estado === "error" ? (
-        <p className="text-accent">Error: {estado.mensaje}</p>
-      ) : (
-        <div className="relative flex-1" data-canvas="true">
-          {GEOMETRIA_STATS.map((geometria, i) => (
-            <CajaEstadistica
-              key={`s${String(i)}`}
-              panelId={`s${String(i)}`}
-              disposicion={geometria}
-              etiqueta={ETIQUETAS[i]}
-              cargando={statCargando[i]}
-              valor={statBoxes[i]?.valor}
-              subtitulo={statBoxes[i]?.subtitulo}
-              destacado={statBoxes[i]?.destacado}
-            />
-          ))}
-        </div>
-      )}
+      <div className="relative flex-1" data-canvas="true">
+        {GEOMETRIA_STATS.map((geometria, i) => (
+          <CajaEstadistica
+            key={`s${String(i)}`}
+            panelId={`s${String(i)}`}
+            disposicion={geometria}
+            etiqueta={ETIQUETAS[i]}
+            cargando={statCargando[i]}
+            valor={statBoxes[i]?.valor}
+            subtitulo={statBoxes[i]?.subtitulo}
+            destacado={statBoxes[i]?.destacado}
+          />
+        ))}
+      </div>
     </div>
   );
 }

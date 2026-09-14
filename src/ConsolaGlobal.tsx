@@ -54,10 +54,14 @@ function textoDeContenidoToolResult(content: unknown): string {
 export function resumenResultadoHerramienta(bloque: BloqueResultadoHerramienta, nombreHerramienta?: string): string {
   const prefijo = nombreHerramienta ? `${nombreHerramienta}: ` : "";
   const contenidoTexto = textoDeContenidoToolResult(bloque.content).trim();
-  const primeraLinea = contenidoTexto.split("\n")[0] ?? "";
-  if (bloque.is_error) return `← ${prefijo}error: ${primeraLinea || "sin detalle"}`;
-  if (!contenidoTexto) return `← ${prefijo}ok`;
-  return `← ${prefijo}${primeraLinea}`;
+  const lineas = contenidoTexto.split("\n").filter((linea) => linea.length > 0);
+  if (bloque.is_error) return `← ${prefijo}error: ${lineas[0] || "sin detalle"}`;
+  if (lineas.length === 0) return `← ${prefijo}ok`;
+  // Una sola línea se enseña tal cual (el caso común: un Read, un Bash con una línea de salida).
+  // Con varias, mostrar solo la primera se lee como si hubiera devuelto un único resultado — un
+  // Glob de tres ficheros se pintaba igual que uno de uno solo. Contar es más honesto que elegir.
+  if (lineas.length === 1) return `← ${prefijo}${lineas[0]}`;
+  return `← ${prefijo}${String(lineas.length)} resultados`;
 }
 
 /** `{ id, nombre }` de cada `tool_use` de un `agente.assistant`, para poder nombrar su `tool_result`
@@ -201,7 +205,11 @@ function LineaItem({ item }: { item: ItemLinea }) {
         </li>
       );
     case "textoAsistente":
-      return <li className="text-xs text-ok">{item.texto}</li>;
+      return (
+        <li className="max-w-[80%] rounded-7 border border-ok bg-ok-bg px-2.5 py-1.5 text-xs text-text-bright">
+          {item.texto}
+        </li>
+      );
     case "usoHerramienta":
       return (
         <li className="text-2xs text-text-dim">
@@ -386,7 +394,7 @@ export function ConsolaGlobal({
   return (
     <Panel tabId="global" panelId="consola" titulo="Consola" disposicionPorDefecto={{ x: 0, y: 0, w: 100, h: 100, z: 10 }}>
       <div className="flex h-full flex-col gap-2">
-        <ul ref={listaRef} className="flex-1 overflow-auto">
+        <ul ref={listaRef} className="flex flex-1 flex-col gap-1.5 overflow-auto">
           {eventos.length === 0 ? (
             <p className="text-text-dim">Sin eventos todavía: escribe un comando.</p>
           ) : (

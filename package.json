@@ -13,7 +13,16 @@
   "bugs": {
     "url": "https://github.com/Nicolascarames/Agente-QA-Web/issues"
   },
-  "keywords": ["qa", "testing", "playwright", "gherkin", "bdd", "claude", "agent", "e2e"],
+  "keywords": [
+    "qa",
+    "testing",
+    "playwright",
+    "gherkin",
+    "bdd",
+    "claude",
+    "agent",
+    "e2e"
+  ],
   "engines": {
     "node": ">=22"
   },
@@ -54,6 +63,7 @@
     "react-rnd": "^10.4.13"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^26.2.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",

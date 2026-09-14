@@ -6,7 +6,7 @@ import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "./app.js";
 import type { EventoAgente, SesionAgente } from "./agente.js";
-import type { EstadoCorridaActiva, EstadoProyecto, EstadoProyectoActivo, RespuestaComando } from "../shared/tipos.js";
+import type { EstadoCorridaActiva, EstadoProyectoActivo, RespuestaComando } from "../shared/tipos.js";
 
 const execFile = promisify(execFileCb);
 async function git(cwd: string, args: string[]): Promise<string> {
@@ -52,16 +52,6 @@ describe("buildApp", () => {
 
   afterEach(async () => {
     await rm(proyecto, { recursive: true, force: true });
-  });
-
-  it("GET /api/estado deriva el estado del proyecto activo del disco", async () => {
-    const app = buildApp({ proyectoInicial: proyecto });
-    const respuesta = await app.inject({ method: "GET", url: "/api/estado" });
-    expect(respuesta.statusCode).toBe(200);
-    const cuerpo = respuesta.json<EstadoProyecto>();
-    expect(cuerpo.proyecto).toBe(proyecto);
-    expect(cuerpo.agenteQaInicializado).toBe(false);
-    await app.close();
   });
 
   it("GET /api/proyecto devuelve el proyecto activo, sin recientes (una instancia por repo)", async () => {

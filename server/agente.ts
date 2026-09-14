@@ -158,12 +158,16 @@ export function lanzar(peticionInicial: string, opciones: OpcionesLanzar): Sesio
       plugins: [{ type: "local", path: rutaSkill }],
       skills: ["qa"],
       systemPrompt: { type: "preset", preset: "claude_code", append: ROL_QA + appendCredenciales },
-      // AskUserQuestion NO va aquí: comprobado en manual contra pruebas/sauce, el SDK emite el aviso
-      // CLAUDE_SDK_CAN_USE_TOOL_SHADOWED — una entrada "pelada" en allowedTools se auto-aprueba antes
-      // de consultar canUseTool, así que nunca llegaría a bloquearse para esperar la respuesta del
-      // usuario. Queda fuera de la lista para que "caiga" en canUseTool (sigue disponible: no está en
+      // Ni AskUserQuestion ni mcp__playwright__* van aquí: comprobado en manual contra pruebas/sauce,
+      // el SDK emite el aviso CLAUDE_SDK_CAN_USE_TOOL_SHADOWED — una entrada "pelada" en allowedTools
+      // se auto-aprueba antes de consultar canUseTool. Para AskUserQuestion eso impedía bloquearse a
+      // esperar la respuesta del usuario; para mcp__playwright__* impedía DEL TODO que la barrera de
+      // escrituras (líneas de canUseTool más arriba) se llegara a ejecutar — bug real encontrado
+      // probando el paquete instalado desde npm: el propio log del servidor mostraba el aviso
+      // nombrando mcp__playwright__*, y la comprobación de lista blanca nunca se invocaba. Los dos
+      // quedan fuera de la lista para que "caigan" en canUseTool (siguen disponibles: no están en
       // disallowedTools); el resto de tools sí puede quedarse aquí, no necesitan intercepción.
-      allowedTools: ["mcp__playwright__*", "Read", "Write", "Edit", "Glob", "Grep", "Bash"],
+      allowedTools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash"],
       canUseTool,
     },
   });

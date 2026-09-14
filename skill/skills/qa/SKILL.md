@@ -36,9 +36,13 @@ El trabajo avanza en tres pasos, y **se puede parar en cualquiera** si el usuari
 2. **Page Objects** — los métodos con los que el test va a actuar sobre la página.
 3. **Test** — el `.spec.ts` que ejecuta el escenario y lo pone en verde.
 
-**Tras la primera puerta se espera confirmación antes de escribir código.** Enseña el Gherkin,
-pregunta si es correcto, y no toques `tests/pages/` ni `tests/specs/` hasta que el usuario diga
-que sí (o lo corrija y confirmes la versión corregida).
+**Tras la primera puerta se espera confirmación antes de escribir código.** Escribe el `.feature`
+en `tests/features/` en cuanto lo tengas listo — así aparece editable en la pestaña Redactar, que
+es donde se revisa y corrige, no en el chat. En la consola no repitas el Gherkin completo: un aviso
+corto que apunte al fichero basta (p. ej. «He dejado el escenario en Redactar →
+`<nombre>.feature`, revísalo y dime si confirmas o lo edito yo»). No toques `tests/pages/` ni
+`tests/specs/` hasta que el usuario confirme ahí mismo, en la consola (o lo edite él en Redactar y
+avise). Si pide cambios, reescribe el `.feature` y repite el aviso corto.
 
 ## 4. Definición de terminado
 
@@ -94,6 +98,14 @@ en `referencias/localizadores.md`.
 El login se resuelve **una sola vez**, en un proyecto de setup de Playwright que guarda la sesión
 con `storageState`. Ningún test individual hace login por su cuenta: todos arrancan ya
 autenticados, reusando ese estado guardado.
+
+**Ninguna credencial (usuario, contraseña, o cualquier variable de Configuración → Credenciales)
+se escribe nunca en claro en `.feature` ni en `.spec.ts`/`.setup.ts`.** El valor real solo sirve
+para actuar sobre la página (rellenar el formulario) — nunca para redactar el Gherkin ni como
+literal en el código, aunque sea "solo" un fallback. En el `.feature`, refiérete a la credencial
+por su papel, no por el valor (`"con el usuario de pruebas"`, no `"con standard_user"`). En el
+`.spec.ts`/`.setup.ts`, léela solo de `process.env.NOMBRE`; si falta, el test debe fallar con un
+error explícito, nunca seguir con un valor hardcodeado de repuesto.
 
 ## 9. Esperas
 

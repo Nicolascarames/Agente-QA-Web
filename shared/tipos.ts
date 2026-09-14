@@ -2,28 +2,6 @@
 // Node ni del navegador: los importan los dos lados, cada uno con su propio
 // tsconfig (tsconfig.server.json / tsconfig.app.json).
 
-/** Cómo de avanzado está un bloque del proyecto QA, derivado del disco en cada petición. */
-export type EstadoBloque = "no existe" | "borrador" | "listo";
-
-export interface EstadoFicheros {
-  estado: EstadoBloque;
-  ficheros: number;
-}
-
-export interface EstadoProyecto {
-  proyecto: string;
-  /** false si no existe `.agente-qa/` en absoluto: el frontend ofrece ejecutar `init`. */
-  agenteQaInicializado: boolean;
-  features: EstadoFicheros;
-  e2e: EstadoFicheros;
-  reporte: { estado: EstadoBloque };
-}
-
-/** Respuesta de `GET /api/actividad` mientras depende del Bloque 1 de Agente-QA-MCP. */
-export interface ActividadNoDisponible {
-  error: string;
-}
-
 /** Alcance: una instancia por repo (decisión cerrada en ESTADO.md) — sin lista de recientes. */
 export interface EstadoProyectoActivo {
   actual: string;

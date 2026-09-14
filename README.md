@@ -62,7 +62,8 @@ ahí lo que quieres probar, en castellano y en una sola frase con todo lo necesa
 
 - Tu propio mensaje aparece al instante en el hilo; el chat baja solo hasta el último mensaje, no
   hace falta hacer scroll a mano.
-- Las respuestas del agente se ven en verde claro, distintas del resto de líneas.
+- Las respuestas del agente aparecen en un bocadillo verde a la izquierda, el tuyo en uno naranja a
+  la derecha — como cualquier chat.
 - Mientras trabaja, se ve un indicador "🤖 trabajando…" y una narración legible de lo que va
   haciendo (no un volcado técnico).
 - Si necesita decidir algo ambiguo, pregunta con opciones numeradas: elígela con el ratón, con las
@@ -136,7 +137,7 @@ navegador. Los dos procesos escriben a la misma consola sin prefijo (`[vite]`/`[
 solo el arranque de Vite y nada del servidor, tarda unos segundos en aparecer, es normal.
 
 **Si la página carga pero todo lo que empieza por `/api/` falla** (Dashboard vacío, consola sin
-respuesta, "Error: /api/estado respondió 500"): el servidor (puerto 3939) no arrancó o quedó
+respuesta, "Error: /api/proyecto respondió 500"): el servidor (puerto 3939) no arrancó o quedó
 zombi. Compruébalo con:
 
 ```bash

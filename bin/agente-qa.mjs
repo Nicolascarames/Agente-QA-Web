@@ -2,12 +2,32 @@
 // Punto de entrada de `npx agente-qa` (Bloque 3). Arranca sobre `process.cwd()`, sin argumentos
 // ni selector de proyecto (alcance cerrado: una instancia por repo). Importa el server ya
 // compilado (`npm run build` primero): mismo criterio que `"start": "node dist-server/server/index.js"`.
+import { existsSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
-import { buildApp } from "../dist-server/server/app.js";
-import { ejecutarAsistente } from "../dist-server/server/asistente.js";
-import { ejecutarDoctor } from "../dist-server/server/doctor.js";
-import { instalar } from "../dist-server/server/instalar.js";
-import { leerConfigRaiz } from "../dist-server/server/proyecto.js";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+// Los `import` estáticos de dist-server/ se evalúan antes que cualquier otra línea de este
+// fichero (hoisting de ESM), así que un `if` de comprobación colocado después de ellos no evita
+// nada: si falta dist-server/ (p.ej. se interrumpió el `prepare` de `npm install`), Node revienta
+// aquí mismo con un ERR_MODULE_NOT_FOUND en crudo, antes de que el doctor o el asistente lleguen a
+// decir nada. Por eso la comprobación va primero y los imports se hacen dinámicos, solo si existe.
+const rutaDistServer = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "dist-server");
+if (!existsSync(rutaDistServer)) {
+  console.error(
+    "No se encuentra dist-server/ — este paquete necesita compilarse antes de arrancar.\n" +
+      "Si lo instalaste con `npm install`, el hook `prepare` (npm run build) no llegó a completarse " +
+      "— revisa el log de esa instalación.\n" +
+      "Para compilarlo a mano: `npm run build` en la raíz de este paquete."
+  );
+  process.exit(1);
+}
+
+const { buildApp } = await import("../dist-server/server/app.js");
+const { ejecutarAsistente } = await import("../dist-server/server/asistente.js");
+const { ejecutarDoctor } = await import("../dist-server/server/doctor.js");
+const { instalar } = await import("../dist-server/server/instalar.js");
+const { leerConfigRaiz } = await import("../dist-server/server/proyecto.js");
 
 const DESTINOS_INSTALAR = ["claude", "codex", "copilot"];
 
