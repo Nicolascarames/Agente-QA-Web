@@ -238,4 +238,32 @@ describe("lanzar", () => {
       await rm(proyecto, { recursive: true, force: true });
     }
   });
+
+  it("añade el texto de la política de puertas al system prompt, por defecto 'escenario'", async () => {
+    let systemPromptCapturado: string | undefined;
+    const queryFn: typeof query = (params) => {
+      systemPromptCapturado = (params.options?.systemPrompt as { append?: string } | undefined)?.append;
+      const mensajeResultado = { type: "result", subtype: "success", is_error: false, queued_turn_count: 0 } as unknown as SDKMessage;
+      return Object.assign(generadorDe([mensajeResultado]), { interrupt: () => Promise.resolve(undefined) }) as unknown as Query;
+    };
+    const sesion = lanzar("algo", { cwd: "/tmp", queryFn });
+    for await (const _evento of sesion.suscribirse()) {
+      // drenar hasta el cierre
+    }
+    expect(systemPromptCapturado).toContain("PARA UNA SOLA VEZ");
+  });
+
+  it("usa el texto de la política indicada en opciones.puertas", async () => {
+    let systemPromptCapturado: string | undefined;
+    const queryFn: typeof query = (params) => {
+      systemPromptCapturado = (params.options?.systemPrompt as { append?: string } | undefined)?.append;
+      const mensajeResultado = { type: "result", subtype: "success", is_error: false, queued_turn_count: 0 } as unknown as SDKMessage;
+      return Object.assign(generadorDe([mensajeResultado]), { interrupt: () => Promise.resolve(undefined) }) as unknown as Query;
+    };
+    const sesion = lanzar("algo", { cwd: "/tmp", queryFn, puertas: "por-fichero" });
+    for await (const _evento of sesion.suscribirse()) {
+      // drenar hasta el cierre
+    }
+    expect(systemPromptCapturado).toContain("CADA fichero");
+  });
 });

@@ -5,9 +5,11 @@ import { fileURLToPath } from "node:url";
 import { query as queryReal } from "@anthropic-ai/claude-agent-sdk";
 import type { CanUseTool, PermissionResult, Query, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import { redactarSecretosProfundo, verificarLlamada } from "./barrera.js";
+import { textoPoliticaPuertas } from "./puertas.js";
 import { leerReporte } from "./reporter.js";
 import { registrarEjecucion } from "./costes.js";
 import { crearCola, crearDifusor } from "./difusor.js";
+import type { PoliticaPuertas } from "../shared/tipos.js";
 
 const dirActual = path.dirname(fileURLToPath(import.meta.url));
 // tsconfig.server.json no fija rootDir: este fichero compila a dist-server/server/agente.js (conserva
@@ -51,6 +53,10 @@ export interface OpcionesLanzar {
   entorno?: string;
   barreraActiva?: boolean;
   listaBlanca?: string[];
+  /** Pieza 2 de la spec de puertas de confirmación: cuántas veces para el agente a pedir
+   *  confirmación con AskUserQuestion antes de seguir. Sin indicar, se comporta como "escenario"
+   *  (una sola parada, tras el escenario). */
+  puertas?: PoliticaPuertas;
   /** Reanuda el hilo de conversación anterior (SDK `resume`), en memoria únicamente — si no se
    *  pasa, se lanza una conversación nueva. */
   resume?: string;
@@ -143,6 +149,8 @@ export function lanzar(peticionInicial: string, opciones: OpcionesLanzar): Sesio
     });
   };
 
+  const appendPuertas = textoPoliticaPuertas(opciones.puertas ?? "escenario");
+
   const appendCredenciales =
     opciones.credenciales && opciones.credenciales.length > 0
       ? `\n\nCredenciales de prueba disponibles para este proyecto (Configuración → Credenciales) — úsalas cuando la petición las necesite, no las pidas por chat si ya están aquí:\n${opciones.credenciales.map((c) => `- ${c.nombre}: ${c.valor}`).join("\n")}`
@@ -157,7 +165,7 @@ export function lanzar(peticionInicial: string, opciones: OpcionesLanzar): Sesio
       mcpServers: { playwright: { command: "npx", args: ["@playwright/mcp@latest"], env: mapaCredenciales } },
       plugins: [{ type: "local", path: rutaSkill }],
       skills: ["qa"],
-      systemPrompt: { type: "preset", preset: "claude_code", append: ROL_QA + appendCredenciales },
+      systemPrompt: { type: "preset", preset: "claude_code", append: ROL_QA + appendPuertas + appendCredenciales },
       // Ni AskUserQuestion ni mcp__playwright__* van aquí: comprobado en manual contra pruebas/sauce,
       // el SDK emite el aviso CLAUDE_SDK_CAN_USE_TOOL_SHADOWED — una entrada "pelada" en allowedTools
       // se auto-aprueba antes de consultar canUseTool. Para AskUserQuestion eso impedía bloquearse a

@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "./app.js";
 import type { EventoAgente, SesionAgente } from "./agente.js";
+import { escribirConfigRaiz } from "./proyecto.js";
 import type { EstadoCorridaActiva, EstadoProyectoActivo, RespuestaComando } from "../shared/tipos.js";
 
 const execFile = promisify(execFileCb);
@@ -92,8 +93,26 @@ describe("buildApp", () => {
       listaBlanca: undefined,
       resume: undefined,
       credenciales: [],
+      puertas: undefined,
     });
     expect(respuesta.json<RespuestaComando>().runId).toBeTruthy();
+    await app.close();
+  });
+
+  it("pasa la política de puertas guardada en la config raíz a lanzarFn", async () => {
+    await escribirConfigRaiz(proyecto, {
+      schemaVersion: 1,
+      appUrl: "https://ejemplo.test",
+      entorno: "pruebas",
+      barrera: false,
+      listaBlanca: [],
+      puertas: "por-fichero",
+    });
+    const { sesion } = crearSesionFalsa();
+    const lanzarFn = vi.fn(() => sesion);
+    const app = buildApp({ proyectoInicial: proyecto, lanzarFn });
+    await app.inject({ method: "POST", url: "/api/comando", payload: { texto: "hazlo" } });
+    expect(lanzarFn).toHaveBeenCalledWith("hazlo", expect.objectContaining({ puertas: "por-fichero" }));
     await app.close();
   });
 

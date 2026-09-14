@@ -239,6 +239,7 @@ export function buildApp(opts: AppOptions): FastifyInstance {
         listaBlanca: config?.listaBlanca,
         resume: ultimaSesionId ?? undefined,
         credenciales: credenciales.variables,
+        puertas: config?.puertas,
       }),
       runId,
     };
