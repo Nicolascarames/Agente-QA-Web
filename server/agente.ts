@@ -208,7 +208,12 @@ export function lanzar(peticionInicial: string, opciones: OpcionesLanzar): Sesio
           terminada = true;
           break;
         }
-        emitirSeguro({ type: `agente.${mensaje.type}`, data: mensaje });
+        // Pieza 4 de la spec de puertas: el banner de la consola ("Sesión iniciada" vs.
+        // "Conversación reanudada") necesita saber si ESTA sesión se lanzó con `resume` — solo se
+        // sabe aquí, no en el propio mensaje `system` del SDK, que es idéntico en los dos casos.
+        const datosEvento =
+          mensaje.type === "system" ? { ...(mensaje as unknown as Record<string, unknown>), reanudada: Boolean(opciones.resume) } : mensaje;
+        emitirSeguro({ type: `agente.${mensaje.type}`, data: datosEvento });
       }
     } catch (error) {
       // `abortController.abort()` (parar()) hace que `q` rechace con un error de "Operation

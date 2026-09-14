@@ -128,10 +128,11 @@ export function extraerTextoAsistente(evento: EventoNdjson): string | null {
  *  leyendo la consola y por tanto no se pinta. `init` sí se resume — sin enumerar el catálogo
  *  completo de herramientas MCP, solo cuántas hay. */
 export function resumenEventoSistema(data: unknown): string | null {
-  const d = (data ?? {}) as { subtype?: string; model?: string; tools?: unknown[] };
+  const d = (data ?? {}) as { subtype?: string; model?: string; tools?: unknown[]; reanudada?: boolean };
   if (d.subtype === "init") {
     const numHerramientas = Array.isArray(d.tools) ? d.tools.length : 0;
-    return `Sesión iniciada — modelo ${d.model ?? "desconocido"}, ${String(numHerramientas)} herramientas disponibles.`;
+    const encabezado = d.reanudada ? "Conversación reanudada" : "Sesión iniciada";
+    return `${encabezado} — modelo ${d.model ?? "desconocido"}, ${String(numHerramientas)} herramientas disponibles.`;
   }
   return null;
 }

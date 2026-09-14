@@ -72,6 +72,30 @@ describe("lanzar", () => {
     expect(opcionesCapturadas?.resume).toBe("sesion-anterior");
   });
 
+  it("marca reanudada:true en el evento agente.system cuando se lanza con `resume`", async () => {
+    const mensajeSistema = { type: "system", subtype: "init", model: "claude-x", tools: [], session_id: "s1" } as unknown as SDKMessage;
+    const mensajeResultado = { type: "result", subtype: "success", is_error: false, queued_turn_count: 0 } as unknown as SDKMessage;
+    const sesion = lanzar("continuar", {
+      cwd: "/tmp",
+      queryFn: queryFnFalsa([mensajeSistema, mensajeResultado]),
+      resume: "sesion-anterior",
+    });
+    const eventos: EventoAgente[] = [];
+    for await (const evento of sesion.suscribirse()) eventos.push(evento);
+    const eventoSistema = eventos.find((e) => e.type === "agente.system");
+    expect((eventoSistema?.data as { reanudada?: boolean } | undefined)?.reanudada).toBe(true);
+  });
+
+  it("marca reanudada:false en el evento agente.system cuando es una sesión nueva (sin `resume`)", async () => {
+    const mensajeSistema = { type: "system", subtype: "init", model: "claude-x", tools: [] } as unknown as SDKMessage;
+    const mensajeResultado = { type: "result", subtype: "success", is_error: false, queued_turn_count: 0 } as unknown as SDKMessage;
+    const sesion = lanzar("empezar", { cwd: "/tmp", queryFn: queryFnFalsa([mensajeSistema, mensajeResultado]) });
+    const eventos: EventoAgente[] = [];
+    for await (const evento of sesion.suscribirse()) eventos.push(evento);
+    const eventoSistema = eventos.find((e) => e.type === "agente.system");
+    expect((eventoSistema?.data as { reanudada?: boolean } | undefined)?.reanudada).toBe(false);
+  });
+
   it("las credenciales de Configuración llegan al system prompt y al env del MCP de Playwright, nunca en claro por eventos", async () => {
     let opcionesCapturadas: { systemPrompt?: { append?: string }; mcpServers?: Record<string, { env?: Record<string, string> }> } | undefined;
     const mensajeConSecreto = {

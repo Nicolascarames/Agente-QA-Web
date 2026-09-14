@@ -40,6 +40,15 @@ describe("describirEvento — bug 1: nada de JSON crudo por defecto", () => {
     }
   });
 
+  it("un system/init reanudado dice 'Conversación reanudada', no 'Sesión iniciada'", () => {
+    const e = evento("agente.system", { type: "system", subtype: "init", model: "claude-x", tools: ["a", "b"], reanudada: true });
+    const items = describirEvento(e, null);
+    expect(items).toHaveLength(1);
+    if (items[0].tipo === "corto") {
+      expect(items[0].etiqueta).toBe("Conversación reanudada — modelo claude-x, 2 herramientas disponibles.");
+    }
+  });
+
   it("un tool_use se pinta con nombre y parámetros legibles (no como JSON del input)", () => {
     const e = evento("agente.assistant", {
       message: { content: [{ type: "tool_use", name: "mcp__playwright__browser_snapshot", input: { target: "iframe#login" } }] },
