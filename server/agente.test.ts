@@ -247,9 +247,8 @@ describe("lanzar", () => {
       return Object.assign(generadorDe([mensajeResultado]), { interrupt: () => Promise.resolve(undefined) }) as unknown as Query;
     };
     const sesion = lanzar("algo", { cwd: "/tmp", queryFn });
-    for await (const _evento of sesion.suscribirse()) {
-      // drenar hasta el cierre
-    }
+    const eventos: EventoAgente[] = [];
+    for await (const evento of sesion.suscribirse()) eventos.push(evento);
     expect(systemPromptCapturado).toContain("PARA UNA SOLA VEZ");
   });
 
@@ -261,9 +260,8 @@ describe("lanzar", () => {
       return Object.assign(generadorDe([mensajeResultado]), { interrupt: () => Promise.resolve(undefined) }) as unknown as Query;
     };
     const sesion = lanzar("algo", { cwd: "/tmp", queryFn, puertas: "por-fichero" });
-    for await (const _evento of sesion.suscribirse()) {
-      // drenar hasta el cierre
-    }
+    const eventos: EventoAgente[] = [];
+    for await (const evento of sesion.suscribirse()) eventos.push(evento);
     expect(systemPromptCapturado).toContain("CADA fichero");
   });
 });
