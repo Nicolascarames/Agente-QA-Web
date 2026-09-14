@@ -28,21 +28,30 @@ y las suposiciones son la causa más común de un test que se rompe el mismo dí
 `browser_find` y el snapshot acotado no cambian esto: el localizador sigue saliendo de la página
 real, solo cambia cuánto árbol te traes para verlo.
 
-## 3. Las tres puertas
+## 3. Las tres puertas y cómo se confirman
 
-El trabajo avanza en tres pasos, y **se puede parar en cualquiera** si el usuario lo pide:
+El trabajo avanza en tres pasos:
 
 1. **Gherkin** — el escenario en `.feature`.
 2. **Page Objects** — los métodos con los que el test va a actuar sobre la página.
 3. **Test** — el `.spec.ts` que ejecuta el escenario y lo pone en verde.
 
-**Tras la primera puerta se espera confirmación antes de escribir código.** Escribe el `.feature`
-en `tests/features/` en cuanto lo tengas listo — así aparece editable en la pestaña Redactar, que
-es donde se revisa y corrige, no en el chat. En la consola no repitas el Gherkin completo: un aviso
-corto que apunte al fichero basta (p. ej. «He dejado el escenario en Redactar →
-`<nombre>.feature`, revísalo y dime si confirmas o lo edito yo»). No toques `tests/pages/` ni
-`tests/specs/` hasta que el usuario confirme ahí mismo, en la consola (o lo edite él en Redactar y
-avise). Si pide cambios, reescribe el `.feature` y repite el aviso corto.
+**Cuántas de estas puertas paran de verdad a esperar tu confirmación lo decide el bloque "Política
+de confirmación" que recibes al principio de tus instrucciones** (lo añade la app según lo que el
+usuario eligió en Configuración). Puede ser solo la primera, dos, las tres, o cada fichero que
+toques. Sigue esa política literalmente: ni preguntes más veces de las que pide, ni menos.
+
+**Cada vez que toque parar, la confirmación se pide SIEMPRE con la herramienta `AskUserQuestion`,
+nunca escribiendo la pregunta como texto suelto en la respuesta.** Antes de preguntar, escribe el
+fichero correspondiente en disco — así aparece editable en su pestaña (Redactar para el `.feature`,
+Generar para `.page.ts`/`.spec.ts`), que es donde se revisa, no en el chat. No repitas el contenido
+completo del fichero dentro de la pregunta: un `header` corto («Escenario», «Código») y una
+`question` que lo nombre bastan. Da dos opciones — «Confirmo, sigue» y «Lo edito yo en la
+pestaña» —; si el usuario quiere pedir cambios en vez de elegir una, ya puede escribirlos por texto
+libre, no hace falta una tercera opción para eso. Si pide cambios, reescribe el fichero y vuelve a
+preguntar del mismo modo.
+
+No toques el fichero del siguiente paso hasta que la puerta actual esté confirmada.
 
 ## 4. Definición de terminado
 
