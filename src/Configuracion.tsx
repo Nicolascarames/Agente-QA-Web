@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { Panel } from "./Panel";
 import { guardarCredenciales, guardarConfig, obtenerConfig, obtenerCredenciales, obtenerDoctor } from "./api";
-import type { ConfigRaiz, CredencialVariable, ResultadoComprobacion } from "../shared/tipos";
+import type { ConfigRaiz, CredencialVariable, PoliticaPuertas, ResultadoComprobacion } from "../shared/tipos";
 
 const CONFIG_VACIA: ConfigRaiz = { schemaVersion: 1, appUrl: "", entorno: "pruebas", barrera: false, listaBlanca: [], puertas: "escenario" };
 
 // GAP=1.5 entre los tres paneles, mismo patrón que Dashboard/Reports (ver ESTADO.md): cada uno
 // llega exacto a 0/100 sin dejar huecos ni sobrar ancho.
 const GAP = 1.5;
-const ANCHO_PANEL = (100 - GAP * 2) / 3;
+const ANCHO_PANEL = (100 - GAP * 3) / 4;
 
 /** Bloque 5: entorno, barrera de escrituras y lista blanca. Después del plan: `appUrl` gana control
  *  propio aquí (antes solo la creaba `npx agente-qa` al arrancar, preguntando por terminal). */
@@ -214,6 +214,99 @@ function PanelCredenciales() {
   );
 }
 
+const POLITICAS_PUERTAS: { valor: PoliticaPuertas; etiqueta: string; ayuda: string }[] = [
+  {
+    valor: "escenario",
+    etiqueta: "Una vez, tras el escenario (recomendado)",
+    ayuda: "Confirmas el Gherkin y el resto del ciclo — page objects, spec y ejecución — sigue solo hasta el test en verde.",
+  },
+  {
+    valor: "escenario-y-codigo",
+    etiqueta: "Dos veces: escenario y código",
+    ayuda: "Además del Gherkin, confirmas tras los page objects y el spec juntos, antes de ejecutar.",
+  },
+  {
+    valor: "por-artefacto",
+    etiqueta: "Tres veces: cada artefacto por separado",
+    ayuda: "Escenario, page objects y spec, cada uno con su propia parada.",
+  },
+  {
+    valor: "por-fichero",
+    etiqueta: "En cada fichero",
+    ayuda: "Cualquier fichero que el agente escriba o modifique bajo tests/, incluidas las correcciones de un test en rojo.",
+  },
+];
+
+/** Pieza 2 de la spec de puertas de confirmación: cuántas veces para el agente a pedir tu OK antes
+ *  de seguir. Cada parada reanuda la sesión y el agente relee el contexto — eso se paga en tokens,
+ *  por eso el párrafo de coste está siempre visible, no solo al pasar el ratón. */
+function PanelPuertas() {
+  const [puertas, setPuertas] = useState<PoliticaPuertas>("escenario");
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    obtenerConfig()
+      .then((recibida) => {
+        setPuertas(recibida.puertas);
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => setCargando(false));
+  }, []);
+
+  const elegir = (valor: PoliticaPuertas) => {
+    setError(null);
+    setGuardando(true);
+    guardarConfig({ puertas: valor })
+      .then((guardada) => {
+        setPuertas(guardada.puertas);
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => setGuardando(false));
+  };
+
+  if (cargando) return <p className="text-xs text-text-dim">Cargando…</p>;
+
+  return (
+    <div className="flex flex-col gap-3 text-xs">
+      <p className="text-text-faint">
+        Cada parada reanuda la sesión: el agente relee el contexto, y eso se paga en tokens. La opción marcada por
+        defecto es la que menos interrumpe.
+      </p>
+      <div className="flex flex-col gap-1.5">
+        {POLITICAS_PUERTAS.map((p) => (
+          <label
+            key={p.valor}
+            className={`flex flex-col gap-0.5 rounded-7 border px-2.5 py-1.5 ${
+              puertas === p.valor ? "border-accent bg-accent-bg" : "border-border-soft bg-bg-sunken"
+            }`}
+          >
+            <span className="flex items-center gap-2 text-text-bright">
+              <input
+                type="radio"
+                name="puertas"
+                checked={puertas === p.valor}
+                disabled={guardando}
+                onChange={() => {
+                  elegir(p.valor);
+                }}
+              />
+              {p.etiqueta}
+            </span>
+            <span className="pl-5 text-2xs text-text-faint">{p.ayuda}</span>
+          </label>
+        ))}
+      </div>
+      {error && <p className="text-danger">{error}</p>}
+    </div>
+  );
+}
+
 /** Las cuatro comprobaciones de `npx agente-qa doctor` (server/doctor.ts), de solo lectura: antes
  *  solo se veían por terminal, el usuario pidió tenerlas también aquí. */
 function PanelDiagnostico() {
@@ -288,6 +381,14 @@ export function Configuracion() {
           disposicionPorDefecto={{ x: (ANCHO_PANEL + GAP) * 2, y: 0, w: ANCHO_PANEL, h: 100, z: 1 }}
         >
           <PanelDiagnostico />
+        </Panel>
+        <Panel
+          tabId="configuracion"
+          panelId="puertas"
+          titulo="🚪 Puertas de confirmación"
+          disposicionPorDefecto={{ x: (ANCHO_PANEL + GAP) * 3, y: 0, w: ANCHO_PANEL, h: 100, z: 1 }}
+        >
+          <PanelPuertas />
         </Panel>
       </div>
     </div>
