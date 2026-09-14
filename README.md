@@ -69,6 +69,11 @@ ahí lo que quieres probar, en castellano y en una sola frase con todo lo necesa
 - Si necesita decidir algo ambiguo, pregunta con opciones numeradas: elígela con el ratón, con las
   flechas ↑↓ + Enter, o pulsando su número — la primera opción llega con el foco puesto, como una
   respuesta por defecto. Si ninguna encaja, escribe tu propia respuesta en la caja de abajo.
+- **Antes de escribir el `.page.ts`/`.spec.ts` te pide confirmar el escenario**, siempre con botones
+  (nunca hay que adivinar si "vale" cuenta como confirmación): la pestaña Redactar se abre sola con
+  el `.feature` delante, eliges «Confirmo, sigue» o «Lo edito yo en la pestaña». En Configuración
+  eliges cuántas veces quieres que pare en todo el ciclo — desde una sola vez (lo normal, el resto
+  sigue solo hasta el verde) hasta una por cada fichero que toque.
 - Al terminar, el resultado se resalta en un bloque aparte.
 - **Puedes seguir la conversación**: un segundo mensaje recuerda lo que hablasteis antes, no hace
   falta repetir el contexto desde cero.
@@ -92,7 +97,7 @@ listas se refrescan solas en cuanto el agente termina un turno, no hace falta re
 | **Ejecutar** | La lista de tests (título = fichero `.spec.ts`) con botón ▶ por fila y un "▶ Ejecutar todos" arriba para lanzar Playwright de verdad desde la web, viendo la salida aparecer línea a línea mientras corre; el detalle junta los pasos del Gherkin con el código del spec, en la misma pestaña |
 | **Reparar** | Solo los tests en rojo: veredicto sugerido (fallo del test o de la app), el `.spec.ts` completo editable, y el diff de corrección propuesto (Aplicar y reejecutar/Rechazar) |
 | **Reports** | Historial de ejecuciones, fallos agrupados por causa, tests inestables, pass rate |
-| **Configuración** | URL base, entorno y barrera de escrituras; credenciales de prueba (usuario/contraseña o cualquier variable con nombre libre); diagnóstico en vivo de las cuatro comprobaciones del `doctor` |
+| **Configuración** | URL base, entorno y barrera de escrituras; credenciales de prueba (usuario/contraseña o cualquier variable con nombre libre); cuántas veces para el agente a pedir tu confirmación; diagnóstico en vivo de las cuatro comprobaciones del `doctor` |
 
 Los ficheros se generan en `tests/` del repo destino, así que se versionan junto a la aplicación que
 prueban.

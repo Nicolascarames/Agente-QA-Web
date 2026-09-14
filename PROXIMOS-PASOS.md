@@ -1,8 +1,9 @@
 # PRÓXIMOS PASOS — Agente-QA-Web
 
-Actualizado: 2026-09-14 (probado el paquete tal cual se instalaría desde npm: barrera de escrituras
-y credenciales en claro corregidas, consola con bocadillos, deuda técnica cerrada, snapshot acotado
-cerrado con conclusión)
+Actualizado: 2026-09-14 (puertas de confirmación con botones: la skill exige `AskUserQuestion`,
+política configurable, salto de pestaña, banner de sesión reanudada corregido — verificado en vivo
+contra una app real. Antes: paquete probado tal cual se instalaría desde npm, barrera de escrituras
+y credenciales en claro corregidas, deuda técnica cerrada, snapshot acotado cerrado con conclusión)
 
 Cola priorizada. **Una tarea = una línea.** El detalle vive en la spec.
 
@@ -10,17 +11,29 @@ Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`]
 
 ## Dónde lo dejamos (2026-09-14)
 
-El plan de nueve bloques y la instalación guiada siguen cerrados. Antes de publicar en npm, se probó
-el paquete completo tal cual lo instalaría un usuario real (`npm pack` + `npm install` del tarball en
-un repo consumidor limpio, fuera de este repo): el ciclo frase → `.feature` → page object →
-`.spec.ts` → verde funciona de punta a punta, y las ocho pestañas se comportan como documenta
-`ESTADO.md`. La prueba encontró y se corrigieron dos fallos reales — uno de ellos serio, la barrera
-de escrituras nunca se ejecutaba — y se cerró la deuda técnica acumulada (detalle de ambas cosas en
-`ESTADO.md`, tabla de decisiones). **Lo único grande que sigue quedando es publicar en npm** (Pieza 3
-de su spec: los dos workflows y los cuatro pasos manuales). Antes de tocar eso hay que decidir una
-cosa que está a medias: `package.json` dice hoy `qa-web-agent` / `0.1.0` y la spec decide
-`agente-qa` / `1.0.0`. npm liberó el nombre `agente-qa` el 2026-09-13 sobre las 13:26 (hora
-peninsular); las versiones `0.1.0`–`0.1.6` de ese nombre no se pueden reutilizar nunca.
+El plan de nueve bloques y la instalación guiada siguen cerrados. Se implementó
+[`docs/superpowers/specs/2026-09-14-puertas-de-confirmacion-con-botones.md`](docs/superpowers/specs/2026-09-14-puertas-de-confirmacion-con-botones.md):
+la confirmación de cada puerta (escenario, page objects, spec) se pide siempre con `AskUserQuestion`
+— nunca en prosa —, cuántas veces para se elige en Configuración (por defecto una sola vez), y la
+consola salta sola a la pestaña del fichero que toca revisar. De paso se corrigió el banner de la
+consola, que decía "Sesión iniciada" incluso en una conversación reanudada. Verificado en vivo contra
+una app real (no `pruebas/sauce`): tres paradas exactas con la política `por-artefacto`, botones
+reales, salto de pestaña correcto las tres veces, test en verde. El ciclo en vivo encontró además un
+hallazgo operacional real (detalle en `ESTADO.md`): una skill ya instalada en un proyecto
+(`agente-qa instalar`) no se actualiza sola cuando se edita `skill/skills/qa/SKILL.md` en el repo
+fuente — hay que reinstalar a mano.
+
+Antes de eso: se probó el paquete completo tal cual lo instalaría un usuario real (`npm pack` +
+`npm install` del tarball en un repo consumidor limpio, fuera de este repo): el ciclo frase →
+`.feature` → page object → `.spec.ts` → verde funciona de punta a punta. La prueba encontró y se
+corrigieron dos fallos reales — uno de ellos serio, la barrera de escrituras nunca se ejecutaba — y
+se cerró la deuda técnica acumulada (detalle en `ESTADO.md`, tabla de decisiones).
+
+**Lo único grande que sigue quedando es publicar en npm** (Pieza 3 de su spec: los dos workflows y
+los cuatro pasos manuales). Antes de tocar eso hay que decidir una cosa que está a medias:
+`package.json` dice hoy `qa-web-agent` / `0.1.0` y la spec decide `agente-qa` / `1.0.0`. npm liberó
+el nombre `agente-qa` el 2026-09-13 sobre las 13:26 (hora peninsular); las versiones `0.1.0`–`0.1.6`
+de ese nombre no se pueden reutilizar nunca.
 
 Lo demás de la lista es deuda menor, ninguna bloquea nada.
 
@@ -145,6 +158,15 @@ Lo demás de la lista es deuda menor, ninguna bloquea nada.
       las credenciales quedaban en claro en `.feature`/`.spec.ts` generados (la plantilla canónica
       enseñaba el patrón). Los dos corregidos y verificados (build/typecheck/lint/153 tests en verde).
       Detalle en `ESTADO.md`.
+- [x] **Puertas de confirmación con botones reales.** Cerrado 2026-09-14. Bug real reportado por el
+      usuario: el agente confirmaba en prosa («revísalo y dime si confirmas»), sin botones, sin
+      salto de pestaña, y el banner decía «Sesión iniciada» aunque la conversación se hubiera
+      reanudado. Spec y plan:
+      [`docs/superpowers/specs/2026-09-14-puertas-de-confirmacion-con-botones.md`](docs/superpowers/specs/2026-09-14-puertas-de-confirmacion-con-botones.md).
+      `SKILL.md` exige `AskUserQuestion` en cada puerta; política de puertas configurable en
+      Configuración (`"escenario"` por defecto: una parada y el resto del ciclo sigue solo); la
+      consola salta sola a la pestaña del fichero; banner corregido. Verificado en vivo contra una
+      app real, tres paradas exactas con `por-artefacto`. Detalle en `ESTADO.md`.
 - [ ] **Publicar en npm** — Piezas 1 y 3 de la spec de instalación guiada. La 1 (empaquetado) está
       hecha; falta la 3: `.github/workflows/ci.yml` y `publicar.yml`, más los cuatro pasos manuales
       (esperar a que npm libere el nombre, repo público, publicar la 1.0.0 a mano, configurar el
@@ -174,18 +196,22 @@ Lo demás de la lista es deuda menor, ninguna bloquea nada.
       implementó `security find-generic-password` porque no hay máquina macOS a mano para verificar
       el nombre exacto del servicio, y adivinarlo daría falsos negativos silenciosos. Verificar y
       completar cuando haya acceso a macOS.
-- [ ] **El Gherkin propuesto no siempre pasa por Redactar antes de confirmarse.** `SKILL.md` §3 pide
-      escribir el `.feature` en disco antes de pedir confirmación y no repetir el Gherkin completo en
-      la consola (2026-09-14). Verificado en tres ciclos reales: cuando hay una elección real de
-      redacción (qué frase exacta, qué producto), el agente prefiere `AskUserQuestion` con el Gherkin
-      inline **antes** de escribir el fichero — la puerta en sí se respeta (no toca `tests/pages/`/
-      `tests/specs/` sin confirmar), pero la revisión en Redactar no llega a ejercerse porque
-      `AskUserQuestion` resuelve todo en el mismo turno. Decidir si se fuerza a escribir siempre
-      primero (incluso con ambigüedad de redacción) o se acepta esta vía como equivalente. Detalle en
+- [ ] **Una skill instalada (`agente-qa instalar`) no se actualiza sola cuando se edita
+      `skill/skills/qa/SKILL.md` en el repo fuente.** Encontrado en el ciclo en vivo del 2026-09-14:
+      `agente.ts` carga el plugin desde el repo fuente, pero el SDK también autodescubre
+      `.claude/skills/` del proyecto activo, y esa copia local gana si existe y está desactualizada
+      — pasó de verdad contra `pruebas/babia/`, instalada en una sesión anterior. No hay mecanismo
+      que avise ni que reinstale sola. Por ahora, tocar la skill y luego correr
+      `agente-qa instalar` en cualquier proyecto que ya la tuviera. Sin decidir si merece un aviso
+      automático (p.ej. el `doctor` comparando hashes) o si con documentarlo basta. Detalle en
       `ESTADO.md`.
 
 ### Cerradas 2026-09-14
 
+- [x] **El Gherkin propuesto no siempre pasaba por Redactar antes de confirmarse.** `SKILL.md` §3
+      pedía escribir el `.feature` antes de preguntar, pero dejaba el CÓMO preguntar a criterio del
+      agente, que seguía usando prosa sin botones. Resuelto de verdad con la spec de puertas de
+      confirmación (fila de arriba): `AskUserQuestion` ya no es opcional. Detalle en `ESTADO.md`.
 - [x] **Snapshot acotado (`browser_find`/`browser_snapshot({target})`) en vez del árbol completo.**
       Seis ciclos reales medidos en total: 6/6 verdes a la primera, cero reparaciones, sin síntoma de
       que acotar esconda algo relevante. **Decisión: se mantiene tal cual, cerrado.** Detalle en
