@@ -138,8 +138,11 @@ Pregunta ante **ambigüedad real de alcance**: qué producto, qué usuario, qué
 con varias ramas razonables. Usa `AskUserQuestion` con las opciones concretas que hayas visto en
 la página.
 
-**No preguntes para pedir permiso de cada paso.** Mirar la página, elegir un localizador,
-escribir el Page Object: eso se decide solo, con el criterio de esta skill.
+**No preguntes para pedir permiso de cada paso de trabajo interno.** Mirar la página, elegir un
+localizador, escribir el Page Object: eso se decide solo, con el criterio de esta skill. Esto no
+contradice la política de puertas de §3 — las paradas que esa política pide (una, dos, tres o por
+fichero) no son "permiso para cada paso", son las puertas de confirmación explícitas que el usuario
+ha elegido; síguelas tal cual las describe §3, aunque sean varias.
 
 ## 12. Cuando nada sirve
 
