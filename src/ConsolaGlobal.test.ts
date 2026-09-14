@@ -6,6 +6,7 @@ import {
   formatearParametrosHerramienta,
   resumenEventoSistema,
   resumenResultadoHerramienta,
+  rutaUltimoFicheroEscrito,
   textoBloqueFinal,
 } from "./ConsolaGlobal";
 import type { EventoNdjson } from "../shared/tipos";
@@ -135,5 +136,34 @@ describe("formatearParametrosHerramienta / resumenEventoSistema — casos límit
 
   it("un subtype de system distinto de init no se resume (queda en null)", () => {
     expect(resumenEventoSistema({ subtype: "hook_completed" })).toBeNull();
+  });
+});
+
+describe("rutaUltimoFicheroEscrito — Pieza 3: a qué pestaña saltar", () => {
+  it("encuentra la ruta del último Write, buscando hacia atrás en los eventos", () => {
+    const eventos = [
+      evento("agente.assistant", {
+        message: { content: [{ type: "tool_use", name: "Write", input: { file_path: "C:\\repo\\tests\\features\\login.feature" } }] },
+      }),
+      evento("agente.user", { message: { content: [{ type: "tool_result", content: "ok" }] } }),
+    ];
+    expect(rutaUltimoFicheroEscrito(eventos)).toBe("C:\\repo\\tests\\features\\login.feature");
+  });
+
+  it("un Edit posterior gana al Write anterior (se queda con el más reciente)", () => {
+    const eventos = [
+      evento("agente.assistant", { message: { content: [{ type: "tool_use", name: "Write", input: { file_path: "a.feature" } }] } }),
+      evento("agente.assistant", { message: { content: [{ type: "tool_use", name: "Edit", input: { file_path: "b.spec.ts" } }] } }),
+    ];
+    expect(rutaUltimoFicheroEscrito(eventos)).toBe("b.spec.ts");
+  });
+
+  it("ignora tool_use que no son Write ni Edit", () => {
+    const eventos = [evento("agente.assistant", { message: { content: [{ type: "tool_use", name: "Read", input: { file_path: "x.ts" } }] } })];
+    expect(rutaUltimoFicheroEscrito(eventos)).toBeNull();
+  });
+
+  it("sin ningún Write/Edit en la conversación, devuelve null", () => {
+    expect(rutaUltimoFicheroEscrito([])).toBeNull();
   });
 });

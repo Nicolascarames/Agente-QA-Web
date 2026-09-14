@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Panel } from "./Panel";
 import { enviarComando, interrumpirCorrida, pararCorrida, responderPregunta } from "./api";
 import { esEventoTerminal } from "../shared/eventos";
+import { pestanaParaRuta, type PestanaDestino } from "./pestanaParaRuta";
 import type { EventoNdjson } from "../shared/tipos";
 
 interface OpcionPregunta {
@@ -74,6 +75,29 @@ export function extraerToolUseIds(evento: EventoNdjson): { id: string; nombre: s
   return (contenido as BloqueContenidoAsistente[])
     .filter((b): b is BloqueContenidoAsistente & { id: string } => b.type === "tool_use" && typeof b.id === "string")
     .map((b) => ({ id: b.id, nombre: b.name ?? "?" }));
+}
+
+const NOMBRES_HERRAMIENTA_ESCRITURA = new Set(["Write", "Edit"]);
+
+/** Ruta del último fichero que el agente escribió o modificó (`Write`/`Edit`), buscando hacia atrás
+ *  en `eventos` — para saber a qué pestaña saltar cuando llega la pregunta de confirmación (Pieza
+ *  3). `null` si no ha escrito nada todavía en esta conversación. */
+export function rutaUltimoFicheroEscrito(eventos: EventoNdjson[]): string | null {
+  for (let i = eventos.length - 1; i >= 0; i -= 1) {
+    const evento = eventos[i];
+    if (evento.type !== "agente.assistant") continue;
+    const contenido = (evento.data as { message?: { content?: unknown } } | undefined)?.message?.content;
+    if (!Array.isArray(contenido)) continue;
+    const bloques = contenido as BloqueContenidoAsistente[];
+    for (let j = bloques.length - 1; j >= 0; j -= 1) {
+      const bloque = bloques[j];
+      if (bloque.type === "tool_use" && bloque.name && NOMBRES_HERRAMIENTA_ESCRITURA.has(bloque.name)) {
+        const rutaFichero = (bloque.input as { file_path?: unknown } | undefined)?.file_path;
+        if (typeof rutaFichero === "string") return rutaFichero;
+      }
+    }
+  }
+  return null;
 }
 
 /** Un `tool_use` legible: nombre + sus parámetros — sin esto no se puede saber desde la consola,
@@ -251,6 +275,10 @@ export interface ConsolaGlobalProps {
    *  conoce a quien lo pide. */
   borradorConsola: string | null;
   onBorradorAplicado: () => void;
+  /** Pieza 3: a qué pestaña saltar cuando llega una pregunta de confirmación sobre un fichero que
+   *  el agente acaba de escribir bajo tests/. Sin pasarla, la consola simplemente no salta de
+   *  pestaña — no rompe nada. */
+  onAbrirPestana?: (pestana: PestanaDestino) => void;
 }
 
 /**
@@ -264,6 +292,7 @@ export function ConsolaGlobal({
   agregarMensajeUsuario,
   borradorConsola,
   onBorradorAplicado,
+  onAbrirPestana,
 }: ConsolaGlobalProps) {
   const [comando, setComando] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -274,6 +303,9 @@ export function ConsolaGlobal({
   const [opcionEnfocada, setOpcionEnfocada] = useState(0);
   const listaRef = useRef<HTMLUListElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  // Solo saltar de pestaña la primera vez que se ve CADA pregunta (por requestId): si ya se saltó
+  // y el usuario ha vuelto a otra pestaña a propósito, un re-render no debe arrastrarlo de vuelta.
+  const requestIdAbierto = useRef<unknown>(undefined);
 
   // El botón "Escribir el ejemplo en la consola" de Empezar rellena esta caja sin enviarla: solo
   // escribe, enfoca y avisa a App.tsx para que limpie el borrador (si no, se reescribiría en cada
@@ -289,11 +321,16 @@ export function ConsolaGlobal({
   // hasta que se llame a `responderPregunta`, así que basta con quedarse con la más reciente.
   useEffect(() => {
     const ultimo = eventos[eventos.length - 1];
-    if (ultimo?.type === "agente.pregunta") {
-      setPreguntaPendiente(ultimo.data as PreguntaAgente);
-      setOpcionEnfocada(0);
-    }
-  }, [eventos]);
+    if (ultimo?.type !== "agente.pregunta") return;
+    const pregunta = ultimo.data as PreguntaAgente;
+    setPreguntaPendiente(pregunta);
+    setOpcionEnfocada(0);
+    if (pregunta.requestId === requestIdAbierto.current) return;
+    requestIdAbierto.current = pregunta.requestId;
+    const ruta = rutaUltimoFicheroEscrito(eventos);
+    const pestana = ruta ? pestanaParaRuta(ruta) : null;
+    if (pestana) onAbrirPestana?.(pestana);
+  }, [eventos, onAbrirPestana]);
 
   useEffect(() => {
     if (!corridaActiva) setPreguntaPendiente(null);
