@@ -7,7 +7,7 @@ import fastifyStatic from "@fastify/static";
 import { lanzar, type SesionAgente } from "./agente.js";
 import { leerConfigRaiz, escribirConfigRaiz, leerCredenciales, escribirCredenciales } from "./proyecto.js";
 import * as git from "./git.js";
-import { leerReporte, sugerirVeredicto } from "./reporter.js";
+import { acumularReporte, combinarConSpecsEnDisco, leerReporte, leerReporteUltimaCorrida, sugerirVeredicto } from "./reporter.js";
 import { cruzarTrazabilidad } from "./trazabilidad.js";
 import { leerHistorial, registrarEjecucion } from "./costes.js";
 import { listarFragiles } from "./fragiles.js";
@@ -24,17 +24,28 @@ import type {
   EstadoProyectoActivo,
   EventoNdjson,
   EventoTest,
+  FilaTest,
   RegistroEjecucion,
   ResultadoDoctor,
   ResultadoEjecucionPlaywright,
   RespuestaComando,
+  RespuestaDiff,
   ResultadoTest,
   ResultadoTestRojo,
 } from "../shared/tipos.js";
 
 /** Defaults de `ConfigRaiz` cuando `agente-qa.config.json` todavía no existe o no tiene `appUrl`
  *  (Bloque 5): el panel de Configuración necesita algo que pintar antes de que el usuario guarde nada. */
-const CONFIG_RAIZ_POR_DEFECTO: ConfigRaiz = { schemaVersion: 1, appUrl: "", entorno: "pruebas", barrera: false, listaBlanca: [], puertas: "escenario" };
+const CONFIG_RAIZ_POR_DEFECTO: ConfigRaiz = {
+  schemaVersion: 1,
+  appUrl: "",
+  entorno: "pruebas",
+  barrera: false,
+  listaBlanca: [],
+  puertas: "escenario",
+  modelo: "sonnet",
+  presupuestoUsd: 2,
+};
 
 /** Extrae `session_id` de un evento del agente si lo trae, para poder reanudar la conversación
  *  (`resume`) en el siguiente `/api/comando` sin acoplarse a la forma completa del mensaje del SDK. */
@@ -120,7 +131,16 @@ export function buildApp(opts: AppOptions): FastifyInstance {
   // `sugerencia` es solo la etiqueta del badge de Reparar (`reporter.ts`, regla 2 de la spec): la
   // clasificación real la hace el agente, no esta ruta.
 
-  app.get("/api/tests", async (): Promise<ResultadoTest[]> => leerReporte(proyectoActivo));
+  // Bug real: un `.spec.ts` que existe en `tests/specs/` pero nunca se ejecutó no salía en el
+  // reporte de Playwright, así que tampoco aquí — `combinarConSpecsEnDisco` lo añade como
+  // "noEjecutado" y, al revés, quita del listado un spec que el reporte todavía menciona pero que
+  // ya se borró de disco. `specsDir` está declarado más abajo (Redactar/Generar) pero en el mismo
+  // scope de `buildApp`: para cuando llega una petición ya está asignado.
+  app.get("/api/tests", async (): Promise<FilaTest[]> => {
+    const resultados = await leerReporte(proyectoActivo);
+    const specsEnDisco = await git.listarFicheros(specsDir, ".spec.ts");
+    return combinarConSpecsEnDisco(resultados, specsEnDisco);
+  });
 
   app.get("/api/tests/rojos", async (): Promise<ResultadoTestRojo[]> => {
     const resultados = await leerReporte(proyectoActivo);
@@ -164,15 +184,19 @@ export function buildApp(opts: AppOptions): FastifyInstance {
     // Reports se enteraban. No hay coste de LLM ni turnos en esta vía (no pasa por el SDK): se
     // registran como 0, honesto en vez de inventar un número — el resto del contrato de
     // `RegistroEjecucion` (que Dashboard/Reports ya suman/recorren) sigue cumpliéndose igual.
-    // `resultados` sale de releer el reporte de Playwright ya actualizado por esta corrida, filtrado
-    // al spec pedido cuando lo hay (botón por fila), para no atribuir a esta ejecución tests que no
-    // corrieron ahora.
-    const reporte = await leerReporte(proyectoActivo);
+    // `resultados` sale de releer el reporte de ESTA corrida (no el acumulado, que ya puede traer
+    // specs de corridas anteriores), filtrado al spec pedido cuando lo hay (botón por fila), para
+    // no atribuir a esta ejecución tests que no corrieron ahora.
+    const reporte = await leerReporteUltimaCorrida(proyectoActivo);
     const resultadosEjecucion = (rutaPedida ? reporte.filter((r) => r.ficheroSpec === rutaPedida) : reporte).map((r) => ({
       nombre: r.nombre,
       ficheroSpec: r.ficheroSpec,
       estado: r.estado,
     }));
+    // Vista persistente de Ejecutar (`server/reporter.ts`): sin esto, un botón "Ejecutar todos" de
+    // toda la suite (o un botón por fila de un solo spec) borraría del listado los tests de
+    // corridas anteriores en cuanto Playwright vacía `test-results/`.
+    await acumularReporte(proyectoActivo);
     await registrarEjecucion(proyectoActivo, {
       costeUsd: 0,
       duracionMs: Date.now() - inicio,
@@ -240,10 +264,24 @@ export function buildApp(opts: AppOptions): FastifyInstance {
         resume: ultimaSesionId ?? undefined,
         credenciales: credenciales.variables,
         puertas: config?.puertas,
+        modelo: config?.modelo,
+        presupuestoUsd: config?.presupuestoUsd,
       }),
       runId,
     };
     await reply.send({ runId } satisfies RespuestaComando);
+  });
+
+  // Corta el hilo de `resume`: el próximo /api/comando lanza una conversación nueva, sin arrastrar
+  // el contexto acumulado hasta ahora. No aborta ninguna corrida en marcha — mandar eso a la vez
+  // sería una acción sorpresa; el usuario para primero si hace falta.
+  app.post("/api/conversacion/nueva", async (_req, reply) => {
+    if (corridaActiva) {
+      await reply.status(409).send({ error: "hay una corrida en marcha" });
+      return;
+    }
+    ultimaSesionId = null;
+    await reply.send({ ok: true });
   });
 
   // Sin ninguna ejecución en marcha, esta conexión no tiene nada que reenviar: avisa y cierra en
@@ -434,8 +472,15 @@ export function buildApp(opts: AppOptions): FastifyInstance {
       await reply.status(400).send({ error: 'falta "ruta"' });
       return;
     }
+    const motivo = await git.motivoSinControlDeVersiones(proyectoActivo, ruta);
+    if (motivo) {
+      const respuesta: RespuestaDiff = { diff: "", sinControlDeVersiones: motivo };
+      await reply.send(respuesta);
+      return;
+    }
     const contenido = await git.diff(proyectoActivo, [ruta]);
-    await reply.send({ diff: contenido });
+    const respuesta: RespuestaDiff = { diff: contenido };
+    await reply.send(respuesta);
   });
 
   app.post<{ Body: { rutas?: string[]; mensaje?: string } }>("/api/generados/commit", async (req, reply) => {

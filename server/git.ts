@@ -21,6 +21,29 @@ export async function diff(rootDir: string, rutas?: string[]): Promise<string> {
   return git(rootDir, ["diff", "--", ...objetivo]);
 }
 
+/**
+ * Por qué `diff()` no tiene sentido para `ruta`, o `null` si sí lo tiene. Dos casos: el proyecto no
+ * está bajo git (`git rev-parse` falla), o `ruta` está ignorada por un `.gitignore` — el caso real es
+ * un proyecto sin git propio que vive dentro de este repo, bajo una carpeta que sí lo ignora (p.ej.
+ * `pruebas/babia`, con `pruebas` en el `.gitignore` de este repo) — en ambos, `diff()` fallaría con
+ * `git add -N` devolviendo "The following paths are ignored by one of your .gitignore files".
+ * `git check-ignore -q` sale con 0 si está ignorada, 1 si no lo está y 128 si hay un error: solo el
+ * 0 cuenta como "ignorada", el resto se trata igual que "no ignorada" (más simple y seguro aquí).
+ */
+export async function motivoSinControlDeVersiones(rootDir: string, ruta: string): Promise<string | null> {
+  try {
+    await git(rootDir, ["rev-parse", "--is-inside-work-tree"]);
+  } catch {
+    return "Este proyecto no está bajo git: no hay versión anterior con la que comparar.";
+  }
+  try {
+    await execFile("git", ["check-ignore", "-q", "--", ruta], { cwd: rootDir });
+    return "Esta ruta está ignorada por un .gitignore (el proyecto vive dentro de otro repositorio que lo excluye): no hay versión anterior con la que comparar. Para ver diffs, haz `git init` en la carpeta del proyecto.";
+  } catch {
+    return null;
+  }
+}
+
 /** Rutas (relativas a `rootDir`) con cambios bajo `tests/`, en el formato corto de `git status`. */
 export async function ficherosModificados(rootDir: string): Promise<string[]> {
   // `--untracked-files=all`: sin él, git agrupa un directorio recién creado entero en una sola

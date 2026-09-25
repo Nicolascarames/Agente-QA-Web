@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Panel } from "./Panel";
 import { obtenerConfig, obtenerCredenciales, obtenerDoctor } from "./api";
+import { usePreferenciasUI } from "./preferenciasUI";
 import type { ConfigRaiz, ResultadoComprobacion } from "../shared/tipos";
 
 // GAP=1.5 entre los tres paneles, mismo patrón que Configuracion/Dashboard (ver ESTADO.md): cada
@@ -198,8 +199,11 @@ export interface EmpezarProps {
 /** Primeros pasos dentro de la web, para quien acaba de instalar y no ha leído nada. No hay
  *  cuarto panel para el botón de abajo: es una acción de la pestaña, no un dato movible. */
 export function Empezar({ onEscribirEjemplo, onGuiaDescartada }: EmpezarProps) {
+  // Ver el mismo comentario en Configuracion.tsx: `overflow-auto` aquí recorta cualquier panel
+  // arrastrado fuera de esta caja en modo movibles, así que solo se aplica en fijos.
+  const { modoPaneles } = usePreferenciasUI();
   return (
-    <div className="flex h-full w-full flex-col gap-2.5 overflow-auto p-4">
+    <div className={`flex h-full w-full flex-col gap-2.5 p-4 ${modoPaneles === "fijos" ? "overflow-auto" : "overflow-visible"}`}>
       <div className="relative flex-1" data-canvas="true">
         <Panel
           tabId="empezar"

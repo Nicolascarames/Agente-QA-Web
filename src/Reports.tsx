@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Panel } from "./Panel";
 import { obtenerHistorial, obtenerTests, obtenerTestsRojos } from "./api";
-import type { RegistroEjecucion, ResultadoTest, ResultadoTestRojo } from "../shared/tipos";
+import type { FilaTest, RegistroEjecucion, ResultadoTest, ResultadoTestRojo } from "../shared/tipos";
 
 // Dos filas a todo el ancho y alto del contenedor, separación uniforme de 1.5 (GAP): tres cajas de
 // estadística arriba y "Fallos agrupados"/"Historial" repartiendo el resto en dos columnas debajo.
@@ -56,7 +56,7 @@ function contarFlaky(historial: RegistroEjecucion[]): number {
 }
 
 export function Reports() {
-  const [tests, setTests] = useState<ResultadoTest[] | null>(null);
+  const [tests, setTests] = useState<FilaTest[] | null>(null);
   const [rojos, setRojos] = useState<ResultadoTestRojo[] | null>(null);
   const [historial, setHistorial] = useState<RegistroEjecucion[] | null>(null);
 

@@ -10,6 +10,14 @@ import { Reparar } from "./Reparar";
 import { Reports } from "./Reports";
 import { useCorridaGlobal, type EstadoCorridaGlobal } from "./useCorridaGlobal";
 import { ConsolaGlobal } from "./ConsolaGlobal";
+import {
+  PreferenciasUIContext,
+  guardarPreferencias,
+  leerPreferencias,
+  normalizarPreferencias,
+  type ModoPaneles,
+  type PreferenciasUIContextValor,
+} from "./preferenciasUI";
 
 // Las siete pestañas de ESTADO.md más "Empezar" (guía de primeros pasos). Bloque 2: fuera Explorar
 // (el mapeador antiguo) y fuera Motor/Instalar (la guía integrada, atada al mismo catálogo del CLI
@@ -123,6 +131,33 @@ export default function App() {
 
   const alturaBanda = `calc(100vh - ${String(alturaTopbar)}px)`;
 
+  // Configuración → Apariencia (src/preferenciasUI.ts): tamaño de texto y modo de paneles, por
+  // navegador vía localStorage. Vive en App.tsx (no en Configuracion.tsx) porque el tamaño de texto
+  // se aplica aquí mismo sobre <html> y el modo de paneles decide cómo se pinta la banda de abajo.
+  const [preferencias, setPreferencias] = useState(() => leerPreferencias(window.localStorage));
+
+  useLayoutEffect(() => {
+    document.documentElement.style.setProperty("--ajuste-texto", `${String(preferencias.ajusteTexto)}px`);
+  }, [preferencias.ajusteTexto]);
+
+  const contextoPreferencias: PreferenciasUIContextValor = {
+    ...preferencias,
+    setAjusteTexto: (ajusteTexto: number) => {
+      setPreferencias((actual) => {
+        const siguiente = normalizarPreferencias({ ...actual, ajusteTexto });
+        guardarPreferencias(window.localStorage, siguiente);
+        return siguiente;
+      });
+    },
+    setModoPaneles: (modoPaneles: ModoPaneles) => {
+      setPreferencias((actual) => {
+        const siguiente = normalizarPreferencias({ ...actual, modoPaneles });
+        guardarPreferencias(window.localStorage, siguiente);
+        return siguiente;
+      });
+    },
+  };
+
   useEffect(() => {
     void obtenerProyecto().then((datos) => {
       setProyectoActual(datos.actual);
@@ -140,6 +175,7 @@ export default function App() {
     }`;
 
   return (
+    <PreferenciasUIContext.Provider value={contextoPreferencias}>
     <div className="min-h-screen w-screen bg-bg text-text">
       <div className="flex h-screen w-screen overflow-hidden">
       {sidebarAbierta && (
@@ -231,14 +267,31 @@ export default function App() {
           </div>
         </header>
 
-        {/* La pestaña activa (izquierda) y la consola global (derecha), en la misma fila y al
-            mismo alto — cada una mide su propio `[data-canvas]`: la pestaña trae el suyo anidado
-            (ver Redactar/Dashboard/etc.) tras su propio `p-4`; la consola no, así que este
+        {/* La pestaña activa (izquierda, 75%) y la consola global (derecha, 25%), en la misma fila
+            y al mismo alto — cada una mide su propio `[data-canvas]`: la pestaña trae el suyo
+            anidado (ver Redactar/Dashboard/etc.) tras su propio `p-4`; la consola no, así que este
             contenedor le da el mismo `p-4` + `[data-canvas]` interior, para que el panel de la
-            consola quede al mismo margen del borde que los de cualquier otra pestaña. */}
-        <div className="flex" style={{ height: alturaBanda }}>
-          <div className="relative h-full w-[70%] shrink-0 overflow-hidden">
-            <div key={pestana} className="relative h-full w-full animate-page-fade overflow-hidden">
+            consola quede al mismo margen del borde que los de cualquier otra pestaña (`pl-0`: el
+            `p-4` derecho del canvas de la pestaña ya deja el hueco de ese lado — un `p-4` completo
+            aquí lo duplicaba y el borde pestaña/consola quedaba con el doble de separación que
+            entre dos paneles cualesquiera).
+            `data-lienzo-global` marca toda la banda como límite de arrastre en modo movibles
+            (Panel.tsx, `bounds="[data-lienzo-global]"`) — un panel de la pestaña puede acabar
+            sobre la consola, así que el límite es la banda entera, no el canvas local de cada una.
+            `overflow-hidden` aquí (en los dos modos) evita que un panel arrastrado más allá del
+            75% de la pestaña abra scroll horizontal en `<main>` — los paneles ya están acotados a
+            esta banda vía `bounds`, así que nada se recorta de verdad, solo se evita el hueco de
+            scroll.
+            En modo movibles se quita el `overflow-hidden`/`animate-page-fade` de la pestaña: un
+            `transform` (el de la animación) abre su propio contexto de apilamiento y atrapa el
+            z-index de los paneles dentro de él, así que ninguno podría subir por encima de la
+            consola al arrastrarlo. */}
+        <div className="flex overflow-hidden" style={{ height: alturaBanda }} data-lienzo-global="true">
+          <div className={`relative h-full w-[75%] shrink-0 ${preferencias.modoPaneles === "fijos" ? "overflow-hidden" : ""}`}>
+            <div
+              key={pestana}
+              className={`relative h-full w-full ${preferencias.modoPaneles === "fijos" ? "animate-page-fade overflow-hidden" : ""}`}
+            >
               {contenidoPestana(pestana, corridaGlobal, {
                 escribirEnConsola: setBorradorConsola,
                 descartarGuia,
@@ -246,7 +299,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex h-full w-[30%] shrink-0 flex-col p-4">
+          <div className="flex h-full w-[25%] shrink-0 flex-col py-4 pr-4">
             <div className="relative flex-1" data-canvas="true">
               <ConsolaGlobal
                 corridaActiva={corridaActiva}
@@ -265,5 +318,6 @@ export default function App() {
       </main>
       </div>
     </div>
+    </PreferenciasUIContext.Provider>
   );
 }

@@ -67,6 +67,24 @@ describe("cruzarTrazabilidad", () => {
     ]);
   });
 
+  it("cubierto: un paso del .feature partido en varias líneas se une antes de comparar", async () => {
+    const featurePartido = `Característica: añadir al carrito
+
+Escenario: añade un producto
+  Dado que estoy en el inventario
+  Cuando añado el producto
+    al carrito
+  Entonces el contador muestra 1
+`;
+    await writeFile(path.join(proyecto, "tests", "features", "anadir-al-carrito.feature"), featurePartido, "utf8");
+    await mkdir(path.join(proyecto, "tests", "specs"), { recursive: true });
+    await writeFile(path.join(proyecto, "tests", "specs", "anadir-al-carrito.spec.ts"), SPEC_ANADIR_QUE_CALZA, "utf8");
+
+    const cobertura = await cruzarTrazabilidad(proyecto);
+
+    expect(cobertura.map((c) => c.estado)).toEqual(["cubierto"]);
+  });
+
   it("desincronizado: el .spec.ts existe pero ningún bloque test( calza con los pasos actuales", async () => {
     await writeFile(path.join(proyecto, "tests", "features", "anadir-al-carrito.feature"), FEATURE_ANADIR, "utf8");
     await mkdir(path.join(proyecto, "tests", "specs"), { recursive: true });

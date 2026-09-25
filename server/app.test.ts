@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "./app.js";
 import type { EventoAgente, SesionAgente } from "./agente.js";
 import { escribirConfigRaiz } from "./proyecto.js";
-import type { EstadoCorridaActiva, EstadoProyectoActivo, RespuestaComando } from "../shared/tipos.js";
+import type { EstadoCorridaActiva, EstadoProyectoActivo, RespuestaComando, RespuestaDiff } from "../shared/tipos.js";
 
 const execFile = promisify(execFileCb);
 async function git(cwd: string, args: string[]): Promise<string> {
@@ -94,6 +94,8 @@ describe("buildApp", () => {
       resume: undefined,
       credenciales: [],
       puertas: undefined,
+      modelo: undefined,
+      presupuestoUsd: undefined,
     });
     expect(respuesta.json<RespuestaComando>().runId).toBeTruthy();
     await app.close();
@@ -107,6 +109,8 @@ describe("buildApp", () => {
       barrera: false,
       listaBlanca: [],
       puertas: "por-fichero",
+      modelo: "sonnet",
+      presupuestoUsd: 2,
     });
     const { sesion } = crearSesionFalsa();
     const lanzarFn = vi.fn(() => sesion);
@@ -163,6 +167,35 @@ describe("buildApp", () => {
     await app.inject({ method: "POST", url: "/api/comando", payload: { texto: "segundo" } });
 
     expect(lanzarFn).toHaveBeenNthCalledWith(2, "segundo", expect.objectContaining({ resume: "sesion-123" }));
+    await app.close();
+  });
+
+  it("POST /api/conversacion/nueva corta el `resume`: el siguiente /api/comando lanza sin él", async () => {
+    const { sesion: primeraSesion } = crearSesionFalsa([{ type: "operation.completed", data: { session_id: "sesion-123", result: "ok" } }]);
+    const { sesion: segundaSesion } = crearSesionFalsa();
+    const lanzarFn = vi.fn().mockReturnValueOnce(primeraSesion).mockReturnValueOnce(segundaSesion);
+    const app = buildApp({ proyectoInicial: proyecto, lanzarFn });
+
+    await app.inject({ method: "POST", url: "/api/comando", payload: { texto: "primero" } });
+    await app.inject({ method: "GET", url: "/api/eventos" }); // drena hasta el evento terminal y cierra la corrida activa
+
+    const respuestaNueva = await app.inject({ method: "POST", url: "/api/conversacion/nueva" });
+    expect(respuestaNueva.statusCode).toBe(200);
+
+    await app.inject({ method: "POST", url: "/api/comando", payload: { texto: "segundo" } });
+
+    expect(lanzarFn).toHaveBeenNthCalledWith(2, "segundo", expect.objectContaining({ resume: undefined }));
+    await app.close();
+  });
+
+  it("POST /api/conversacion/nueva responde 409 si hay una corrida en marcha", async () => {
+    const { sesion } = crearSesionFalsa();
+    const app = buildApp({ proyectoInicial: proyecto, lanzarFn: () => sesion });
+    await app.inject({ method: "POST", url: "/api/comando", payload: { texto: "hazlo" } });
+
+    const respuesta = await app.inject({ method: "POST", url: "/api/conversacion/nueva" });
+    expect(respuesta.statusCode).toBe(409);
+    expect(respuesta.json<{ error: string }>().error).toContain("hay una corrida en marcha");
     await app.close();
   });
 
@@ -374,6 +407,29 @@ describe("buildApp", () => {
     await app.close();
   });
 
+  it("GET /api/generados/diff devuelve 200 con sinControlDeVersiones cuando la ruta está ignorada por un .gitignore del repo padre", async () => {
+    // Reproduce el caso real: el proyecto activo no tiene git propio, pero vive bajo un repo padre
+    // (el temporal de este test) que lo ignora — el mismo caso que `pruebas/babia` en este repo.
+    const padre = await mkdtemp(path.join(tmpdir(), "agente-qa-web-app-padre-"));
+    try {
+      await git(padre, ["init", "-q"]);
+      const proyectoIgnorado = path.join(padre, "proyecto-ignorado");
+      await writeFile(path.join(padre, ".gitignore"), "proyecto-ignorado/\n", "utf8");
+      await mkdir(path.join(proyectoIgnorado, "tests", "specs"), { recursive: true });
+      await writeFile(path.join(proyectoIgnorado, "tests", "specs", "login.spec.ts"), "test('login', () => {});\n", "utf8");
+
+      const app = buildApp({ proyectoInicial: proyectoIgnorado });
+      const respuesta = await app.inject({ method: "GET", url: "/api/generados/diff?ruta=tests/specs/login.spec.ts" });
+      expect(respuesta.statusCode).toBe(200);
+      const cuerpo = respuesta.json<RespuestaDiff>();
+      expect(cuerpo.diff).toBe("");
+      expect(cuerpo.sinControlDeVersiones).toContain("ignorada por un .gitignore");
+      await app.close();
+    } finally {
+      await rm(padre, { recursive: true, force: true });
+    }
+  });
+
   it("POST /api/generados/commit crea un commit con las rutas dadas", async () => {
     await git(proyecto, ["init", "-q"]);
     await git(proyecto, ["config", "user.email", "test@test.com"]);
@@ -488,6 +544,19 @@ describe("buildApp", () => {
     expect(respuesta.statusCode).toBe(200);
     const cuerpo = respuesta.json<{ ok: boolean; comprobaciones: { nombre: string; ok: boolean; mensaje: string }[] }>();
     expect(cuerpo.comprobaciones).toHaveLength(4);
+    await app.close();
+  });
+
+  it("GET /api/tests añade como noEjecutado un .spec.ts en disco que el reporte no menciona todavía", async () => {
+    const app = buildApp({ proyectoInicial: proyecto });
+    await mkdir(path.join(proyecto, "tests", "specs"), { recursive: true });
+    await writeFile(path.join(proyecto, "tests", "specs", "carrito.spec.ts"), "", "utf8");
+
+    const respuesta = await app.inject({ method: "GET", url: "/api/tests" });
+    expect(respuesta.statusCode).toBe(200);
+    expect(respuesta.json<{ nombre: string; ficheroSpec: string; estado: string }[]>()).toEqual([
+      { nombre: "carrito", ficheroSpec: "specs/carrito.spec.ts", estado: "noEjecutado", duracionMs: 0, reintentos: 0, pasos: [] },
+    ]);
     await app.close();
   });
 

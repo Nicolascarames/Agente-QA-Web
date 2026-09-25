@@ -6,10 +6,10 @@ import { query as queryReal } from "@anthropic-ai/claude-agent-sdk";
 import type { CanUseTool, PermissionResult, Query, SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import { redactarSecretosProfundo, verificarLlamada } from "./barrera.js";
 import { textoPoliticaPuertas } from "./puertas.js";
-import { leerReporte } from "./reporter.js";
+import { acumularReporte, leerReporteUltimaCorrida } from "./reporter.js";
 import { registrarEjecucion } from "./costes.js";
 import { crearCola, crearDifusor } from "./difusor.js";
-import type { PoliticaPuertas } from "../shared/tipos.js";
+import type { ModeloAgente, PoliticaPuertas } from "../shared/tipos.js";
 
 const dirActual = path.dirname(fileURLToPath(import.meta.url));
 // tsconfig.server.json no fija rootDir: este fichero compila a dist-server/server/agente.js (conserva
@@ -60,6 +60,13 @@ export interface OpcionesLanzar {
   /** Reanuda el hilo de conversación anterior (SDK `resume`), en memoria únicamente — si no se
    *  pasa, se lanza una conversación nueva. */
   resume?: string;
+  /** Modelo del SDK. Sin indicar, "sonnet" — Opus gasta varias veces más límite de suscripción. */
+  modelo?: ModeloAgente;
+  /** Tope de gasto en USD de ESTA petición (SDK `maxBudgetUsd`): pasado el límite, el `result`
+   *  cierra con subtype `error_max_budget_usd` en vez de seguir gastando. `0` o negativo se trata
+   *  como "sin tope" (no se manda a `maxBudgetUsd`, que interpretaría 0 como corte inmediato). Sin
+   *  indicar, 2 $. */
+  presupuestoUsd?: number;
   /** Credenciales de prueba de Configuración (`agente-qa.credenciales.json`, nunca versionado): el
    *  agente necesita ver el VALOR para poder escribirlo en un formulario, así que van también al
    *  `system prompt`, no solo al entorno — lo que sí protege `emitirSeguro` es que nunca salgan en
@@ -156,12 +163,27 @@ export function lanzar(peticionInicial: string, opciones: OpcionesLanzar): Sesio
       ? `\n\nCredenciales de prueba disponibles para este proyecto (Configuración → Credenciales) — úsalas cuando la petición las necesite, no las pidas por chat si ya están aquí:\n${opciones.credenciales.map((c) => `- ${c.nombre}: ${c.valor}`).join("\n")}`
       : "";
 
+  const presupuestoUsd = opciones.presupuestoUsd ?? 2;
+
   const q: Query = queryFn({
     prompt: colaMensajes.iterable,
     options: {
       cwd: opciones.cwd,
       abortController,
       resume: opciones.resume,
+      model: opciones.modelo ?? "sonnet",
+      // `0` o negativo es "sin tope": mandar 0 a maxBudgetUsd lo interpretaría como corte inmediato.
+      maxBudgetUsd: presupuestoUsd > 0 ? presupuestoUsd : undefined,
+      // No se cargan los ajustes del usuario (hooks de SessionStart, plugins, CLAUDE.md global, MCP
+      // personales) — medido 2026-09-25: arrancaban el contexto en 33k tokens y viajaban en cada
+      // llamada; solo el proyecto destino y la skill qa.
+      settingSources: ["project"],
+      // Solo el MCP de Playwright declarado aquí, nunca uno que el usuario tenga configurado aparte.
+      strictMcpConfig: true,
+      // Solo las herramientas propias de Claude Code que el ciclo usa: el preset entero (Artifact,
+      // Cron*, worktrees, WebSearch, Task…) añadía ~30 esquemas a cada llamada sin usarse nunca.
+      // Skill carga la skill qa y ToolSearch trae los esquemas diferidos de mcp__playwright__*.
+      tools: ["Read", "Write", "Edit", "Glob", "Grep", "Bash", "AskUserQuestion", "Skill", "ToolSearch"],
       mcpServers: { playwright: { command: "npx", args: ["@playwright/mcp@latest"], env: mapaCredenciales } },
       plugins: [{ type: "local", path: rutaSkill }],
       skills: ["qa"],
@@ -195,13 +217,17 @@ export function lanzar(peticionInicial: string, opciones: OpcionesLanzar): Sesio
           // Bloque 8: acumula lo que el SDK reportó al cerrar, sin base de datos. Nunca debe tumbar
           // la ejecución: un historial no escrito es peor, pero no tan malo como perder el resultado.
           try {
-            const resultados = await leerReporte(opciones.cwd);
+            const resultados = await leerReporteUltimaCorrida(opciones.cwd);
             await registrarEjecucion(opciones.cwd, {
               costeUsd: mensaje.total_cost_usd ?? 0,
               duracionMs: mensaje.duration_ms ?? 0,
               numTurnos: mensaje.num_turns ?? 0,
               resultados: resultados.map((r) => ({ nombre: r.nombre, ficheroSpec: r.ficheroSpec, estado: r.estado })),
             });
+            // Vista persistente de Ejecutar (`server/reporter.ts`): `results.json` es solo de esta
+            // corrida, así que sin esto un turno del agente que ejecuta un único spec borraría del
+            // listado los tests de las corridas anteriores.
+            await acumularReporte(opciones.cwd);
           } catch (error) {
             console.error("no se pudo registrar el historial de la ejecución", error);
           }

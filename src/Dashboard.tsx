@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { obtenerFragiles, obtenerHistorial, obtenerTests, obtenerTrazabilidad } from "./api";
 import { Panel, type DisposicionPanel } from "./Panel";
-import type { CoberturaEscenario, ElementoFragil, RegistroEjecucion, ResultadoTest } from "../shared/tipos";
+import { usePreferenciasUI } from "./preferenciasUI";
+import type { CoberturaEscenario, ElementoFragil, FilaTest, RegistroEjecucion } from "../shared/tipos";
 
 // Cada una de las seis cajas del Bloque 8 depende de un endpoint distinto: si uno falla, solo esa
 // caja se queda en guion, el resto de la vista sigue viva.
@@ -29,7 +30,7 @@ const ETIQUETAS = ["Escenarios cubiertos", "Tests en verde", "Tests en rojo", "�
 
 export function Dashboard() {
   const [trazabilidad, setTrazabilidad] = useState<CargaBloque<CoberturaEscenario[]>>({ estado: "cargando" });
-  const [tests, setTests] = useState<CargaBloque<ResultadoTest[]>>({ estado: "cargando" });
+  const [tests, setTests] = useState<CargaBloque<FilaTest[]>>({ estado: "cargando" });
   const [historial, setHistorial] = useState<CargaBloque<RegistroEjecucion[]>>({ estado: "cargando" });
   const [fragiles, setFragiles] = useState<CargaBloque<ElementoFragil[]>>({ estado: "cargando" });
 
@@ -117,8 +118,12 @@ export function Dashboard() {
     fragiles.estado === "cargando",
   ];
 
+  // Ver el mismo comentario en Configuracion.tsx: `overflow-auto` aquí recorta cualquier panel
+  // arrastrado fuera de esta caja en modo movibles, así que solo se aplica en fijos.
+  const { modoPaneles } = usePreferenciasUI();
+
   return (
-    <div className="flex h-full w-full flex-col overflow-auto p-4">
+    <div className={`flex h-full w-full flex-col p-4 ${modoPaneles === "fijos" ? "overflow-auto" : "overflow-visible"}`}>
       <div className="relative flex-1" data-canvas="true">
         {GEOMETRIA_STATS.map((geometria, i) => (
           <CajaEstadistica

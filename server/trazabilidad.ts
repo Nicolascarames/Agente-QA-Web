@@ -9,6 +9,8 @@ import type { CoberturaEscenario } from "../shared/tipos.js";
 
 const ESCENARIO_RE = /^\s*Escenario:\s*(.+)$/;
 const PASO_RE = /^\s*(Dado|Cuando|Entonces|Y|Pero|\*)\b/i;
+// Lo que sigue a un paso sin ser continuación suya: tabla, docstring, etiqueta u otro bloque.
+const CONTINUACION_EXCLUIDA_RE = /^(\||"""|```|@|Escenario|Esquema|Ejemplos|Antecedentes|Regla|Característica)/i;
 
 interface EscenarioParseado {
   escenario: string;
@@ -18,6 +20,7 @@ interface EscenarioParseado {
 function parsearEscenarios(contenido: string): EscenarioParseado[] {
   const escenarios: EscenarioParseado[] = [];
   let actual: EscenarioParseado | null = null;
+  let enPaso = false;
   for (const lineaCruda of contenido.split(/\r?\n/)) {
     const matchEscenario = lineaCruda.match(ESCENARIO_RE);
     if (matchEscenario) {
@@ -26,9 +29,19 @@ function parsearEscenarios(contenido: string): EscenarioParseado[] {
       continue;
     }
     const linea = lineaCruda.trim();
-    if (!linea || linea.startsWith("#")) continue;
+    if (!linea || linea.startsWith("#")) {
+      enPaso = false;
+      continue;
+    }
     if (actual && PASO_RE.test(lineaCruda)) {
       actual.pasos.push(linea);
+      enPaso = true;
+    } else if (actual && enPaso && !CONTINUACION_EXCLUIDA_RE.test(linea)) {
+      // Paso largo partido en varias líneas (la skill corta a ~100 columnas): el agente lo lee como
+      // un solo paso y escribe un único test.step, así que aquí también se une con un espacio.
+      actual.pasos[actual.pasos.length - 1] += ` ${linea}`;
+    } else {
+      enPaso = false;
     }
   }
   return escenarios;

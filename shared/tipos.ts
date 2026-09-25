@@ -17,6 +17,10 @@ export interface EstadoProyectoActivo {
  *  del ciclo sigue solo hasta el test en verde. */
 export type PoliticaPuertas = "escenario" | "escenario-y-codigo" | "por-artefacto" | "por-fichero";
 
+/** Modelo del SDK que lanza el agente. Sonnet por defecto: Opus gasta varias veces más límite de
+ *  suscripción para una mejora que, en el flujo de QA de este repo, casi nunca se nota. */
+export type ModeloAgente = "sonnet" | "opus" | "haiku";
+
 export interface ConfigRaiz {
   schemaVersion: 1;
   appUrl: string;
@@ -24,6 +28,8 @@ export interface ConfigRaiz {
   barrera: boolean;
   listaBlanca: string[];
   puertas: PoliticaPuertas;
+  modelo: ModeloAgente;
+  presupuestoUsd: number;
 }
 
 /** Un par nombre/valor que el agente puede usar en pruebas (usuario, contraseña, o cualquier otra
@@ -91,6 +97,10 @@ export interface ResultadoTest {
   pasos: { titulo: string; estado: "passed" | "failed" | "skipped" }[];
 }
 
+/** Fila de la lista de Ejecutar: además de los estados reales de Playwright, admite un spec que
+ *  existe en `tests/specs/` pero nunca se ha ejecutado — no tiene entrada en el reporte todavía. */
+export type FilaTest = Omit<ResultadoTest, "estado"> & { estado: ResultadoTest["estado"] | "noEjecutado" };
+
 /** Etiqueta SUGERIDA para el badge de Reparar — nunca definitiva. Quien clasifica de verdad "fallo
  *  del test" vs. "fallo de la aplicación" es el agente, visible en el chat. */
 export type Sugerencia = "fallo-test" | "fallo-aplicacion" | "desconocido";
@@ -153,4 +163,13 @@ export interface ResultadoEjecucionPlaywright {
   ok: boolean;
   codigo: number | null;
   salida: string;
+}
+
+/** Respuesta de `GET /api/generados/diff`. `sinControlDeVersiones`, si está presente, explica por
+ *  qué `diff` viene vacío (proyecto sin git, o ruta ignorada por un `.gitignore` — ver
+ *  `git.motivoSinControlDeVersiones`) en vez de tratarlo como un error: la UI lo muestra como nota
+ *  neutra, no como fallo. */
+export interface RespuestaDiff {
+  diff: string;
+  sinControlDeVersiones?: string;
 }

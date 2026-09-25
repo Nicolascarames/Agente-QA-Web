@@ -1,8 +1,8 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { leerReporte, sugerirVeredicto } from "./reporter.js";
+import { acumularReporte, combinarConSpecsEnDisco, leerReporte, leerReporteUltimaCorrida, sugerirVeredicto } from "./reporter.js";
 import type { ResultadoTest } from "../shared/tipos.js";
 
 // Fixture con las tres formas que importan: un test verde, uno rojo por localizador roto y uno
@@ -103,6 +103,96 @@ describe("leerReporte", () => {
     const aplicacion = resultados[2];
     expect(aplicacion.estado).toBe("failed");
     expect(aplicacion.mensajeError).toContain("toHaveText");
+  });
+});
+
+describe("acumularReporte / leerReporte (acumulado persistente entre corridas)", () => {
+  let proyecto: string;
+
+  beforeEach(async () => {
+    proyecto = await mkdtemp(path.join(tmpdir(), "agente-qa-web-reporter-acumulado-"));
+  });
+
+  afterEach(async () => {
+    await rm(proyecto, { recursive: true, force: true });
+  });
+
+  async function escribirUltimaCorrida(reporte: unknown): Promise<void> {
+    await mkdir(path.join(proyecto, "test-results"), { recursive: true });
+    await writeFile(path.join(proyecto, "test-results", "results.json"), JSON.stringify(reporte), "utf8");
+  }
+
+  it("sin test-results/results.json no toca el acumulado", async () => {
+    await acumularReporte(proyecto);
+    await expect(readFile(path.join(proyecto, "agente-qa.resultados.json"), "utf8")).rejects.toThrow();
+  });
+
+  it("fusiona por suite.file: la suite nueva reemplaza a la del acumulado, el resto se conserva", async () => {
+    await escribirUltimaCorrida({
+      suites: [{ file: "carrito.spec.ts", specs: [{ title: "v1", file: "carrito.spec.ts", tests: [{ results: [{ status: "failed" }] }] }] }],
+    });
+    await acumularReporte(proyecto);
+
+    // Segunda corrida, de un solo spec (botón por fila): Playwright vacía test-results/ y este
+    // results.json ya no trae carrito.spec.ts — sin la fusión, leerReporte lo perdería.
+    await escribirUltimaCorrida({
+      suites: [{ file: "login.spec.ts", specs: [{ title: "login ok", file: "login.spec.ts", tests: [{ results: [{ status: "passed" }] }] }] }],
+    });
+    await acumularReporte(proyecto);
+
+    const acumulado = await leerReporte(proyecto);
+    expect(acumulado).toHaveLength(2);
+    expect(acumulado.find((r) => r.ficheroSpec === "carrito.spec.ts")?.estado).toBe("failed");
+    expect(acumulado.find((r) => r.ficheroSpec === "login.spec.ts")?.estado).toBe("passed");
+
+    // Tercera corrida: solo carrito.spec.ts, ahora en verde — reemplaza esa suite, login.spec.ts
+    // (de la corrida anterior, ya fuera de test-results/) se conserva.
+    await escribirUltimaCorrida({
+      suites: [{ file: "carrito.spec.ts", specs: [{ title: "v1", file: "carrito.spec.ts", tests: [{ results: [{ status: "passed" }] }] }] }],
+    });
+    await acumularReporte(proyecto);
+
+    const trasTerceraCorrida = await leerReporte(proyecto);
+    expect(trasTerceraCorrida).toHaveLength(2);
+    expect(trasTerceraCorrida.find((r) => r.ficheroSpec === "carrito.spec.ts")?.estado).toBe("passed");
+    expect(trasTerceraCorrida.find((r) => r.ficheroSpec === "login.spec.ts")?.estado).toBe("passed");
+  });
+
+  it("leerReporte sigue viendo el acumulado aunque test-results/results.json ya no exista", async () => {
+    await escribirUltimaCorrida(REPORTE_FIXTURE);
+    await acumularReporte(proyecto);
+    await rm(path.join(proyecto, "test-results"), { recursive: true, force: true });
+
+    await expect(leerReporte(proyecto)).resolves.toHaveLength(3);
+  });
+
+  it("leerReporte cae a test-results/results.json si el acumulado todavía no existe (compatibilidad)", async () => {
+    await escribirUltimaCorrida(REPORTE_FIXTURE);
+
+    await expect(leerReporte(proyecto)).resolves.toHaveLength(3);
+    await expect(leerReporteUltimaCorrida(proyecto)).resolves.toHaveLength(3);
+  });
+});
+
+describe("combinarConSpecsEnDisco", () => {
+  function resultadoDe(ficheroSpec: string, estado: ResultadoTest["estado"] = "passed"): ResultadoTest {
+    return { nombre: "un test", ficheroSpec, estado, duracionMs: 10, reintentos: 0, pasos: [] };
+  }
+
+  it("añade como noEjecutado un .spec.ts en disco que no aparece en el reporte", () => {
+    const filas = combinarConSpecsEnDisco([], ["login.spec.ts"]);
+    expect(filas).toEqual([{ nombre: "login", ficheroSpec: "specs/login.spec.ts", estado: "noEjecutado", duracionMs: 0, reintentos: 0, pasos: [] }]);
+  });
+
+  it("no duplica un spec que ya tiene fila en el reporte", () => {
+    const filas = combinarConSpecsEnDisco([resultadoDe("login.spec.ts")], ["login.spec.ts"]);
+    expect(filas).toHaveLength(1);
+    expect(filas[0].estado).toBe("passed");
+  });
+
+  it("quita del reporte un spec que ya no existe en disco (spec borrado)", () => {
+    const filas = combinarConSpecsEnDisco([resultadoDe("borrado.spec.ts")], []);
+    expect(filas).toEqual([]);
   });
 });
 

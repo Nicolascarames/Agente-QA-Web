@@ -1,6 +1,8 @@
 # PRÓXIMOS PASOS — Agente-QA-Web
 
-Actualizado: 2026-09-14 (puertas de confirmación con botones: la skill exige `AskUserQuestion`,
+Actualizado: 2026-09-25 (Configuración → Apariencia: tamaño de letra global y paneles fijos/movibles
+por toda la ventana, verificado en vivo; antes, consumo del agente acotado: Sonnet, tope de gasto,
+entorno aislado, «Nueva conversación»). Antes, 2026-09-14 (puertas de confirmación con botones: la skill exige `AskUserQuestion`,
 política configurable, salto de pestaña, banner de sesión reanudada corregido — verificado en vivo
 contra una app real. Antes: paquete probado tal cual se instalaría desde npm, barrera de escrituras
 y credenciales en claro corregidas, deuda técnica cerrada, snapshot acotado cerrado con conclusión)
@@ -205,6 +207,23 @@ Lo demás de la lista es deuda menor, ninguna bloquea nada.
       `agente-qa instalar` en cualquier proyecto que ya la tuviera. Sin decidir si merece un aviso
       automático (p.ej. el `doctor` comparando hashes) o si con documentarlo basta. Detalle en
       `ESTADO.md`.
+- [ ] **Comprobar un ciclo completo con Sonnet contra `pruebas/babia`** y comparar coste y turnos con
+      los 8 $ / 90 turnos del 2026-09-25 (Opus). Si falla en flujos largos, subir a Opus solo esa
+      petición desde Configuración, no cambiar el defecto.
+
+- [ ] **El agente ejecuta Playwright sin las credenciales de prueba en el entorno** y acaba pasándolas
+      en claro en la línea de comandos (`USUARIO=… CONTRASENA=… npx playwright test`), visto en la
+      transcripción del 2026-09-25 contra `pruebas/babia`. Hay que inyectarlas en el entorno del agente
+      o que `playwright.config.ts` las lea de `agente-qa.credenciales.json`.
+
+### Cerradas 2026-09-25
+
+- [x] Ejecutar lista todos los specs de `tests/specs/` (○ «sin ejecutar» si nunca corrieron) y los resultados sobreviven entre corridas en `agente-qa.resultados.json`. Detalle en `ESTADO.md`.
+- [x] Código con resaltado VS Code (CodeMirror) en Redactar/Generar/Ejecutar/Reparar, sin cortes de línea raros; diff sin 500 cuando el proyecto no está bajo git; botón en Redactar para que el agente corrija «no cubierto»/«desincronizado»; la trazabilidad ya no marca desincronizado un paso partido en dos líneas. Detalle en `ESTADO.md`.
+- [x] Consumo del agente acotado: Sonnet por defecto y elegible, tope de gasto por petición, fuera el
+      entorno personal del usuario (hooks, plugins, MCP, CLAUDE.md global), herramientas limitadas a
+      las del ciclo (arranque de 53k a 22,5k tokens, medido en vivo), botón «Nueva conversación» y
+      aviso de contexto por encima de 100k. Detalle en `ESTADO.md`.
 
 ### Cerradas 2026-09-14
 

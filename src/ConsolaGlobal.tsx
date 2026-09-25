@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Panel } from "./Panel";
-import { enviarComando, interrumpirCorrida, pararCorrida, responderPregunta } from "./api";
+import { enviarComando, interrumpirCorrida, nuevaConversacion, pararCorrida, responderPregunta } from "./api";
 import { esEventoTerminal } from "../shared/eventos";
 import { pestanaParaRuta, type PestanaDestino } from "./pestanaParaRuta";
 import type { EventoNdjson } from "../shared/tipos";
@@ -17,6 +17,16 @@ interface PreguntaAgente {
 
 function serializarDatos(data: unknown): string {
   return typeof data === "string" ? data : JSON.stringify(data);
+}
+
+/** Nombre del `CustomEvent` con el que otra pestaña (p.ej. Redactar) le pide a esta consola que
+ *  envíe un texto, sin tener referencia a ella — está montada aparte, siempre visible. */
+export const EVENTO_COMANDO_EXTERNO = "agente-qa:comando";
+
+/** Dispara `EVENTO_COMANDO_EXTERNO`: lo escucha `ConsolaGlobal` y lo envía como si lo hubiera
+ *  escrito el usuario, con eco en el chat incluido. */
+export function pedirAlAgente(texto: string): void {
+  window.dispatchEvent(new CustomEvent(EVENTO_COMANDO_EXTERNO, { detail: { texto } }));
 }
 
 interface BloqueContenidoAsistente {
@@ -107,6 +117,20 @@ export function rutaUltimoFicheroEscrito(eventos: EventoNdjson[]): string | null
   return null;
 }
 
+/** La última `agente.pregunta` aún sin responder, buscando hacia atrás: no exige que sea el último
+ *  evento, porque detrás de ella pueden llegar eventos que la consola no pinta (`rate_limit_event`,
+ *  hooks) y con ellos los botones no salían nunca — el texto libre se enviaba como comando nuevo y
+ *  `canUseTool` se quedaba bloqueado. La cortan un `usuario.mensaje` (la respuesta) o un evento
+ *  terminal. */
+export function preguntaSinResponder(eventos: EventoNdjson[]): PreguntaAgente | null {
+  for (let i = eventos.length - 1; i >= 0; i -= 1) {
+    const evento = eventos[i];
+    if (evento.type === "usuario.mensaje" || esEventoTerminal(evento.type)) return null;
+    if (evento.type === "agente.pregunta") return evento.data as PreguntaAgente;
+  }
+  return null;
+}
+
 /** Un `tool_use` legible: nombre + sus parámetros — sin esto no se puede saber desde la consola,
  *  p.ej., si `browser_snapshot` se llamó con `target` o sin él (deuda técnica abierta del proyecto). */
 export function formatearParametrosHerramienta(input: unknown): string {
@@ -130,6 +154,30 @@ export function extraerTextoAsistente(evento: EventoNdjson): string | null {
   return texto || null;
 }
 
+/** Forma del `usage` de un mensaje `agente.assistant` (`BetaMessage.usage` del SDK): solo los tres
+ *  campos que cuentan para "cuánto va a releer el próximo paso" — no output_tokens, que no vuelve
+ *  a entrar en el prompt. */
+interface UsoTokens {
+  input_tokens?: number;
+  cache_read_input_tokens?: number;
+  cache_creation_input_tokens?: number;
+}
+
+/** Tamaño del contexto en el ÚLTIMO `agente.assistant` con `usage` conocido, o `null` sin ninguno
+ *  todavía. Cada paso del agente relee TODO el contexto acumulado — este número es justo lo que se
+ *  vuelve a pagar en el siguiente turno, de ahí el aviso cuando crece demasiado (ver botón "Nueva
+ *  conversación" más abajo). */
+export function tokensContextoActual(eventos: EventoNdjson[]): number | null {
+  for (let i = eventos.length - 1; i >= 0; i -= 1) {
+    const evento = eventos[i];
+    if (evento.type !== "agente.assistant") continue;
+    const usage = (evento.data as { message?: { usage?: UsoTokens } } | undefined)?.message?.usage;
+    if (!usage) continue;
+    return (usage.input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0);
+  }
+  return null;
+}
+
 /** Resumen legible de un evento `agente.system` (mensaje `system` del SDK), o `null` si es puro
  *  andamiaje (hooks de arranque/fin de turno, progreso interno) que no aporta nada a una persona
  *  leyendo la consola y por tanto no se pinta. `init` sí se resume — sin enumerar el catálogo
@@ -151,7 +199,13 @@ export function resumenEventoSistema(data: unknown): string | null {
  *  conserva, porque ahí sí es información nueva. */
 export function textoBloqueFinal(evento: EventoNdjson, ultimoTextoAsistente: string | null): string {
   const esError = evento.type === "operation.error";
-  const { result } = (evento.data as { result?: string } | undefined) ?? {};
+  const { result, subtype, total_cost_usd } = (evento.data as { result?: string; subtype?: string; total_cost_usd?: number } | undefined) ?? {};
+  // El SDK para en seco al superar `maxBudgetUsd` (server/agente.ts): sin esta rama, el mensaje
+  // genérico de error no dice por qué se paró ni dónde se sube el tope.
+  if (subtype === "error_max_budget_usd") {
+    const presupuesto = typeof total_cost_usd === "number" ? total_cost_usd.toFixed(2) : "?";
+    return `Parado: se alcanzó el tope de gasto de ${presupuesto} $ de esta petición (Configuración → Modelo y gasto).`;
+  }
   if (esError) return result ?? "Ha ocurrido un error — mira el detalle.";
   if (result && result === ultimoTextoAsistente) return "Terminado.";
   return result ?? "Terminado.";
@@ -306,6 +360,10 @@ export function ConsolaGlobal({
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [preguntaPendiente, setPreguntaPendiente] = useState<PreguntaAgente | null>(null);
+  // Líneas propias de la consola (no vienen del agente): hoy solo el aviso de "Nueva conversación".
+  // `eventos` es de quien la posee (`useCorridaGlobal`, vive en App.tsx) y no expone un reset — se
+  // acumula aparte y se pinta detrás de la lista, en vez de fingir un evento que nadie mandó.
+  const [lineasInfo, setLineasInfo] = useState<string[]>([]);
   // Opción con el foco del teclado en la pregunta activa: arranca en la primera (la que el propio
   // modelo suele poner primero suele ser la recomendada, ver convención de AskUserQuestion).
   const [opcionEnfocada, setOpcionEnfocada] = useState(0);
@@ -328,13 +386,12 @@ export function ConsolaGlobal({
   // La última pregunta sin responder, si la hay: el propio `canUseTool` del agente queda bloqueado
   // hasta que se llame a `responderPregunta`, así que basta con quedarse con la más reciente.
   useEffect(() => {
-    const ultimo = eventos[eventos.length - 1];
-    if (ultimo?.type !== "agente.pregunta") return;
-    const pregunta = ultimo.data as PreguntaAgente;
+    const pregunta = preguntaSinResponder(eventos);
+    if (!pregunta) return;
     setPreguntaPendiente(pregunta);
-    setOpcionEnfocada(0);
     if (pregunta.requestId === requestIdAbierto.current) return;
     requestIdAbierto.current = pregunta.requestId;
+    setOpcionEnfocada(0);
     const ruta = rutaUltimoFicheroEscrito(eventos);
     const pestana = ruta ? pestanaParaRuta(ruta) : null;
     if (pestana) onAbrirPestana?.(pestana);
@@ -388,20 +445,51 @@ export function ConsolaGlobal({
     setError(err instanceof Error ? err.message : String(err));
   };
 
+  // Lógica común a "enviar lo escrito en la caja" y "pedirAlAgente desde otra pestaña": ninguna de
+  // las dos sabe si hay una corrida en marcha (enviarComando encola) ni le importa limpiar la caja
+  // de texto — eso es cosa de quien la posee (ver `enviar`, único que la toca).
+  // Resuelve a `true` solo si el comando llegó al servidor: `enviar` no borra la caja si falló.
+  const enviarTexto = (texto: string): Promise<boolean> => {
+    const limpio = texto.trim();
+    if (!limpio) return Promise.resolve(false);
+    agregarMensajeUsuario(limpio);
+    setError(null);
+    setEnviando(true);
+    return enviarComando(limpio)
+      .then((respuesta) => {
+        marcarCorridaActiva(respuesta.runId);
+        return true;
+      })
+      .catch((err: unknown) => {
+        manejarError(err);
+        return false;
+      })
+      .finally(() => setEnviando(false));
+  };
+
   const enviar = (): Promise<void> => {
     const texto = comando.trim();
     if (!texto) return Promise.resolve();
-    agregarMensajeUsuario(texto);
-    setError(null);
-    setEnviando(true);
-    return enviarComando(texto)
-      .then((respuesta) => {
-        marcarCorridaActiva(respuesta.runId);
-        setComando("");
-      })
-      .catch(manejarError)
-      .finally(() => setEnviando(false));
+    return enviarTexto(texto).then((ok) => {
+      if (ok) setComando("");
+    });
   };
+
+  // Ref siempre al día: el listener de abajo se engancha una sola vez (deps vacías, para no
+  // reenganchar el listener en cada tecla) y así no arrastra un `enviarTexto` de un render viejo.
+  const enviarTextoRef = useRef(enviarTexto);
+  enviarTextoRef.current = enviarTexto;
+
+  // Puente con `pedirAlAgente` (Redactar y cualquier pestaña futura sin referencia a esta consola,
+  // que está montada aparte, siempre visible): en vez de prop-drilling, escucha el CustomEvent.
+  useEffect(() => {
+    function manejarComandoExterno(e: Event) {
+      const texto = (e as CustomEvent<{ texto: string }>).detail?.texto;
+      if (texto) void enviarTextoRef.current(texto);
+    }
+    window.addEventListener(EVENTO_COMANDO_EXTERNO, manejarComandoExterno);
+    return () => window.removeEventListener(EVENTO_COMANDO_EXTERNO, manejarComandoExterno);
+  }, []);
 
   const responder = (respuesta: { textoLibre?: string; opcionesElegidas?: string[] }) => {
     agregarMensajeUsuario(respuesta.opcionesElegidas?.length ? respuesta.opcionesElegidas.join(", ") : (respuesta.textoLibre ?? ""));
@@ -436,6 +524,19 @@ export function ConsolaGlobal({
     void enviar().then(() => interrumpirCorrida().catch(manejarError));
   };
 
+  // Corta `resume`: el próximo comando arranca sin el contexto acumulado hasta ahora. Deshabilitado
+  // con una corrida en marcha — pararla es una decisión aparte, no algo que este botón deba decidir.
+  const iniciarConversacionNueva = () => {
+    setError(null);
+    nuevaConversacion()
+      .then(() => {
+        setLineasInfo((actual) => [...actual, "Conversación nueva: el próximo mensaje empieza sin el contexto anterior."]);
+      })
+      .catch(manejarError);
+  };
+
+  const tokensContexto = tokensContextoActual(eventos);
+
   return (
     <Panel tabId="global" panelId="consola" titulo="Consola" disposicionPorDefecto={{ x: 0, y: 0, w: 100, h: 100, z: 10 }}>
       <div className="flex h-full flex-col gap-2">
@@ -463,11 +564,16 @@ export function ConsolaGlobal({
               });
             })()
           )}
+          {lineasInfo.map((linea, indice) => (
+            <li key={`info-${String(indice)}`} className="text-2xs text-text-faint">
+              {linea}
+            </li>
+          ))}
         </ul>
         {corridaActiva &&
           (() => {
             const ultimo = eventos[eventos.length - 1];
-            if (ultimo && (esEventoTerminal(ultimo.type) || ultimo.type === "agente.pregunta")) return null;
+            if (ultimo && (esEventoTerminal(ultimo.type) || preguntaSinResponder(eventos))) return null;
             return <p className="animate-pulse text-2xs text-text-dim">🤖 trabajando…</p>;
           })()}
         {preguntaPendiente &&
@@ -512,9 +618,19 @@ export function ConsolaGlobal({
               </div>
             );
           })()}
+        {tokensContexto !== null && tokensContexto > 100_000 && (
+          <p className="rounded-7 border border-info bg-info-bg px-2.5 py-1 text-2xs text-info">
+            El contexto va por {String(Math.round(tokensContexto / 1000))}k tokens: cada paso relee todo. Si cambias de tarea, pulsa «Nueva
+            conversación».
+          </p>
+        )}
         {error && <p className="text-xs text-danger">{error}</p>}
         {corridaActiva && <p className="text-2xs text-text-dim">se enviará al terminar el paso actual</p>}
-        <div className="flex flex-wrap gap-1.5">
+        {/* Input en su propia fila, a todo el ancho: a 25% de la banda (o cualquier panel movible
+            estrecho) no caben las cuatro acciones al lado sin comprimirlo hasta dejar el texto
+            ilegible — mismo problema que las credenciales de Configuración. Las acciones van en la
+            fila de debajo, con `flex-wrap` por si tampoco caben todas en una sola línea ahí. */}
+        <div className="flex flex-col gap-1.5">
           <input
             ref={inputRef}
             value={comando}
@@ -526,32 +642,42 @@ export function ConsolaGlobal({
             }}
             disabled={enviando}
             placeholder={preguntaPendiente ? "Responde por texto libre…" : "Escribe un comando…"}
-            className="min-w-[120px] flex-1 rounded-7 border border-border-soft bg-bg-sunken px-2.5 py-1.5 text-sm text-text-bright disabled:opacity-50"
+            className="w-full rounded-7 border border-border-soft bg-bg-sunken px-2.5 py-1.5 text-sm text-text-bright disabled:opacity-50"
           />
-          <button
-            type="button"
-            onClick={enviarOResponder}
-            disabled={enviando}
-            className="rounded-7 border border-accent bg-accent px-3 py-1 text-xs font-bold text-on-accent disabled:opacity-50"
-          >
-            ▶️
-          </button>
-          <button
-            type="button"
-            onClick={parar}
-            disabled={!corridaActiva}
-            className="rounded-7 border border-border-soft bg-bg-sunken px-3 py-1 text-xs font-bold text-text-bright disabled:opacity-50"
-          >
-            Parar
-          </button>
-          <button
-            type="button"
-            onClick={interrumpir}
-            disabled={!corridaActiva}
-            className="rounded-7 border border-border-soft bg-bg-sunken px-3 py-1 text-xs font-bold text-text-bright disabled:opacity-50"
-          >
-            Interrumpir
-          </button>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={enviarOResponder}
+              disabled={enviando}
+              className="rounded-7 border border-accent bg-accent px-3 py-1 text-xs font-bold text-on-accent disabled:opacity-50"
+            >
+              ▶️
+            </button>
+            <button
+              type="button"
+              onClick={parar}
+              disabled={!corridaActiva}
+              className="rounded-7 border border-border-soft bg-bg-sunken px-3 py-1 text-xs font-bold text-text-bright disabled:opacity-50"
+            >
+              Parar
+            </button>
+            <button
+              type="button"
+              onClick={interrumpir}
+              disabled={!corridaActiva}
+              className="rounded-7 border border-border-soft bg-bg-sunken px-3 py-1 text-xs font-bold text-text-bright disabled:opacity-50"
+            >
+              Interrumpir
+            </button>
+            <button
+              type="button"
+              onClick={iniciarConversacionNueva}
+              disabled={Boolean(corridaActiva) || enviando}
+              className="rounded-7 border border-border-soft bg-bg-sunken px-3 py-1 text-xs font-bold text-text-bright disabled:opacity-50"
+            >
+              Nueva conversación
+            </button>
+          </div>
         </div>
       </div>
     </Panel>

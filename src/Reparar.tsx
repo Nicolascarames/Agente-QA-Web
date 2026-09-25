@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { Panel } from "./Panel";
+import { EditorCodigo } from "./EditorCodigo";
 import { commitGenerados, descartarGenerados, guardarContenidoGenerado, obtenerContenidoGenerado, obtenerDiffGenerado, obtenerTestsRojos } from "./api";
 import type { ResultadoTestRojo, Sugerencia } from "../shared/tipos";
 
-// Bloque 7: misma geometría que dejó el Bloque 6 — izquierda 25 %, centro 46 % (arranca en 26.5 %),
-// derecha 26 % (arranca en 74 %), los tres a 100 % de alto — con la lista de rojos real
-// (`GET /api/tests/rojos`) y el diff real de `/api/generados/*` (contrato del Bloque 6, en otro
-// worktree en paralelo — hasta que se integre, esas tres rutas responden 404, esperado).
+// GAP=1.5 entre lista y detalle, mismo patrón que Dashboard/Reports (ver ESTADO.md): un tercio para
+// la lista, dos tercios para el detalle, sin dejar hueco ni sobrar ancho.
+const GAP = 1.5;
+const ANCHO_LISTA = (100 - GAP) / 3;
+const ANCHO_DETALLE = ANCHO_LISTA * 2;
 
 const ETIQUETA_SUGERENCIA: Record<Sugerencia, string> = {
   "fallo-test": "fallo del test",
@@ -48,7 +50,7 @@ export function Reparar({}: object) {
   return (
     <div className="flex h-full flex-col gap-2.5 p-4">
       <div className="relative flex-1" data-canvas="true">
-        <Panel tabId="reparar" panelId="lista" titulo="Tests en rojo" disposicionPorDefecto={{ x: 0, y: 0, w: 30, h: 100, z: 1 }}>
+        <Panel tabId="reparar" panelId="lista" titulo="Tests en rojo" disposicionPorDefecto={{ x: 0, y: 0, w: ANCHO_LISTA, h: 100, z: 1 }}>
           {cargando ? (
             <p className="text-xs text-text-dim">Cargando…</p>
           ) : error ? (
@@ -87,7 +89,7 @@ export function Reparar({}: object) {
           tabId="reparar"
           panelId="detalle"
           titulo="Diagnóstico y propuesta"
-          disposicionPorDefecto={{ x: 31.5, y: 0, w: 68.5, h: 100, z: 1 }}
+          disposicionPorDefecto={{ x: ANCHO_LISTA + GAP, y: 0, w: ANCHO_DETALLE, h: 100, z: 1 }}
         >
           {!rojoSeleccionado ? (
             <p className="text-xs text-text-dim">Selecciona un test en rojo de la lista.</p>
@@ -106,6 +108,7 @@ export function Reparar({}: object) {
 function PropuestaDiff({ test, onCambio }: { test: ResultadoTestRojo; onCambio: () => void }) {
   const [diff, setDiff] = useState<string | null>(null);
   const [errorDiff, setErrorDiff] = useState<string | null>(null);
+  const [sinControlDeVersiones, setSinControlDeVersiones] = useState<string | null>(null);
   const [contenido, setContenido] = useState("");
   const [cargandoContenido, setCargandoContenido] = useState(true);
   const [errorContenido, setErrorContenido] = useState<string | null>(null);
@@ -132,9 +135,11 @@ function PropuestaDiff({ test, onCambio }: { test: ResultadoTestRojo; onCambio: 
   const cargarDiff = () => {
     setDiff(null);
     setErrorDiff(null);
+    setSinControlDeVersiones(null);
     obtenerDiffGenerado(test.ficheroSpec)
       .then((respuesta) => {
         setDiff(respuesta.diff);
+        setSinControlDeVersiones(respuesta.sinControlDeVersiones ?? null);
       })
       .catch((err: unknown) => {
         setDiff("");
@@ -192,15 +197,7 @@ function PropuestaDiff({ test, onCambio }: { test: ResultadoTestRojo; onCambio: 
           {test.mensajeError}
         </pre>
       )}
-      <textarea
-        value={contenido}
-        onChange={(e) => {
-          setContenido(e.target.value);
-        }}
-        disabled={cargandoContenido}
-        spellCheck={false}
-        className="h-40 resize-none rounded-7 border border-border-soft bg-bg-sunken p-2.5 font-mono text-2xs text-text-bright disabled:opacity-50"
-      />
+      <EditorCodigo lenguaje="typescript" valor={contenido} onCambio={setContenido} soloLectura={cargandoContenido} className="h-40" />
       <div className="flex items-center gap-2">
         <button
           type="button"
@@ -212,45 +209,38 @@ function PropuestaDiff({ test, onCambio }: { test: ResultadoTestRojo; onCambio: 
         </button>
         {errorContenido && <p className="text-xs text-danger">{errorContenido}</p>}
       </div>
-      <div className="flex-1 overflow-auto rounded-8 border border-border-soft bg-bg-sunken p-2">
-        {errorDiff ? (
-          <p className="text-xs text-danger">{errorDiff}</p>
-        ) : diff === null ? (
-          <p className="text-xs text-text-dim">Cargando diff…</p>
-        ) : diff === "" ? (
-          <p className="text-xs text-text-dim">Sin diff propuesto todavía.</p>
-        ) : (
-          <pre className="whitespace-pre-wrap break-all text-2xs">
-            {diff.split("\n").map((linea, indice) => (
-              <div
-                key={String(indice)}
-                className={linea.startsWith("-") ? "text-danger" : linea.startsWith("+") ? "text-ok" : "text-text-dim"}
-              >
-                {linea}
-              </div>
-            ))}
-          </pre>
-        )}
-      </div>
-      <div className="flex gap-1.5">
-        <button
-          type="button"
-          onClick={aplicar}
-          disabled={procesando || !diff}
-          title={!diff ? "sin diff propuesto todavía" : undefined}
-          className="rounded-7 border border-border-soft bg-bg-sunken px-2.5 py-1.5 text-xs font-bold text-text-bright disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          ✅ Aplicar y reejecutar
-        </button>
-        <button
-          type="button"
-          onClick={rechazar}
-          disabled={procesando}
-          className="rounded-7 border border-border-soft bg-bg-sunken px-2.5 py-1.5 text-xs text-text-bright disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          ✖️ Rechazar
-        </button>
-      </div>
+      {errorDiff ? (
+        <p className="flex-1 overflow-auto rounded-8 border border-border-soft bg-bg-sunken p-2 text-xs text-danger">{errorDiff}</p>
+      ) : sinControlDeVersiones ? (
+        <p className="flex-1 overflow-auto rounded-8 border border-border-soft bg-bg-sunken p-2 text-xs text-text-dim">{sinControlDeVersiones}</p>
+      ) : diff === null ? (
+        <p className="flex-1 overflow-auto rounded-8 border border-border-soft bg-bg-sunken p-2 text-xs text-text-dim">Cargando diff…</p>
+      ) : diff === "" ? (
+        <p className="flex-1 overflow-auto rounded-8 border border-border-soft bg-bg-sunken p-2 text-xs text-text-dim">Sin diff propuesto todavía.</p>
+      ) : (
+        <EditorCodigo lenguaje="diff" valor={diff} soloLectura />
+      )}
+      {!sinControlDeVersiones && (
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={aplicar}
+            disabled={procesando || !diff}
+            title={!diff ? "sin diff propuesto todavía" : undefined}
+            className="rounded-7 border border-border-soft bg-bg-sunken px-2.5 py-1.5 text-xs font-bold text-text-bright disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            ✅ Aplicar y reejecutar
+          </button>
+          <button
+            type="button"
+            onClick={rechazar}
+            disabled={procesando}
+            className="rounded-7 border border-border-soft bg-bg-sunken px-2.5 py-1.5 text-xs text-text-bright disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            ✖️ Rechazar
+          </button>
+        </div>
+      )}
     </div>
   );
 }

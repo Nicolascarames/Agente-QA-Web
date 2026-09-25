@@ -288,4 +288,54 @@ describe("lanzar", () => {
     for await (const evento of sesion.suscribirse()) eventos.push(evento);
     expect(systemPromptCapturado).toContain("CADA fichero");
   });
+
+  it("gasto de suscripción: modelo 'sonnet' por defecto, presupuesto de 2$, sin ajustes del usuario y solo el MCP declarado aquí", async () => {
+    let opcionesCapturadas: { model?: string; maxBudgetUsd?: number; settingSources?: string[]; strictMcpConfig?: boolean; tools?: unknown } | undefined;
+    const queryFn: typeof query = (params) => {
+      opcionesCapturadas = params.options;
+      const mensajeResultado = { type: "result", subtype: "success", is_error: false, queued_turn_count: 0 } as unknown as SDKMessage;
+      return Object.assign(generadorDe([mensajeResultado]), { interrupt: () => Promise.resolve(undefined) }) as unknown as Query;
+    };
+    const sesion = lanzar("algo", { cwd: "/tmp", queryFn });
+    const suscripcion = sesion.suscribirse()[Symbol.asyncIterator]();
+    while (!(await suscripcion.next()).done) {
+      // drenar hasta que cierre
+    }
+    expect(opcionesCapturadas?.model).toBe("sonnet");
+    expect(opcionesCapturadas?.maxBudgetUsd).toBe(2);
+    expect(opcionesCapturadas?.settingSources).toEqual(["project"]);
+    expect(opcionesCapturadas?.strictMcpConfig).toBe(true);
+    expect(opcionesCapturadas?.tools).toEqual(["Read", "Write", "Edit", "Glob", "Grep", "Bash", "AskUserQuestion", "Skill", "ToolSearch"]);
+  });
+
+  it("honra opciones.modelo y opciones.presupuestoUsd cuando se indican", async () => {
+    let opcionesCapturadas: { model?: string; maxBudgetUsd?: number } | undefined;
+    const queryFn: typeof query = (params) => {
+      opcionesCapturadas = params.options;
+      const mensajeResultado = { type: "result", subtype: "success", is_error: false, queued_turn_count: 0 } as unknown as SDKMessage;
+      return Object.assign(generadorDe([mensajeResultado]), { interrupt: () => Promise.resolve(undefined) }) as unknown as Query;
+    };
+    const sesion = lanzar("algo", { cwd: "/tmp", queryFn, modelo: "opus", presupuestoUsd: 5 });
+    const suscripcion = sesion.suscribirse()[Symbol.asyncIterator]();
+    while (!(await suscripcion.next()).done) {
+      // drenar hasta que cierre
+    }
+    expect(opcionesCapturadas?.model).toBe("opus");
+    expect(opcionesCapturadas?.maxBudgetUsd).toBe(5);
+  });
+
+  it("presupuestoUsd <= 0 se trata como sin tope: maxBudgetUsd queda undefined", async () => {
+    let opcionesCapturadas: { maxBudgetUsd?: number } | undefined;
+    const queryFn: typeof query = (params) => {
+      opcionesCapturadas = params.options;
+      const mensajeResultado = { type: "result", subtype: "success", is_error: false, queued_turn_count: 0 } as unknown as SDKMessage;
+      return Object.assign(generadorDe([mensajeResultado]), { interrupt: () => Promise.resolve(undefined) }) as unknown as Query;
+    };
+    const sesion = lanzar("algo", { cwd: "/tmp", queryFn, presupuestoUsd: 0 });
+    const suscripcion = sesion.suscribirse()[Symbol.asyncIterator]();
+    while (!(await suscripcion.next()).done) {
+      // drenar hasta que cierre
+    }
+    expect(opcionesCapturadas?.maxBudgetUsd).toBeUndefined();
+  });
 });

@@ -76,7 +76,14 @@ ahí lo que quieres probar, en castellano y en una sola frase con todo lo necesa
   sigue solo hasta el verde) hasta una por cada fichero que toque.
 - Al terminar, el resultado se resalta en un bloque aparte.
 - **Puedes seguir la conversación**: un segundo mensaje recuerda lo que hablasteis antes, no hace
-  falta repetir el contexto desde cero.
+  falta repetir el contexto desde cero. Los botones de las preguntas también siguen en la misma
+  conversación.
+- **Cuando cambies de tarea, pulsa «Nueva conversación»** (en la cabecera de la consola). Cada paso
+  del agente relee toda la conversación, así que arrastrar la anterior gasta límite de tu
+  suscripción sin aportar nada. Si el contexto pasa de 100k tokens, la consola te lo avisa.
+- **Cada petición tiene un tope de gasto** (2 $ por defecto). Si se alcanza, el agente para y la
+  consola lo dice. Lo cambias en Configuración → Modelo y gasto, igual que el modelo (Sonnet por
+  defecto; Opus solo para casos difíciles, porque consume varias veces más).
 
 **La primera vez que abres la app aterrizas en la pestaña «Empezar»**, que te dice si te falta algo
 por configurar y qué escribir primero. Cuando ya no la necesites, el botón «No volver a mostrar esta
@@ -92,12 +99,26 @@ listas se refrescan solas en cuanto el agente termina un turno, no hace falta re
 |---|---|
 | **Empezar** | Si te falta algo por configurar (sesión, Playwright, URL, credenciales) y cómo se arregla; tus tres primeros pasos, con un botón que escribe la petición de ejemplo en la consola; y qué hace cada pestaña |
 | **Dashboard** | Escenarios cubiertos, verdes, rojos, última ejecución, coste acumulado, elementos frágiles |
-| **Redactar** | Los `.feature` generados, editables a mano, con badge de cobertura por fichero |
-| **Generar** | Los `.page.ts` y `.spec.ts`, contenido completo editable, con el visor de diff debajo (Aceptar/Descartar) cuando hay cambios pendientes frente al commit |
-| **Ejecutar** | La lista de tests (título = fichero `.spec.ts`) con botón ▶ por fila y un "▶ Ejecutar todos" arriba para lanzar Playwright de verdad desde la web, viendo la salida aparecer línea a línea mientras corre; el detalle junta los pasos del Gherkin con el código del spec, en la misma pestaña |
+| **Redactar** | Los `.feature` generados, editables a mano, con badge de cobertura por fichero. Si un fichero sale **no cubierto** o **desincronizado**, encima del editor aparece un botón («Generar el test» / «Sincronizar el spec») que manda la petición al agente por la consola |
+| **Generar** | Los `.page.ts` y `.spec.ts`, contenido completo editable, con el visor de diff debajo (Aceptar/Descartar) cuando hay cambios pendientes frente al commit. Si el proyecto no tiene git propio (o vive en una carpeta ignorada de otro repo, como `pruebas/babia`), en vez del diff sale un aviso gris: haz `git init` en la carpeta del proyecto para verlo |
+| **Ejecutar** | La lista de tests (título = fichero `.spec.ts`), **todos los de `tests/specs/`**: los que nunca se han ejecutado salen con ○ «sin ejecutar» hasta que les das a ▶. Los resultados se guardan en `agente-qa.resultados.json` (raíz del proyecto), así que no se pierden aunque ejecutes un solo spec o el agente corra Playwright a su manera. Botón ▶ por fila y un "▶ Ejecutar todos" arriba para lanzar Playwright de verdad desde la web, viendo la salida aparecer línea a línea mientras corre; el detalle junta los pasos del Gherkin con el código del spec, en la misma pestaña |
 | **Reparar** | Solo los tests en rojo: veredicto sugerido (fallo del test o de la app), el `.spec.ts` completo editable, y el diff de corrección propuesto (Aplicar y reejecutar/Rechazar) |
 | **Reports** | Historial de ejecuciones, fallos agrupados por causa, tests inestables, pass rate |
-| **Configuración** | URL base, entorno y barrera de escrituras; credenciales de prueba (usuario/contraseña o cualquier variable con nombre libre); cuántas veces para el agente a pedir tu confirmación; diagnóstico en vivo de las cuatro comprobaciones del `doctor` |
+| **Configuración** | URL base, entorno y barrera de escrituras; credenciales de prueba (usuario/contraseña o cualquier variable con nombre libre); cuántas veces para el agente a pedir tu confirmación; modelo (Sonnet/Opus/Haiku) y tope de gasto por petición; diagnóstico en vivo de las cuatro comprobaciones del `doctor`; **Apariencia**: tamaño del texto de toda la app y paneles fijos o movibles |
+
+### Tamaño del texto y paneles
+
+En **Configuración → Apariencia**:
+
+- **Tamaño del texto**: una barra que agranda o achica la letra de toda la app al momento.
+- **Paneles fijos** (por defecto): cada pestaña se reparte entera en la ventana, con la consola a la
+  derecha. En Redactar, Generar, Ejecutar y Reparar: lista estrecha, detalle ancho y consola estrecha.
+- **Paneles movibles**: arrancan igual que fijos, pero los arrastras por la barra de título a
+  cualquier sitio de la ventana (también encima de la consola) y cambias su tamaño tirando de
+  cualquier borde o esquina. El último que tocas queda delante. Si te lías, **Restablecer posiciones**
+  los devuelve a su sitio.
+
+Estas dos opciones se guardan en tu navegador, no en el proyecto.
 
 Los ficheros se generan en `tests/` del repo destino, así que se versionan junto a la aplicación que
 prueban.

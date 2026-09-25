@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { ConfigCredenciales, ConfigRaiz, PoliticaPuertas } from "../shared/tipos.js";
+import type { ConfigCredenciales, ConfigRaiz, ModeloAgente, PoliticaPuertas } from "../shared/tipos.js";
 
 /** Resuelve el proyecto activo: `--project <ruta>` del argv gana, si no, la ruta de `npm run dev` (env), si no, cwd. */
 export function resolverProyectoInicial(argv: readonly string[], cwd: string, env: NodeJS.ProcessEnv = process.env): string {
@@ -45,6 +45,12 @@ function politicaPuertasValida(valor: unknown): PoliticaPuertas {
   return (POLITICAS_PUERTAS_VALIDAS as readonly unknown[]).includes(valor) ? (valor as PoliticaPuertas) : "escenario";
 }
 
+const MODELOS_VALIDOS: readonly ModeloAgente[] = ["sonnet", "opus", "haiku"];
+
+function modeloValido(valor: unknown): ModeloAgente {
+  return (MODELOS_VALIDOS as readonly unknown[]).includes(valor) ? (valor as ModeloAgente) : "sonnet";
+}
+
 /**
  * Lee `agente-qa.config.json` de la raíz del repo. `null` si no existe o no tiene forma válida:
  * quien llama decide qué hacer — `bin/agente-qa.mjs` lo crea preguntando la URL base.
@@ -66,6 +72,8 @@ export async function leerConfigRaiz(rootDir: string): Promise<ConfigRaiz | null
     barrera: typeof candidato.barrera === "boolean" ? candidato.barrera : false,
     listaBlanca: Array.isArray(candidato.listaBlanca) ? (candidato.listaBlanca as string[]) : [],
     puertas: politicaPuertasValida(candidato.puertas),
+    modelo: modeloValido(candidato.modelo),
+    presupuestoUsd: typeof candidato.presupuestoUsd === "number" ? candidato.presupuestoUsd : 2,
   };
 }
 

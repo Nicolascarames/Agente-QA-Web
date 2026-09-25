@@ -62,6 +62,8 @@ describe("leerConfigRaiz / escribirConfigRaiz", () => {
       barrera: true,
       listaBlanca: ["http://localhost:3000"],
       puertas: "por-artefacto",
+      modelo: "opus",
+      presupuestoUsd: 5,
     });
     expect(await leerConfigRaiz(proyecto)).toEqual({
       schemaVersion: 1,
@@ -70,10 +72,12 @@ describe("leerConfigRaiz / escribirConfigRaiz", () => {
       barrera: true,
       listaBlanca: ["http://localhost:3000"],
       puertas: "por-artefacto",
+      modelo: "opus",
+      presupuestoUsd: 5,
     });
   });
 
-  it("rellena entorno/barrera/listaBlanca/puertas con sus defaults si faltan en el JSON leído", async () => {
+  it("rellena entorno/barrera/listaBlanca/puertas/modelo/presupuestoUsd con sus defaults si faltan en el JSON leído", async () => {
     await writeFile(configRaizPath(proyecto), JSON.stringify({ schemaVersion: 1, appUrl: "http://localhost:3000" }), "utf8");
     expect(await leerConfigRaiz(proyecto)).toEqual({
       schemaVersion: 1,
@@ -82,6 +86,8 @@ describe("leerConfigRaiz / escribirConfigRaiz", () => {
       barrera: false,
       listaBlanca: [],
       puertas: "escenario",
+      modelo: "sonnet",
+      presupuestoUsd: 2,
     });
   });
 

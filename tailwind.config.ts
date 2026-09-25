@@ -40,18 +40,23 @@ const config: Config = {
       info: "var(--info)",
       "info-bg": "var(--info-bg)",
     },
+    // Toda la escala +4px (pedido por el usuario, 2026-09-14): letra base demasiado pequeña en uso
+    // real. Se suma a cada valor, no se recalcula desde cero, para conservar la progresión relativa
+    // del mockup original. Cada valor suma además `--ajuste-texto` (Configuración → Apariencia,
+    // src/preferenciasUI.ts): por defecto -2px, así que el tamaño real por defecto es 2px menos que
+    // los literales de aquí — la preferencia se aplica en runtime, sin recompilar CSS.
     fontSize: {
-      "2xs": "8px",
-      xs: "9px",
-      "9.5": "9.5px",
-      sm: "10px",
-      base: "10.5px",
-      "11": "11px",
-      md: "12px",
-      lg: "13px",
-      xl: "16px",
-      "2xl": "20px",
-      "3xl": "24px",
+      "2xs": "calc(12px + var(--ajuste-texto))",
+      xs: "calc(13px + var(--ajuste-texto))",
+      "9.5": "calc(13.5px + var(--ajuste-texto))",
+      sm: "calc(14px + var(--ajuste-texto))",
+      base: "calc(14.5px + var(--ajuste-texto))",
+      "11": "calc(15px + var(--ajuste-texto))",
+      md: "calc(16px + var(--ajuste-texto))",
+      lg: "calc(17px + var(--ajuste-texto))",
+      xl: "calc(20px + var(--ajuste-texto))",
+      "2xl": "calc(24px + var(--ajuste-texto))",
+      "3xl": "calc(28px + var(--ajuste-texto))",
     },
     extend: {
       fontFamily: {

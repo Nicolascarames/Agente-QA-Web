@@ -6,8 +6,10 @@ import {
   formatearParametrosHerramienta,
   resumenEventoSistema,
   resumenResultadoHerramienta,
+  preguntaSinResponder,
   rutaUltimoFicheroEscrito,
   textoBloqueFinal,
+  tokensContextoActual,
 } from "./ConsolaGlobal";
 import type { EventoNdjson } from "../shared/tipos";
 
@@ -135,6 +137,32 @@ describe("textoBloqueFinal / describirEvento — bug 2: el cierre de turno no re
   it("un error sí conserva su texto (no es duplicado de ningún bloque de texto previo)", () => {
     expect(textoBloqueFinal(evento("operation.error", { result: "fallo de API" }), "otro texto")).toBe("fallo de API");
   });
+
+  it("un error_max_budget_usd avisa del tope de gasto en vez del genérico", () => {
+    const texto = textoBloqueFinal(evento("operation.error", { subtype: "error_max_budget_usd", total_cost_usd: 2.03 }), null);
+    expect(texto).toBe("Parado: se alcanzó el tope de gasto de 2.03 $ de esta petición (Configuración → Modelo y gasto).");
+  });
+});
+
+describe("tokensContextoActual — Pieza de aviso de contexto grande", () => {
+  it("sin ningún agente.assistant con usage, null", () => {
+    expect(tokensContextoActual([evento("agente.assistant", {}), evento("usuario.mensaje", { texto: "hola" })])).toBeNull();
+  });
+
+  it("suma input_tokens + cache_read_input_tokens + cache_creation_input_tokens del último con usage", () => {
+    const eventos = [
+      evento("agente.assistant", { message: { usage: { input_tokens: 100, cache_read_input_tokens: 20, cache_creation_input_tokens: 5 } } }),
+    ];
+    expect(tokensContextoActual(eventos)).toBe(125);
+  });
+
+  it("se queda con el ÚLTIMO evento con usage, no el primero", () => {
+    const eventos = [
+      evento("agente.assistant", { message: { usage: { input_tokens: 100 } } }),
+      evento("agente.assistant", { message: { usage: { input_tokens: 200 } } }),
+    ];
+    expect(tokensContextoActual(eventos)).toBe(200);
+  });
 });
 
 describe("formatearParametrosHerramienta / resumenEventoSistema — casos límite", () => {
@@ -194,5 +222,32 @@ describe("rutaUltimoFicheroEscrito — Pieza 3: a qué pestaña saltar", () => {
       evento("agente.assistant", { message: { content: [{ type: "tool_use", name: "Write", input: { file_path: "C:\\repo\\tests\\setup\\auth.setup.ts" } }] } }),
     ];
     expect(rutaUltimoFicheroEscrito(eventos)).toBe("C:\\repo\\tests\\specs\\login.spec.ts");
+  });
+});
+
+describe("preguntaSinResponder — los botones no dependen de que la pregunta sea el último evento", () => {
+  const pregunta = { requestId: "r1", questions: [{ question: "¿Sigo?", header: "Escenario", multiSelect: false, options: [{ label: "Confirmo, sigue", description: "" }] }] };
+
+  it("sigue pendiente aunque detrás lleguen eventos invisibles (rate_limit_event, hooks)", () => {
+    const eventos = [
+      evento("agente.pregunta", pregunta),
+      evento("agente.rate_limit_event", { type: "rate_limit_event" }),
+      evento("agente.system", { type: "system", subtype: "hook_started" }),
+    ];
+    expect(preguntaSinResponder(eventos)).toEqual(pregunta);
+  });
+
+  it("deja de estar pendiente en cuanto hay un mensaje del usuario detrás", () => {
+    const eventos = [evento("agente.pregunta", pregunta), evento("usuario.mensaje", { texto: "si" })];
+    expect(preguntaSinResponder(eventos)).toBeNull();
+  });
+
+  it("deja de estar pendiente si el turno terminó", () => {
+    const eventos = [evento("agente.pregunta", pregunta), evento("operation.stopped", null)];
+    expect(preguntaSinResponder(eventos)).toBeNull();
+  });
+
+  it("sin pregunta, null", () => {
+    expect(preguntaSinResponder([evento("agente.assistant", {})])).toBeNull();
   });
 });

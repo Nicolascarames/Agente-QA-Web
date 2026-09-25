@@ -6,11 +6,12 @@ import type {
   EstadoCorridaActiva,
   EstadoProyectoActivo,
   EventoTest,
+  FilaTest,
   RegistroEjecucion,
   ResultadoDoctor,
   ResultadoEjecucionPlaywright,
   RespuestaComando,
-  ResultadoTest,
+  RespuestaDiff,
   ResultadoTestRojo,
 } from "../shared/tipos";
 
@@ -85,6 +86,12 @@ export function enviarComando(texto: string): Promise<RespuestaComando> {
   });
 }
 
+/** Corta el `resume`: el próximo comando arranca una conversación nueva, sin el contexto anterior.
+ *  409 si hay una corrida en marcha (`pedirJsonEstricto` lo propaga como error con ese mensaje). */
+export function nuevaConversacion(): Promise<void> {
+  return pedirJsonEstricto<void>("/api/conversacion/nueva", { method: "POST" });
+}
+
 export function pararCorrida(): Promise<void> {
   return pedirJsonEstricto<void>("/api/parar", { method: "POST" });
 }
@@ -128,8 +135,8 @@ export function obtenerGenerados(): Promise<Generados> {
   return pedirJson<Generados>("/api/generados");
 }
 
-export function obtenerDiffGenerado(ruta: string): Promise<{ diff: string }> {
-  return pedirJsonEstricto<{ diff: string }>(`/api/generados/diff?ruta=${encodeURIComponent(ruta)}`);
+export function obtenerDiffGenerado(ruta: string): Promise<RespuestaDiff> {
+  return pedirJsonEstricto<RespuestaDiff>(`/api/generados/diff?ruta=${encodeURIComponent(ruta)}`);
 }
 
 export function obtenerContenidoGenerado(ruta: string): Promise<{ contenido: string }> {
@@ -162,8 +169,8 @@ export function descartarGenerados(rutas: string[]): Promise<void> {
 
 // --- Ejecutar / Reparar (Bloque 7): resultados reales del último reporte de Playwright ---------
 
-export function obtenerTests(): Promise<ResultadoTest[]> {
-  return pedirJson<ResultadoTest[]>("/api/tests");
+export function obtenerTests(): Promise<FilaTest[]> {
+  return pedirJson<FilaTest[]>("/api/tests");
 }
 
 export function obtenerTestsRojos(): Promise<ResultadoTestRojo[]> {

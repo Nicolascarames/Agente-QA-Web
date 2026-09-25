@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { commit, descartar, diff, ficherosModificados } from "./git.js";
+import { commit, descartar, diff, ficherosModificados, motivoSinControlDeVersiones } from "./git.js";
 
 const execFile = promisify(execFileCb);
 
@@ -73,5 +73,28 @@ describe("git.ts", () => {
     await appendFile(path.join(repo, "tracked.txt"), "linea 2\n", "utf8");
     await descartar(repo, ["tracked.txt"]);
     expect(await readFile(path.join(repo, "tracked.txt"), "utf8")).toBe("linea 1\n");
+  });
+
+  it("motivoSinControlDeVersiones es null para una ruta normal bajo git", async () => {
+    await writeFile(path.join(repo, "nuevo.txt"), "hola\n", "utf8");
+    expect(await motivoSinControlDeVersiones(repo, "nuevo.txt")).toBeNull();
+  });
+
+  it("motivoSinControlDeVersiones explica que la ruta está ignorada por un .gitignore", async () => {
+    await writeFile(path.join(repo, ".gitignore"), "ignorada/\n", "utf8");
+    await mkdir(path.join(repo, "ignorada"), { recursive: true });
+    await writeFile(path.join(repo, "ignorada", "fichero.txt"), "hola\n", "utf8");
+    const motivo = await motivoSinControlDeVersiones(repo, "ignorada/fichero.txt");
+    expect(motivo).toContain("ignorada por un .gitignore");
+  });
+
+  it("motivoSinControlDeVersiones explica que el proyecto no está bajo git", async () => {
+    const sinGit = await mkdtemp(path.join(tmpdir(), "agente-qa-web-git-sin-git-"));
+    try {
+      const motivo = await motivoSinControlDeVersiones(sinGit, "fichero.txt");
+      expect(motivo).toContain("no está bajo git");
+    } finally {
+      await rm(sinGit, { recursive: true, force: true });
+    }
   });
 });

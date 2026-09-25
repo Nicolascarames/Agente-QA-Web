@@ -152,6 +152,11 @@
      mismo valor literal que `backdropStyle`/`sidebarStyle` del mockup. */
   --backdrop: rgba(0, 0, 0, 0.5);
   --sidebar-shadow: 20px 0 40px rgba(0, 0, 0, 0.5);
+  /* Preferencia de usuario (Configuración → Apariencia, src/preferenciasUI.ts), por navegador vía
+     localStorage — no vive en agente-qa.config.json. App.tsx la aplica en runtime con
+     `setProperty`; tailwind.config.ts la suma a cada tamaño de la escala. Por defecto -2px: la
+     escala se subió +4px el 2026-09-14 y en uso real resultó demasiado grande. */
+  --ajuste-texto: -2px;
 }
 
 /* ── Reset ── */

@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Panel } from "./Panel";
+import { EditorCodigo } from "./EditorCodigo";
 import { ejecutarTests, obtenerContenidoGenerado, obtenerTests, suscribirseEventosTests } from "./api";
-import type { ResultadoTest } from "../shared/tipos";
+import type { FilaTest } from "../shared/tipos";
 
-// Bloque 7: mismos tres paneles que el Bloque 6 dejó vacíos (misma geometría — izquierda 25 %,
-// centro 46 % arrancando en 26.5 %, derecha 26 % arrancando en 74 %, los tres a 100 % de alto —
-// ver git blame de este fichero), ahora con datos reales del último `GET /api/tests`.
+// GAP=1.5 entre lista y detalle, mismo patrón que Dashboard/Reports (ver ESTADO.md): un tercio para
+// la lista, dos tercios para el detalle, sin dejar hueco ni sobrar ancho.
+const GAP = 1.5;
+const ANCHO_LISTA = (100 - GAP) / 3;
+const ANCHO_DETALLE = ANCHO_LISTA * 2;
 //
 // Después del plan: el Bloque 7 decidió que esta pestaña solo LEÍA el reporte (`server/reporter.ts`)
 // porque "no hay runner de Playwright en el servidor" — el usuario pidió poder lanzar los tests
@@ -26,18 +29,20 @@ function rutaSpecDesdeFichero(ficheroSpec: string): string {
   return normalizada.startsWith("tests/") ? normalizada : `tests/${normalizada}`;
 }
 
-const ICONO_ESTADO: Record<ResultadoTest["estado"], string> = {
+const ICONO_ESTADO: Record<FilaTest["estado"], string> = {
   passed: "✅",
   failed: "❌",
   timedOut: "⏱️",
   skipped: "⏭️",
+  noEjecutado: "○",
 };
 
-const COLOR_ESTADO: Record<ResultadoTest["estado"], string> = {
+const COLOR_ESTADO: Record<FilaTest["estado"], string> = {
   passed: "text-ok",
   failed: "text-danger",
   timedOut: "text-danger",
   skipped: "text-text-dim",
+  noEjecutado: "text-text-faint",
 };
 
 const COLOR_PASO: Record<"passed" | "failed" | "skipped", string> = {
@@ -47,7 +52,7 @@ const COLOR_PASO: Record<"passed" | "failed" | "skipped", string> = {
 };
 
 export function Ejecutar({}: object) {
-  const [tests, setTests] = useState<ResultadoTest[]>([]);
+  const [tests, setTests] = useState<FilaTest[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [seleccionado, setSeleccionado] = useState<number | null>(null);
@@ -144,7 +149,7 @@ export function Ejecutar({}: object) {
           tabId="ejecutar"
           panelId="lista"
           titulo="Tests con spec compilada"
-          disposicionPorDefecto={{ x: 0, y: 0, w: 30, h: 100, z: 1 }}
+          disposicionPorDefecto={{ x: 0, y: 0, w: ANCHO_LISTA, h: 100, z: 1 }}
         >
           <div className="flex h-full flex-col gap-2">
             <button
@@ -183,11 +188,12 @@ export function Ejecutar({}: object) {
                         onClick={() => {
                           setSeleccionado(indice);
                         }}
-                        className={`flex flex-1 flex-col gap-0.5 rounded-7 border px-2.5 py-1.5 text-left text-xs ${
+                        title={test.nombre}
+                        className={`flex min-w-0 flex-1 flex-col gap-0.5 rounded-7 border px-2.5 py-1.5 text-left text-xs ${
                           indice === seleccionado ? "border-accent bg-accent-bg" : "border-border-soft bg-bg-sunken"
                         }`}
                       >
-                        <span className={`font-semibold ${COLOR_ESTADO[test.estado]}`}>
+                        <span className={`truncate font-semibold ${COLOR_ESTADO[test.estado]}`}>
                           {ICONO_ESTADO[test.estado]} {test.nombre}
                         </span>
                         <span className="truncate text-2xs text-text-faint">{test.ficheroSpec}</span>
@@ -215,7 +221,7 @@ export function Ejecutar({}: object) {
           tabId="ejecutar"
           panelId="detalle"
           titulo={testSeleccionado ? testSeleccionado.ficheroSpec : "Pasos y código de este test"}
-          disposicionPorDefecto={{ x: 31.5, y: 0, w: 68.5, h: 100, z: 1 }}
+          disposicionPorDefecto={{ x: ANCHO_LISTA + GAP, y: 0, w: ANCHO_DETALLE, h: 100, z: 1 }}
         >
           {!testSeleccionado ? (
             <p className="text-xs text-text-dim">Selecciona un test de la lista.</p>
@@ -247,9 +253,7 @@ export function Ejecutar({}: object) {
               ) : codigoSpec === null ? (
                 <p className="text-xs text-text-dim">No se pudo cargar el código de este spec.</p>
               ) : (
-                <pre className="flex-1 overflow-auto whitespace-pre rounded-7 border border-border-soft bg-bg-sunken p-2.5 font-mono text-2xs text-text-bright">
-                  {codigoSpec}
-                </pre>
+                <EditorCodigo lenguaje="typescript" valor={codigoSpec} soloLectura />
               )}
             </div>
           )}
