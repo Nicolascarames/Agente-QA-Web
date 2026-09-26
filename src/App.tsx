@@ -31,10 +31,18 @@ interface WiringEmpezar {
   descartarGuia: () => void;
 }
 
+// Qué ejecución archivada abrir en Reports al pulsar "Ver informe" desde Ejecutar — mismo patrón que
+// `WiringEmpezar`: viven aquí porque `<Ejecutar>` y `<Reports>` no se conocen entre sí.
+interface WiringInformes {
+  onVerInforme: (id: string) => void;
+  informeAAbrir: string | null;
+  onInformeAbierto: () => void;
+}
+
 // Redactar/Generar (Bloque 6) y Ejecutar/Reparar (Bloque 7) traen cada una su propio chat ligero
 // que reutiliza el mismo estado de corrida que la consola global de la banda 2, así que las cuatro
 // necesitan las mismas tres piezas que recibe `<ConsolaGlobal>`.
-function contenidoPestana(pestana: Pestana, corrida: EstadoCorridaGlobal, wiringEmpezar: WiringEmpezar) {
+function contenidoPestana(pestana: Pestana, corrida: EstadoCorridaGlobal, wiringEmpezar: WiringEmpezar, wiringInformes: WiringInformes) {
   switch (pestana) {
     case "Empezar":
       return <Empezar onEscribirEjemplo={wiringEmpezar.escribirEnConsola} onGuiaDescartada={wiringEmpezar.descartarGuia} />;
@@ -47,11 +55,11 @@ function contenidoPestana(pestana: Pestana, corrida: EstadoCorridaGlobal, wiring
     case "Generar":
       return <Generar {...corrida} />;
     case "Ejecutar":
-      return <Ejecutar {...corrida} />;
+      return <Ejecutar {...corrida} onVerInforme={wiringInformes.onVerInforme} />;
     case "Reparar":
       return <Reparar {...corrida} />;
     case "Reports":
-      return <Reports />;
+      return <Reports informeAAbrir={wiringInformes.informeAAbrir} onInformeAbierto={wiringInformes.onInformeAbierto} />;
   }
 }
 
@@ -97,6 +105,9 @@ export default function App() {
   // Borrador que Empezar quiere dejar escrito (no enviado) en la consola global — null cuando no
   // hay nada pendiente. Vive aquí porque `<Empezar>` y `<ConsolaGlobal>` no se conocen entre sí.
   const [borradorConsola, setBorradorConsola] = useState<string | null>(null);
+  // Qué ejecución archivada abrir en Reports al pulsar "Ver informe" desde Ejecutar — mismo patrón
+  // que `borradorConsola`: viven aquí porque `<Ejecutar>` y `<Reports>` no se conocen entre sí.
+  const [informeAAbrir, setInformeAAbrir] = useState<string | null>(null);
 
   const descartarGuia = () => {
     try {
@@ -292,10 +303,21 @@ export default function App() {
               key={pestana}
               className={`relative h-full w-full ${preferencias.modoPaneles === "fijos" ? "animate-page-fade overflow-hidden" : ""}`}
             >
-              {contenidoPestana(pestana, corridaGlobal, {
-                escribirEnConsola: setBorradorConsola,
-                descartarGuia,
-              })}
+              {contenidoPestana(
+                pestana,
+                corridaGlobal,
+                { escribirEnConsola: setBorradorConsola, descartarGuia },
+                {
+                  onVerInforme: (id) => {
+                    setInformeAAbrir(id);
+                    ir("Reports");
+                  },
+                  informeAAbrir,
+                  onInformeAbierto: () => {
+                    setInformeAAbrir(null);
+                  },
+                },
+              )}
             </div>
           </div>
 

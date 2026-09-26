@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Panel } from "./Panel";
 import { EditorCodigo } from "./EditorCodigo";
-import { ejecutarTests, obtenerContenidoGenerado, obtenerTests, suscribirseEventosTests } from "./api";
-import type { FilaTest } from "../shared/tipos";
+import { ejecutarTests, obtenerConfig, obtenerContenidoGenerado, obtenerInformes, obtenerTests, suscribirseEventosTests } from "./api";
+import { pedirAlAgente } from "./ConsolaGlobal";
+import type { CategoriaCaptura, FilaTest } from "../shared/tipos";
 
 // GAP=1.5 entre lista y detalle, mismo patrón que Dashboard/Reports (ver ESTADO.md): un tercio para
 // la lista, dos tercios para el detalle, sin dejar hueco ni sobrar ancho.
@@ -51,7 +52,7 @@ const COLOR_PASO: Record<"passed" | "failed" | "skipped", string> = {
   skipped: "text-text-dim",
 };
 
-export function Ejecutar({}: object) {
+export function Ejecutar({ onVerInforme }: { onVerInforme?: (id: string) => void }) {
   const [tests, setTests] = useState<FilaTest[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +63,8 @@ export function Ejecutar({}: object) {
   const [lineasEnVivo, setLineasEnVivo] = useState<string[]>([]);
   const [codigoSpec, setCodigoSpec] = useState<string | null>(null);
   const [cargandoCodigo, setCargandoCodigo] = useState(false);
+  const [capturas, setCapturas] = useState<CategoriaCaptura[]>(["validaciones"]);
+  const [ultimoInformeId, setUltimoInformeId] = useState<string | null>(null);
   const salidaEnVivoRef = useRef<HTMLPreElement | null>(null);
   // Guarda la función de cierre de la suscripción SSE en curso, para poder desuscribirse también al
   // desmontar el componente (navegar fuera de la pestaña a media ejecución), no solo al terminar.
@@ -91,6 +94,16 @@ export function Ejecutar({}: object) {
 
   useEffect(cargarTests, []);
 
+  useEffect(() => {
+    obtenerConfig()
+      .then((config) => {
+        setCapturas(config.capturas ?? ["validaciones"]);
+      })
+      .catch(() => {
+        // Sin config todavía: se queda en el defecto ["validaciones"] ya inicializado arriba.
+      });
+  }, []);
+
   const testSeleccionado = seleccionado !== null ? tests[seleccionado] : undefined;
 
   useEffect(() => {
@@ -118,10 +131,18 @@ export function Ejecutar({}: object) {
     desuscribirseRef.current = suscribirseEventosTests((evento) => {
       if (evento.tipo === "linea") setLineasEnVivo((actual) => [...actual, evento.texto]);
     });
-    ejecutarTests(ruta)
+    ejecutarTests(ruta, capturas)
       .then((resultado) => {
         if (!resultado.ok) setSalidaEjecucion(resultado.salida);
         cargarTests();
+        obtenerInformes()
+          .then((informes) => {
+            setUltimoInformeId(informes[0]?.id ?? null);
+          })
+          .catch(() => {
+            // Sin informe archivado (p.ej. archivarUltimaEjecucion falló en el servidor, ya
+            // registrado ahí): no hay enlace "Ver informe" para esta corrida, no es un error visible.
+          });
       })
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : String(err));
@@ -162,6 +183,31 @@ export function Ejecutar({}: object) {
             >
               {ejecutando === "" ? "Ejecutando toda la suite…" : "▶ Ejecutar todos"}
             </button>
+            <div className="flex flex-wrap gap-2 text-2xs text-text-faint">
+              {(["validaciones", "fallos", "pasos"] as const).map((valor) => (
+                <label key={valor} className="flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    checked={capturas.includes(valor)}
+                    onChange={() => {
+                      setCapturas((actual) => (actual.includes(valor) ? actual.filter((c) => c !== valor) : [...actual, valor]));
+                    }}
+                  />
+                  {valor}
+                </label>
+              ))}
+            </div>
+            {ultimoInformeId && onVerInforme && (
+              <button
+                type="button"
+                onClick={() => {
+                  onVerInforme(ultimoInformeId);
+                }}
+                className="self-start rounded-7 border border-border-soft bg-bg-sunken px-2.5 py-1 text-2xs text-text-bright"
+              >
+                📊 Ver informe
+              </button>
+            )}
             {(ejecutando !== null || lineasEnVivo.length > 0) && (
               <pre
                 ref={salidaEnVivoRef}
@@ -247,6 +293,22 @@ export function Ejecutar({}: object) {
                   </li>
                 ))}
               </ul>
+              {codigoSpec !== null && !codigoSpec.includes("validar(") && (
+                <div className="flex items-center justify-between gap-2 rounded-7 border border-border-soft bg-bg-sunken px-2.5 py-1.5 text-2xs text-text-faint">
+                  <span>Este test no saca capturas.</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      pedirAlAgente(
+                        `Adapta ${rutaSpecDesdeFichero(testSeleccionado.ficheroSpec)} para que use \`paso\`/\`validar\` de \`tests/soporte/agente-qa.ts\` en vez de \`test.step\`/\`expect\` sueltos: cada \`Entonces\` debe terminar con \`validar(locator, esperado)\` sobre el elemento que comprueba, después de su \`expect\`. Sigue la puerta de confirmación habitual antes de guardar.`,
+                      );
+                    }}
+                    className="shrink-0 rounded-7 border border-accent bg-accent px-2 py-1 font-bold text-on-accent"
+                  >
+                    + Añadir capturas
+                  </button>
+                </div>
+              )}
               <p className="text-2xs uppercase tracking-[.05em] text-text-faint">{testSeleccionado.ficheroSpec}</p>
               {cargandoCodigo ? (
                 <p className="text-xs text-text-dim">Cargando código…</p>
