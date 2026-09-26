@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { archivarUltimaEjecucion, generarInformeHtml, idInformeValido, listarInformes } from "./informes.js";
 import type { ResumenInforme } from "../shared/tipos.js";
 
-function reporteEjemplo(startTime: string, adjuntos: { path: string; name: string }[] = []) {
+function reporteEjemplo(startTime: string, adjuntos: { path?: string; name: string; contentType?: string; body?: string }[] = []) {
   return {
     stats: { startTime, duration: 1234 },
     suites: [
@@ -87,6 +87,27 @@ describe("archivarUltimaEjecucion", () => {
     await writeFile(path.join(proyecto, "test-results", "results.json"), "{ esto no es json", "utf8");
     await expect(archivarUltimaEjecucion(proyecto, { historial: null })).resolves.toBeUndefined();
   });
+
+  it("el informe.html generado incluye el valor esperado de las validaciones", async () => {
+    const capturaAbs = path.join(proyecto, "captura-carrito.png");
+    await writeFile(capturaAbs, Buffer.from([1, 2, 3]));
+    await mkdir(path.join(proyecto, "test-results"), { recursive: true });
+    await writeFile(
+      path.join(proyecto, "test-results", "results.json"),
+      JSON.stringify(
+        reporteEjemplo("2026-09-26T11:00:00.000Z", [
+          { name: "agente-qa:validacion:Entonces veo el carrito", path: capturaAbs },
+          { name: "agente-qa:validacion:Entonces veo el carrito:esperado", contentType: "text/plain", body: Buffer.from("Sauce Labs Backpack").toString("base64") },
+        ]),
+      ),
+      "utf8",
+    );
+
+    await archivarUltimaEjecucion(proyecto, { historial: null });
+
+    const html = await readFile(path.join(proyecto, "agente-qa-informes", "2026-09-26_11-00-00", "informe.html"), "utf8");
+    expect(html).toContain("Sauce Labs Backpack");
+  });
 });
 
 describe("listarInformes", () => {
@@ -134,5 +155,16 @@ describe("generarInformeHtml", () => {
     expect(html).toContain("añade una mochila al carrito");
     expect(html).toContain("1 verdes");
     expect(html).toContain('src="capturas/captura.png"');
+  });
+
+  it("incluye el valor esperado de la validación cuando hay un adjunto :esperado", () => {
+    const html = generarInformeHtml(
+      reporteEjemplo("2026-09-26T10:15:30.000Z", [
+        { name: "agente-qa:validacion:Entonces veo el carrito", path: "/x/captura.png" },
+        { name: "agente-qa:validacion:Entonces veo el carrito:esperado", contentType: "text/plain", body: Buffer.from("Sauce Labs Backpack").toString("base64") },
+      ]),
+      ["captura.png"],
+    );
+    expect(html).toContain("Sauce Labs Backpack");
   });
 });

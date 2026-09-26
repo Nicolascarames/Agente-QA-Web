@@ -14,6 +14,10 @@ interface AdjuntoCrudo {
   name?: string;
   contentType?: string;
   path?: string;
+  /** Adjunto de texto (p.ej. `agente-qa:validacion:<titulo>:esperado`, escrito por `validar()` en
+   *  `skill/skills/qa/plantillas/agente-qa.ts` vía `body`, no `path`): el reporter JSON de
+   *  Playwright lo serializa en base64. */
+  body?: string;
 }
 
 interface ResultadoCrudo {
@@ -60,6 +64,10 @@ interface Recuento {
   rojos: number;
   specs: Set<string>;
   adjuntos: { name: string; path: string }[];
+  /** Valor esperado de cada `validar()`, clave = título del paso (mismo texto que sigue a
+   *  `agente-qa:validacion:` antes del sufijo `:esperado`). Estos adjuntos van por `body`
+   *  (texto en base64), no por `path`, así que quedan fuera de `adjuntos` arriba. */
+  esperados: Map<string, string>;
 }
 
 function recorrerSuite(suite: SuiteCruda, acc: Recuento): void {
@@ -72,7 +80,15 @@ function recorrerSuite(suite: SuiteCruda, acc: Recuento): void {
       if (ultimo.status === "passed") acc.verdes++;
       else acc.rojos++;
       for (const adjunto of ultimo.attachments ?? []) {
-        if (adjunto.name?.startsWith("agente-qa:") && adjunto.path) {
+        if (!adjunto.name?.startsWith("agente-qa:")) continue;
+        if (adjunto.name.startsWith("agente-qa:validacion:") && adjunto.name.endsWith(":esperado")) {
+          if (adjunto.body) {
+            const titulo = adjunto.name.slice("agente-qa:validacion:".length, -":esperado".length);
+            acc.esperados.set(titulo, Buffer.from(adjunto.body, "base64").toString("utf8"));
+          }
+          continue;
+        }
+        if (adjunto.path) {
           acc.adjuntos.push({ name: adjunto.name, path: adjunto.path });
         }
       }
@@ -118,7 +134,7 @@ export async function archivarUltimaEjecucion(rootDir: string, config: { histori
     const destino = path.join(rootDir, "agente-qa-informes", id);
     if (existsSync(destino)) return;
 
-    const acc: Recuento = { verdes: 0, rojos: 0, specs: new Set(), adjuntos: [] };
+    const acc: Recuento = { verdes: 0, rojos: 0, specs: new Set(), adjuntos: [], esperados: new Map() };
     for (const suite of reporte.suites ?? []) recorrerSuite(suite, acc);
 
     await fs.mkdir(path.join(destino, "capturas"), { recursive: true });
@@ -149,7 +165,7 @@ export async function archivarUltimaEjecucion(rootDir: string, config: { histori
       specs: [...acc.specs],
     };
     await fs.writeFile(path.join(destino, "resumen.json"), JSON.stringify(resumen, null, 2) + "\n", "utf8");
-    await fs.writeFile(path.join(destino, "informe.html"), generarInformeHtml(reporte, capturasCopiadas), "utf8");
+    await fs.writeFile(path.join(destino, "informe.html"), generarInformeHtml(reporte, capturasCopiadas, acc.esperados), "utf8");
 
     await asegurarGitignore(rootDir, ENTRADA_GITIGNORE_INFORMES);
 
@@ -190,8 +206,12 @@ function escaparHtml(texto: string): string {
 
 /** Imita el informe HTML de Playwright (spec: "de momento imita el de Playwright, el diseño propio
  *  llega en otra tarea"). Pura: recibe el JSON crudo ya leído y los basenames de las capturas ya
- *  copiadas a `capturas/`, junto a este fichero. */
-export function generarInformeHtml(reporte: ReporteCrudo, capturasCopiadas: string[]): string {
+ *  copiadas a `capturas/`, junto a este fichero. `esperados` (opcional) es el mapa titulo→texto
+ *  construido por `archivarUltimaEjecucion` (ver `Recuento.esperados`) — solo hace falta como
+ *  respaldo, porque `reporte` ya trae sus propios adjuntos `:esperado` con `body`, que esta función
+ *  decodifica directamente por su cuenta (Pieza 4 de la spec: cada captura muestra el texto del
+ *  paso Y el valor esperado). */
+export function generarInformeHtml(reporte: ReporteCrudo, capturasCopiadas: string[], esperados: Map<string, string> = new Map()): string {
   const copiadas = new Set(capturasCopiadas);
   let totalVerdes = 0;
   let totalRojos = 0;
@@ -209,14 +229,29 @@ export function generarInformeHtml(reporte: ReporteCrudo, capturasCopiadas: stri
 
         const adjuntos = (ultimo.attachments ?? []).filter((a) => a.name?.startsWith("agente-qa:") && a.path && copiadas.has(path.basename(a.path)));
         const fallo = adjuntos.find((a) => a.name === "agente-qa:fallo");
-        const capturasPorPaso = new Map<string, string>();
+        const capturasPorPaso = new Map<string, { img?: string; esperado?: string }>();
         for (const adjunto of adjuntos) {
           if (!adjunto.name || !adjunto.path) continue;
           const esValidacion = adjunto.name.startsWith("agente-qa:validacion:") && !adjunto.name.endsWith(":esperado");
           const esPaso = adjunto.name.startsWith("agente-qa:paso:");
           if (!esValidacion && !esPaso) continue;
           const titulo = esValidacion ? adjunto.name.slice("agente-qa:validacion:".length) : adjunto.name.slice("agente-qa:paso:".length);
-          capturasPorPaso.set(titulo, path.basename(adjunto.path));
+          const entrada = capturasPorPaso.get(titulo) ?? {};
+          entrada.img = path.basename(adjunto.path);
+          capturasPorPaso.set(titulo, entrada);
+        }
+        // Los `:esperado` van por `body` (texto en base64), no por `path`, así que quedan fuera del
+        // filtro de `adjuntos` de arriba: se buscan aparte en los attachments crudos de este test.
+        // Si el propio `reporte` no trae el `body` (p.ej. un `reporte` ya recortado por quien llama),
+        // se cae al mapa `esperados` recibido como respaldo.
+        for (const adjunto of ultimo.attachments ?? []) {
+          if (!adjunto.name?.startsWith("agente-qa:validacion:") || !adjunto.name.endsWith(":esperado")) continue;
+          const titulo = adjunto.name.slice("agente-qa:validacion:".length, -":esperado".length);
+          const texto = adjunto.body ? Buffer.from(adjunto.body, "base64").toString("utf8") : esperados.get(titulo);
+          if (texto === undefined) continue;
+          const entrada = capturasPorPaso.get(titulo) ?? {};
+          entrada.esperado = texto;
+          capturasPorPaso.set(titulo, entrada);
         }
 
         const bloque = `
@@ -225,7 +260,10 @@ export function generarInformeHtml(reporte: ReporteCrudo, capturasCopiadas: stri
             ${fallo ? `<div class="fallo"><img src="capturas/${escaparHtml(path.basename(fallo.path ?? ""))}" alt="captura de fallo" /></div>` : ""}
             <ul class="pasos">
               ${[...capturasPorPaso.entries()]
-                .map(([titulo, archivo]) => `<li><p>${escaparHtml(titulo)}</p><img class="miniatura" src="capturas/${escaparHtml(archivo)}" alt="${escaparHtml(titulo)}" /></li>`)
+                .map(
+                  ([titulo, c]) =>
+                    `<li><p>${escaparHtml(titulo)}${c.esperado ? ` — esperado: <code>${escaparHtml(c.esperado)}</code>` : ""}</p>${c.img ? `<img class="miniatura" src="capturas/${escaparHtml(c.img)}" alt="${escaparHtml(titulo)}" />` : ""}</li>`,
+                )
                 .join("")}
             </ul>
           </details>`;
