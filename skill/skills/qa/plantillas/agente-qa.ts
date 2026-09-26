@@ -20,6 +20,12 @@ export function categoriasCapturaActivas(): CategoriaCaptura[] {
     .filter((v): v is CategoriaCaptura => (CATEGORIAS_VALIDAS as readonly string[]).includes(v));
 }
 
+// Sanitiza un título para convertirlo en nombre de fichero seguro, reemplazando caracteres
+// no alfanuméricos (espacios, puntuación, etc.) con guiones.
+export function sanitizarNombreFichero(texto: string): string {
+  return texto.replace(/[^a-zA-Z0-9_-]+/g, "-");
+}
+
 // `paso`/`validar` solo reciben (titulo, fn) / (locator, esperado) — sin un `page` explícito no hay
 // forma de llegar a la página desde fuera del cuerpo del test. Se guarda aquí, actualizada por el
 // fixture `page` de abajo: un valor por worker de Playwright (proceso propio), un test a la vez por
@@ -32,8 +38,9 @@ export const test = base.extend({
     paginaActual = page;
     await use(page);
     if (categoriasCapturaActivas().includes("fallos") && testInfo.status !== testInfo.expectedStatus) {
-      const captura = await page.screenshot({ fullPage: true });
-      await testInfo.attach("agente-qa:fallo", { body: captura, contentType: "image/png" });
+      const ruta = testInfo.outputPath("agente-qa-fallo.png");
+      await page.screenshot({ path: ruta, fullPage: true });
+      await testInfo.attach("agente-qa:fallo", { path: ruta, contentType: "image/png" });
     }
     paginaActual = null;
   },
@@ -51,8 +58,9 @@ export async function paso<T>(titulo: string, fn: () => Promise<T>): Promise<T> 
     try {
       const resultado = await fn();
       if (categoriasCapturaActivas().includes("pasos") && paginaActual) {
-        const captura = await paginaActual.screenshot({ fullPage: true });
-        await test.info().attach(`agente-qa:paso:${titulo}`, { body: captura, contentType: "image/png" });
+        const ruta = test.info().outputPath(`agente-qa-paso-${sanitizarNombreFichero(titulo)}.png`);
+        await paginaActual.screenshot({ path: ruta, fullPage: true });
+        await test.info().attach(`agente-qa:paso:${titulo}`, { path: ruta, contentType: "image/png" });
       }
       return resultado;
     } finally {
@@ -73,12 +81,13 @@ export async function validar(locator: Locator, esperado: unknown): Promise<void
     el.dataset.agenteQaOutlinePrevio = el.style.outline;
     el.style.outline = "3px solid #ff3860";
   });
-  const captura = await locator.page().screenshot();
+  const ruta = test.info().outputPath(`agente-qa-validacion-${sanitizarNombreFichero(titulo)}.png`);
+  await locator.page().screenshot({ path: ruta });
   await locator.evaluate((el: HTMLElement) => {
     el.style.outline = el.dataset.agenteQaOutlinePrevio ?? "";
     delete el.dataset.agenteQaOutlinePrevio;
   });
-  await test.info().attach(`agente-qa:validacion:${titulo}`, { body: captura, contentType: "image/png" });
+  await test.info().attach(`agente-qa:validacion:${titulo}`, { path: ruta, contentType: "image/png" });
   await test.info().attach(`agente-qa:validacion:${titulo}:esperado`, {
     body: Buffer.from(String(esperado)),
     contentType: "text/plain",

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { categoriasCapturaActivas, expect as expectReexportado, paso, test, validar } from "./agente-qa.js";
+import { categoriasCapturaActivas, expect as expectReexportado, paso, sanitizarNombreFichero, test, validar } from "./agente-qa.js";
 
 describe("categoriasCapturaActivas — lee AGENTE_QA_CAPTURAS", () => {
   const original = process.env.AGENTE_QA_CAPTURAS;
@@ -39,5 +39,31 @@ describe("exports del fichero de apoyo", () => {
     expect(typeof expectReexportado).toBe("function");
     expect(typeof paso).toBe("function");
     expect(typeof validar).toBe("function");
+  });
+});
+
+describe("sanitizarNombreFichero — convierte títulos en nombres seguros", () => {
+  it("preserva caracteres alfanuméricos y guiones/guiones bajos", () => {
+    expect(sanitizarNombreFichero("test123_abc-def")).toBe("test123_abc-def");
+  });
+
+  it("reemplaza espacios con guiones", () => {
+    expect(sanitizarNombreFichero("Entonces veo el carrito")).toBe("Entonces-veo-el-carrito");
+  });
+
+  it("reemplaza puntuación con guiones", () => {
+    expect(sanitizarNombreFichero("Dado: acceso (válido)")).toBe("Dado-acceso-v-lido-");
+  });
+
+  it("comprime secuencias múltiples de caracteres no válidos en un guión", () => {
+    expect(sanitizarNombreFichero("texto   con   espacios")).toBe("texto-con-espacios");
+  });
+
+  it("maneja strings vacíos sin error", () => {
+    expect(sanitizarNombreFichero("")).toBe("");
+  });
+
+  it("maneja strings con solo caracteres no válidos", () => {
+    expect(sanitizarNombreFichero("!@#$%^&*()")).toBe("-");
   });
 });
