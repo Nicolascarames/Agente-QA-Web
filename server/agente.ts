@@ -10,7 +10,7 @@ import { acumularReporte, leerReporteUltimaCorrida } from "./reporter.js";
 import { registrarEjecucion } from "./costes.js";
 import { archivarUltimaEjecucion } from "./informes.js";
 import { crearCola, crearDifusor } from "./difusor.js";
-import type { ModeloAgente, PoliticaPuertas } from "../shared/tipos.js";
+import type { CategoriaCaptura, ModeloAgente, PoliticaPuertas } from "../shared/tipos.js";
 
 const dirActual = path.dirname(fileURLToPath(import.meta.url));
 // tsconfig.server.json no fija rootDir: este fichero compila a dist-server/server/agente.js (conserva
@@ -71,6 +71,12 @@ export interface OpcionesLanzar {
   /** Spec de capturas (2026-09-26): cuántas ejecuciones archivadas en `agente-qa-informes/`
    *  conservar tras el turno del agente. `null`/sin indicar, guarda todas. */
   historial?: number | null;
+  /** Categorías de captura de Configuración (spec 2026-09-26). Llegan al agente por el system
+   *  prompt, no por la opción `env` del SDK: sus tipos documentan `env` como entorno del proceso de
+   *  Claude Code, pero no garantizan que la herramienta Bash lo herede (y existe un
+   *  `SUBPROCESS_ENV_SCRUB` en el CLI). `[]` es una elección válida (ninguna captura); sin indicar,
+   *  "validaciones", el mismo valor por defecto de `categoriasCapturaActivas()` en la plantilla. */
+  capturas?: CategoriaCaptura[];
   /** Credenciales de prueba de Configuración (`agente-qa.credenciales.json`, nunca versionado): el
    *  agente necesita ver el VALOR para poder escribirlo en un formulario, así que van también al
    *  `system prompt`, no solo al entorno — lo que sí protege `emitirSeguro` es que nunca salgan en
@@ -167,6 +173,15 @@ export function lanzar(peticionInicial: string, opciones: OpcionesLanzar): Sesio
       ? `\n\nCredenciales de prueba disponibles para este proyecto (Configuración → Credenciales) — úsalas cuando la petición las necesite, no las pidas por chat si ya están aquí:\n${opciones.credenciales.map((c) => `- ${c.nombre}: ${c.valor}`).join("\n")}`
       : "";
 
+  // El agente corre Playwright desde su propio Bash, donde `AGENTE_QA_CAPTURAS` no existe salvo que
+  // el comando lo lleve: sin esto la plantilla caería siempre al valor por defecto y Configuración
+  // solo valdría para el botón Ejecutar. El valor va tal cual (vacío incluido) en su propia línea.
+  const appendCapturas = `
+
+Capturas de pantalla (Configuración → Capturas): al ejecutar Playwright con el comando de la skill qa (sección 4), antepón EXACTAMENTE esta asignación de entorno al comando. Si el valor está vacío, déjalo vacío: significa "ninguna captura".
+AGENTE_QA_CAPTURAS=${(opciones.capturas ?? ["validaciones"]).join(",")}
+`;
+
   const presupuestoUsd = opciones.presupuestoUsd ?? 2;
 
   const q: Query = queryFn({
@@ -191,7 +206,7 @@ export function lanzar(peticionInicial: string, opciones: OpcionesLanzar): Sesio
       mcpServers: { playwright: { command: "npx", args: ["@playwright/mcp@latest"], env: mapaCredenciales } },
       plugins: [{ type: "local", path: rutaSkill }],
       skills: ["qa"],
-      systemPrompt: { type: "preset", preset: "claude_code", append: ROL_QA + appendPuertas + appendCredenciales },
+      systemPrompt: { type: "preset", preset: "claude_code", append: ROL_QA + appendPuertas + appendCredenciales + appendCapturas },
       // Ni AskUserQuestion ni mcp__playwright__* van aquí: comprobado en manual contra pruebas/sauce,
       // el SDK emite el aviso CLAUDE_SDK_CAN_USE_TOOL_SHADOWED — una entrada "pelada" en allowedTools
       // se auto-aprueba antes de consultar canUseTool. Para AskUserQuestion eso impedía bloquearse a

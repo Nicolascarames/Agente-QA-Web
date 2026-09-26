@@ -302,6 +302,7 @@ export function buildApp(opts: AppOptions): FastifyInstance {
         modelo: config?.modelo,
         presupuestoUsd: config?.presupuestoUsd,
         historial: config?.historial,
+        capturas: config?.capturas,
       }),
       runId,
     };

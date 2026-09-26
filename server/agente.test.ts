@@ -8,6 +8,7 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { CanUseTool, Query, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { lanzar, type EventoAgente } from "./agente.js";
 import { leerHistorial } from "./costes.js";
+import type { CategoriaCaptura } from "../shared/tipos.js";
 
 function generadorDe(mensajes: SDKMessage[]): AsyncGenerator<SDKMessage, void> {
   return (async function* () {
@@ -305,6 +306,35 @@ describe("lanzar", () => {
     const eventos: EventoAgente[] = [];
     for await (const evento of sesion.suscribirse()) eventos.push(evento);
     expect(systemPromptCapturado).toContain("PARA UNA SOLA VEZ");
+  });
+
+  describe("capturas de Configuración -> AGENTE_QA_CAPTURAS del comando de Playwright del agente", () => {
+    async function systemPromptCon(opciones: { capturas?: CategoriaCaptura[] }): Promise<string | undefined> {
+      let systemPromptCapturado: string | undefined;
+      const queryFn: typeof query = (params) => {
+        systemPromptCapturado = (params.options?.systemPrompt as { append?: string } | undefined)?.append;
+        const mensajeResultado = { type: "result", subtype: "success", is_error: false, queued_turn_count: 0 } as unknown as SDKMessage;
+        return Object.assign(generadorDe([mensajeResultado]), { interrupt: () => Promise.resolve(undefined) }) as unknown as Query;
+      };
+      const sesion = lanzar("algo", { cwd: "/tmp", queryFn, ...opciones });
+      const eventos: EventoAgente[] = [];
+      for await (const evento of sesion.suscribirse()) eventos.push(evento);
+      return systemPromptCapturado;
+    }
+
+    it("pide anteponer AGENTE_QA_CAPTURAS con el valor configurado", async () => {
+      expect(await systemPromptCon({ capturas: ["fallos", "pasos"] })).toContain("AGENTE_QA_CAPTURAS=fallos,pasos");
+    });
+
+    it("un [] explícito es una elección: valor vacío, no el valor por defecto", async () => {
+      const prompt = await systemPromptCon({ capturas: [] });
+      expect(prompt).toMatch(/AGENTE_QA_CAPTURAS=(\s|$)/);
+      expect(prompt).not.toContain("AGENTE_QA_CAPTURAS=validaciones");
+    });
+
+    it("sin `capturas` usa 'validaciones' (mismo valor por defecto que la plantilla)", async () => {
+      expect(await systemPromptCon({})).toContain("AGENTE_QA_CAPTURAS=validaciones");
+    });
   });
 
   it("usa el texto de la política indicada en opciones.puertas", async () => {

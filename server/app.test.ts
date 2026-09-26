@@ -122,6 +122,27 @@ describe("buildApp", () => {
     await app.close();
   });
 
+  it("pasa las capturas guardadas en la config raíz a lanzarFn, incluido un [] explícito", async () => {
+    await escribirConfigRaiz(proyecto, {
+      schemaVersion: 1,
+      appUrl: "https://ejemplo.test",
+      entorno: "pruebas",
+      barrera: false,
+      listaBlanca: [],
+      puertas: "escenario",
+      modelo: "sonnet",
+      presupuestoUsd: 2,
+      capturas: [],
+      historial: null,
+    });
+    const { sesion } = crearSesionFalsa();
+    const lanzarFn = vi.fn(() => sesion);
+    const app = buildApp({ proyectoInicial: proyecto, lanzarFn });
+    await app.inject({ method: "POST", url: "/api/comando", payload: { texto: "hazlo" } });
+    expect(lanzarFn).toHaveBeenCalledWith("hazlo", expect.objectContaining({ capturas: [] }));
+    await app.close();
+  });
+
   it("POST /api/comando con sesión activa encola el mensaje en la misma sesión, sin lanzar otra", async () => {
     const { sesion, enviarMensaje } = crearSesionFalsa();
     const lanzarFn = vi.fn(() => sesion);
