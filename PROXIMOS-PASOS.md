@@ -101,6 +101,14 @@ Lo demás de la lista es deuda menor, ninguna bloquea nada.
 
 ## Después del plan
 
+- [ ] **Por hablar (pedido por el usuario, 2026-09-25): reportes visibles y capturas configurables
+      por validación.** Hoy `--reporter=list,json` (skill y `server/ejecutorTests.ts`) pisa el
+      `reporter: 'html'` del repo destino y no se genera `playwright-report/`; Reports solo agrega
+      estadísticas y `server/reporter.ts` ignora `attachments`; ningún config captura. Idea: ajuste
+      en Configuración (sin capturas / solo fallos / cada paso) → la skill adjunta captura tras cada
+      `test.step` según una variable de entorno → ejecutar con `list,json,html`. Decidir antes:
+      ¿basta abrir el informe HTML de Playwright o se quieren las capturas dentro de la app? Pasa por
+      brainstorming → spec antes de tocar código.
 - [x] **Continuidad de conversación y consola única.** Cerrado 2026-09-12. `server/agente.ts`/
       `server/app.ts`: `resume` del SDK reanuda el hilo anterior (bug real corregido: el agente
       perdía el contexto en cuanto terminaba un turno con una pregunta en texto plano). Se quitó el
