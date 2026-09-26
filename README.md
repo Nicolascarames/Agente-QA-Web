@@ -218,3 +218,19 @@ npm run build
 ```
 
 Los cuatro deben salir en verde antes de dar por buena una sesión de cambios.
+
+GitHub los ejecuta también en cada push y cada pull request a `main` (`.github/workflows/ci.yml`).
+
+### Publicar una versión nueva
+
+El paquete está en npm como [`agente-qa`](https://www.npmjs.com/package/agente-qa). Para sacar la
+siguiente versión, con `main` limpio y al día:
+
+```bash
+npm version patch          # o minor / major: sube package.json y crea el tag vX.Y.Z
+git push --follow-tags     # empuja el commit y el tag
+```
+
+El tag dispara `.github/workflows/publicar.yml`: repite los cuatro comandos de verificación, publica
+en npm y crea la Release de GitHub con las notas de los commits. Si algo falla no se publica nada;
+se corrige y se saca la versión siguiente.

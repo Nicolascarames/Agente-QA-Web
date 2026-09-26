@@ -1,11 +1,19 @@
 # PRÓXIMOS PASOS — Agente-QA-Web
 
-Actualizado: 2026-09-26 (capturas en cada validación e informe visual por ejecución cerrados; la
-deuda que dejan, abajo en «Deuda anotada»; antes, Apariencia y consumo del agente acotado)
+Actualizado: 2026-09-26 (publicado `agente-qa@1.0.0` en npm y Release `v1.0.0`; quedan dos pasos manuales
+de la cuenta de npm, arriba del todo)
 
 Cola priorizada. **Una tarea = una línea.** El detalle vive en la spec.
 
 Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`](docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md)
+
+## Lo siguiente — dos pasos manuales en npmjs.com (2026-09-26)
+
+- [ ] **Configurar el trusted publisher** de `agente-qa`: página del paquete → Settings → Trusted
+      Publisher → GitHub Actions, organización `Nicolascarames`, repo `Agente-QA-Web`, workflow
+      `publicar.yml`. **Sin esto, el próximo tag falla en `npm publish`** (la 1.0.0 fue a mano).
+- [ ] **Revocar los tres tokens de npm** creados el 2026-09-26 para publicar la 1.0.0 (quedaron
+      escritos en la conversación). Con el trusted publisher no hace falta ningún token.
 
 ## Dónde lo dejamos (2026-09-14)
 
@@ -27,7 +35,7 @@ Antes de eso: se probó el paquete completo tal cual lo instalaría un usuario r
 corrigieron dos fallos reales — uno de ellos serio, la barrera de escrituras nunca se ejecutaba — y
 se cerró la deuda técnica acumulada (detalle en `ESTADO.md`, tabla de decisiones).
 
-**Lo único grande que sigue quedando es publicar en npm** (Pieza 3 de su spec: los dos workflows y
+**(Cerrado 2026-09-26: publicado como `agente-qa@1.0.0`.)** Lo único grande que quedaba era publicar en npm (Pieza 3 de su spec: los dos workflows y
 los cuatro pasos manuales). Antes de tocar eso hay que decidir una cosa que está a medias:
 `package.json` dice hoy `qa-web-agent` / `0.1.0` y la spec decide `agente-qa` / `1.0.0`. npm liberó
 el nombre `agente-qa` el 2026-09-13 sobre las 13:26 (hora peninsular); las versiones `0.1.0`–`0.1.6`
@@ -165,7 +173,8 @@ Lo demás de la lista es deuda menor, ninguna bloquea nada.
       Configuración (`"escenario"` por defecto: una parada y el resto del ciclo sigue solo); la
       consola salta sola a la pestaña del fichero; banner corregido. Verificado en vivo contra una
       app real, tres paradas exactas con `por-artefacto`. Detalle en `ESTADO.md`.
-- [ ] **Publicar en npm** — Piezas 1 y 3 de la spec de instalación guiada. La 1 (empaquetado) está
+- [x] **Publicar en npm.** Cerrado 2026-09-26: `agente-qa@1.0.0` en npm (a mano) y Release `v1.0.0`
+      creada por `publicar.yml` desde el tag; `ci.yml` en verde. Lo que era: Piezas 1 y 3 de la spec de instalación guiada. La 1 (empaquetado) está
       hecha; falta la 3: `.github/workflows/ci.yml` y `publicar.yml`, más los cuatro pasos manuales
       (esperar a que npm libere el nombre, repo público, publicar la 1.0.0 a mano, configurar el
       trusted publisher). Ojo: `package.json` dice hoy `qa-web-agent` y `0.1.0`; la spec decide
