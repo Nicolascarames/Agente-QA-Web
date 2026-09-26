@@ -37,7 +37,7 @@ El trabajo avanza en tres pasos:
 3. **Test** — el `.spec.ts` que ejecuta el escenario y lo pone en verde.
 
 Antes de escribir el `.spec.ts`, si `tests/soporte/agente-qa.ts` todavía no existe en este repo,
-cópialo tal cual desde [plantillas/agente-qa.ts](../plantillas/agente-qa.ts). Los specs importan
+cópialo tal cual desde [plantillas/agente-qa.ts](plantillas/agente-qa.ts). Los specs importan
 `test`, `expect`, `paso` y `validar` desde `../soporte/agente-qa` — nunca `test`/`expect` sueltos de
 `@playwright/test`. Usan `paso(titulo, fn)` en vez de `test.step(titulo, fn)` (mismo título, la
 trazabilidad no cambia), y cada `Entonces` termina con `validar(locator, esperado)` sobre el
