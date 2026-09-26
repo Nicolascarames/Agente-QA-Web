@@ -1,19 +1,24 @@
 import { useEffect, useState } from "react";
 import { Panel } from "./Panel";
-import { obtenerHistorial, obtenerTests, obtenerTestsRojos } from "./api";
-import type { FilaTest, RegistroEjecucion, ResultadoTest, ResultadoTestRojo } from "../shared/tipos";
+import { obtenerHistorial, obtenerInformes, obtenerTests, obtenerTestsRojos } from "./api";
+import type { FilaTest, RegistroEjecucion, ResultadoTest, ResultadoTestRojo, ResumenInforme } from "../shared/tipos";
 
-// Dos filas a todo el ancho y alto del contenedor, separación uniforme de 1.5 (GAP): tres cajas de
-// estadística arriba y "Fallos agrupados"/"Historial" repartiendo el resto en dos columnas debajo.
+// Tres filas a todo el ancho y alto del contenedor, separación uniforme de 1.5 (GAP): tres cajas de
+// estadística arriba, "Fallos agrupados"/"Historial" repartiendo la fila siguiente en dos columnas,
+// y "Ejecuciones" (spec 2026-09-26) a todo el ancho debajo.
 // El panel "Filtros" (banda vacía sin ningún control real que mostrar) se retiró — ver ESTADO.md —
 // y la fila inferior creció para ocupar el hueco que dejaba, llegando igual que antes hasta el
 // borde inferior sin sobrante.
 const GAP = 1.5;
 const COL_W = (100 - 2 * GAP) / 3;
 const MITAD = (100 - GAP) / 2;
-const FILA_STATS_H = 36.5;
+// Tres filas (antes dos): la nueva fila "Ejecuciones" (informes visuales, spec 2026-09-26) necesita
+// su propio espacio a todo el ancho, debajo de "Fallos agrupados"/"Historial".
+const FILA_STATS_H = 27;
 const FILA_INF_Y = FILA_STATS_H + GAP;
-const FILA_INF_H = 100 - FILA_INF_Y;
+const FILA_INF_H = 45;
+const FILA_EJEC_Y = FILA_INF_Y + FILA_INF_H + GAP;
+const FILA_EJEC_H = 100 - FILA_EJEC_Y;
 
 const ETIQUETAS_STATS = ["Pass rate", "Flaky tests", "Fallos abiertos"];
 const GEOMETRIA_STATS = [0, 1, 2].map((col) => ({ x: col * (COL_W + GAP), y: 0, w: COL_W, h: FILA_STATS_H, z: 1 }));
@@ -55,7 +60,99 @@ function contarFlaky(historial: RegistroEjecucion[]): number {
   return [...vistos.values()].filter((m) => m.verde && m.rojo).length;
 }
 
-export function Reports() {
+/** Pieza 5 de la spec de capturas (2026-09-26): lista de ejecuciones archivadas
+ *  (`agente-qa-informes/`, distinto del "Historial de ejecuciones" de arriba, que es
+ *  `agente-qa.historial.json` con coste/turnos del agente) con su informe embebido en un iframe. */
+function PanelEjecuciones({
+  informeAAbrir = null,
+  onInformeAbierto = () => {},
+}: {
+  informeAAbrir?: string | null;
+  onInformeAbierto?: () => void;
+} = {}) {
+  const [informes, setInformes] = useState<ResumenInforme[] | null>(null);
+  const [abierto, setAbierto] = useState<string | null>(null);
+
+  useEffect(() => {
+    obtenerInformes()
+      .then(setInformes)
+      .catch(() => {
+        setInformes([]);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!informeAAbrir) return;
+    setAbierto(informeAAbrir);
+    onInformeAbierto();
+  }, [informeAAbrir, onInformeAbierto]);
+
+  return (
+    <div className="flex h-full gap-2">
+      <div className="flex w-64 shrink-0 flex-col gap-1 overflow-auto">
+        {!informes ? (
+          <p className="p-2 text-xs text-text-dim">Cargando…</p>
+        ) : informes.length === 0 ? (
+          <p className="p-2 text-xs text-text-dim">Sin ejecuciones archivadas todavía.</p>
+        ) : (
+          informes.map((informe) => (
+            <button
+              key={informe.id}
+              type="button"
+              onClick={() => {
+                setAbierto(informe.id);
+              }}
+              className={`flex flex-col gap-0.5 rounded-7 border px-2.5 py-1.5 text-left text-2xs ${
+                abierto === informe.id ? "border-accent bg-accent-bg" : "border-border-soft bg-bg-sunken"
+              }`}
+            >
+              <span className="text-text-bright">{new Date(informe.fecha).toLocaleString()}</span>
+              <span className="text-text-faint">
+                <span className="text-ok">{informe.verdes} verdes</span> · <span className="text-danger">{informe.rojos} rojos</span> ·{" "}
+                {(informe.duracionMs / 1000).toFixed(1)}s
+              </span>
+            </button>
+          ))
+        )}
+      </div>
+      <div className="flex flex-1 flex-col gap-1.5">
+        {!abierto ? (
+          <p className="p-2 text-xs text-text-dim">Selecciona una ejecución.</p>
+        ) : (
+          <>
+            <div className="flex gap-2">
+              <a
+                href={`/informes/${abierto}/playwright/index.html`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-6 border border-border-soft bg-bg-sunken px-2 py-1 text-2xs text-text-bright"
+              >
+                Abrir informe de Playwright
+              </a>
+              <a
+                href={`/informes/${abierto}/informe.html`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-6 border border-border-soft bg-bg-sunken px-2 py-1 text-2xs text-text-bright"
+              >
+                Abrir HTML suelto
+              </a>
+            </div>
+            <iframe title="Informe de la ejecución" src={`/informes/${abierto}/informe.html`} className="flex-1 rounded-7 border border-border-soft bg-white" />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function Reports({
+  informeAAbrir = null,
+  onInformeAbierto = () => {},
+}: {
+  informeAAbrir?: string | null;
+  onInformeAbierto?: () => void;
+} = {}) {
   const [tests, setTests] = useState<FilaTest[] | null>(null);
   const [rojos, setRojos] = useState<ResultadoTestRojo[] | null>(null);
   const [historial, setHistorial] = useState<RegistroEjecucion[] | null>(null);
@@ -157,6 +254,15 @@ export function Reports() {
               )}
             </div>
           </div>
+        </Panel>
+
+        <Panel
+          tabId="reports"
+          panelId="ejecuciones"
+          titulo="Ejecuciones"
+          disposicionPorDefecto={{ x: 0, y: FILA_EJEC_Y, w: 100, h: FILA_EJEC_H, z: 1 }}
+        >
+          <PanelEjecuciones informeAAbrir={informeAAbrir} onInformeAbierto={onInformeAbierto} />
         </Panel>
       </div>
     </div>
