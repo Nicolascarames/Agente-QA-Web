@@ -1,6 +1,6 @@
 {
-  "name": "qa-web-agent",
-  "version": "0.1.0",
+  "name": "agente-qa",
+  "version": "1.0.0",
   "description": "Interfaz web local que convierte una frase en castellano en un test de Playwright ejecutado y en verde, vía el SDK de Claude.",
   "type": "module",
   "license": "MIT",
@@ -27,7 +27,6 @@
     "node": ">=22"
   },
   "bin": {
-    "qa-web-agent": "bin/agente-qa.mjs",
     "agente-qa": "bin/agente-qa.mjs"
   },
   "files": [

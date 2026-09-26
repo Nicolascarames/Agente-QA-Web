@@ -1,0 +1,41 @@
+name: Publicar
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    permissions:
+      # id-token: trusted publishing de npm (sin NPM_TOKEN) y procedencia.
+      # contents: write: crear la Release de GitHub sobre el tag.
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      # Trusted publishing exige npm >= 11.5.1.
+      - run: npm install -g npm@latest
+      - name: El tag coincide con package.json
+        run: |
+          esperado="v$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "$esperado" ]; then
+            echo "El tag $GITHUB_REF_NAME no coincide con package.json ($esperado)"; exit 1
+          fi
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm publish --access public
+      - name: Release de GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
