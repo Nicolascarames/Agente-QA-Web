@@ -33,7 +33,6 @@ import type {
   ResumenInforme,
   RespuestaComando,
   RespuestaDiff,
-  ResultadoTest,
   ResultadoTestRojo,
 } from "../shared/tipos.js";
 

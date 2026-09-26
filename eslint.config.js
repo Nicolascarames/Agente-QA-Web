@@ -6,7 +6,10 @@ export default tseslint.config(
     // design/README.md), no código de la app: no se lintea ni se tipa.
     // pruebas/ (fuera de git, ver ESTADO.md) es un proyecto Playwright aparte con su
     // propio tsconfig: no lo cubre ninguno de los de este repo.
-    ignores: ["dist-client/**", "dist-server/**", "node_modules/**", "design/**", "pruebas/**"],
+    // skill/ es una plantilla que se copia a repos destino (ver skill/skills/qa/plantillas/):
+    // deliberadamente fuera de tsconfig.app.json/tsconfig.server.json, así que ESLint
+    // type-aware tampoco puede lintearla (no pertenece a ningún proyecto TS de este repo).
+    ignores: ["dist-client/**", "dist-server/**", "node_modules/**", "design/**", "pruebas/**", "skill/**"],
   },
   ...tseslint.configs.recommendedTypeChecked,
   {

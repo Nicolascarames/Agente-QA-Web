@@ -99,10 +99,10 @@ describe("ejecutarPlaywright — reporter html y AGENTE_QA_CAPTURAS (spec 2026-0
     const promesa = ejecutarPlaywright("/repo");
     procesoFalso.emit("close", 0);
     await promesa;
-    expect(spawn).toHaveBeenCalledWith(
+    expect(vi.mocked(spawn)).toHaveBeenCalledWith(
       "npx",
       expect.arrayContaining(["--reporter=list,json,html"]),
-      expect.objectContaining({ env: expect.objectContaining({ PLAYWRIGHT_HTML_OPEN: "never" }) }),
+      expect.objectContaining({ env: expect.objectContaining({ PLAYWRIGHT_HTML_OPEN: "never" }) as NodeJS.ProcessEnv }),
     );
   });
 
@@ -110,20 +110,20 @@ describe("ejecutarPlaywright — reporter html y AGENTE_QA_CAPTURAS (spec 2026-0
     const promesa = ejecutarPlaywright("/repo");
     procesoFalso.emit("close", 0);
     await promesa;
-    expect(spawn).toHaveBeenCalledWith("npx", expect.any(Array), expect.objectContaining({ env: expect.objectContaining({ AGENTE_QA_CAPTURAS: "validaciones" }) }));
+    expect(vi.mocked(spawn)).toHaveBeenCalledWith("npx", expect.any(Array), expect.objectContaining({ env: expect.objectContaining({ AGENTE_QA_CAPTURAS: "validaciones" }) as NodeJS.ProcessEnv }));
   });
 
   it("con capturas: [] explícito, AGENTE_QA_CAPTURAS es una cadena vacía", async () => {
     const promesa = ejecutarPlaywright("/repo", undefined, {}, undefined, []);
     procesoFalso.emit("close", 0);
     await promesa;
-    expect(spawn).toHaveBeenCalledWith("npx", expect.any(Array), expect.objectContaining({ env: expect.objectContaining({ AGENTE_QA_CAPTURAS: "" }) }));
+    expect(vi.mocked(spawn)).toHaveBeenCalledWith("npx", expect.any(Array), expect.objectContaining({ env: expect.objectContaining({ AGENTE_QA_CAPTURAS: "" }) as NodeJS.ProcessEnv }));
   });
 
   it("con capturas: ['fallos','pasos'], AGENTE_QA_CAPTURAS las une con coma", async () => {
     const promesa = ejecutarPlaywright("/repo", undefined, {}, undefined, ["fallos", "pasos"]);
     procesoFalso.emit("close", 0);
     await promesa;
-    expect(spawn).toHaveBeenCalledWith("npx", expect.any(Array), expect.objectContaining({ env: expect.objectContaining({ AGENTE_QA_CAPTURAS: "fallos,pasos" }) }));
+    expect(vi.mocked(spawn)).toHaveBeenCalledWith("npx", expect.any(Array), expect.objectContaining({ env: expect.objectContaining({ AGENTE_QA_CAPTURAS: "fallos,pasos" }) as NodeJS.ProcessEnv }));
   });
 });

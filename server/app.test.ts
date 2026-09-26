@@ -617,7 +617,7 @@ describe("buildApp", () => {
         JSON.stringify({ appUrl: "https://x", capturas: ["fallos"] }),
         "utf8",
       );
-      const ejecutarFn = vi.fn(async (rootDir: string, _ruta?: string, _cred?: Record<string, string>, _onLinea?: unknown, capturas?: string[]) => {
+      const ejecutarFn = vi.fn(async (rootDir: string) => {
         await mkdir(path.join(rootDir, "test-results"), { recursive: true });
         await writeFile(path.join(rootDir, "test-results", "results.json"), JSON.stringify({ suites: [] }), "utf8");
         return { ok: true, codigo: 0, salida: "" };

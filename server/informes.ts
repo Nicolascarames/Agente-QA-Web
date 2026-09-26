@@ -225,7 +225,8 @@ export function generarInformeHtml(reporte: ReporteCrudo, capturasCopiadas: stri
         const ultimo = resultados[resultados.length - 1];
         if (!ultimo) continue;
         const ok = ultimo.status === "passed";
-        ok ? totalVerdes++ : totalRojos++;
+        if (ok) totalVerdes++;
+        else totalRojos++;
 
         const adjuntos = (ultimo.attachments ?? []).filter((a) => a.name?.startsWith("agente-qa:") && a.path && copiadas.has(path.basename(a.path)));
         const fallo = adjuntos.find((a) => a.name === "agente-qa:fallo");
