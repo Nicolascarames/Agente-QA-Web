@@ -8,7 +8,14 @@ import {
   usePreferenciasUI,
   type ModoPaneles,
 } from "./preferenciasUI";
-import type { ConfigRaiz, CredencialVariable, ModeloAgente, PoliticaPuertas, ResultadoComprobacion } from "../shared/tipos";
+import type {
+  CategoriaCaptura,
+  ConfigRaiz,
+  CredencialVariable,
+  ModeloAgente,
+  PoliticaPuertas,
+  ResultadoComprobacion,
+} from "../shared/tipos";
 
 const CONFIG_VACIA: ConfigRaiz = {
   schemaVersion: 1,
@@ -19,6 +26,8 @@ const CONFIG_VACIA: ConfigRaiz = {
   puertas: "escenario",
   modelo: "sonnet",
   presupuestoUsd: 2,
+  capturas: ["validaciones"],
+  historial: null,
 };
 
 // 3 columnas x 2 filas, mismo patrón GAP=1.5 que Dashboard (ver ESTADO.md): cada panel llega exacto
@@ -27,8 +36,11 @@ const CONFIG_VACIA: ConfigRaiz = {
 // (persiste por pestaña+panel en localStorage).
 const GAP = 1.5;
 const COL_W = (100 - 2 * GAP) / 3;
-const FILA_H = (100 - GAP) / 2;
+// Tres filas iguales (antes dos): la nueva fila 3 aloja "Capturas e informes" a todo el ancho, spec
+// 2026-09-26. `3 * FILA_H + 2 * GAP = 100`.
+const FILA_H = (100 - 2 * GAP) / 3;
 const FILA_2_Y = FILA_H + GAP;
+const FILA_3_Y = FILA_H * 2 + GAP * 2;
 
 /** Bloque 5: entorno, barrera de escrituras y lista blanca. Después del plan: `appUrl` gana control
  *  propio aquí (antes solo la creaba `npx agente-qa` al arrancar, preguntando por terminal). */
@@ -566,6 +578,117 @@ function PanelApariencia() {
   );
 }
 
+const CATEGORIAS_CAPTURA: { valor: CategoriaCaptura; etiqueta: string }[] = [
+  { valor: "validaciones", etiqueta: "En cada validación" },
+  { valor: "fallos", etiqueta: "Cuando falla un test" },
+  { valor: "pasos", etiqueta: "En todos los pasos" },
+];
+
+/** Pieza 1 de la spec de capturas (2026-09-26): qué categorías adjunta `tests/soporte/agente-qa.ts`
+ *  por defecto, y cuántas ejecuciones archivadas en `agente-qa-informes/` se conservan. Guardado
+ *  inmediato al cambiar, mismo patrón que `PanelPuertas`/`PanelModelo` — sin botón "Guardar" propio. */
+function PanelCapturas() {
+  const [capturas, setCapturas] = useState<CategoriaCaptura[]>(["validaciones"]);
+  const [historialIlimitado, setHistorialIlimitado] = useState(true);
+  const [historialTexto, setHistorialTexto] = useState("10");
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    obtenerConfig()
+      .then((recibida) => {
+        setCapturas(recibida.capturas ?? ["validaciones"]);
+        setHistorialIlimitado(recibida.historial === null || recibida.historial === undefined);
+        if (typeof recibida.historial === "number") setHistorialTexto(String(recibida.historial));
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => setCargando(false));
+  }, []);
+
+  const guardar = (parcial: Partial<ConfigRaiz>) => {
+    setError(null);
+    setGuardando(true);
+    guardarConfig(parcial)
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => setGuardando(false));
+  };
+
+  const alternar = (valor: CategoriaCaptura) => {
+    const siguiente = capturas.includes(valor) ? capturas.filter((c) => c !== valor) : [...capturas, valor];
+    setCapturas(siguiente);
+    guardar({ capturas: siguiente });
+  };
+
+  const cambiarIlimitado = (ilimitado: boolean) => {
+    setHistorialIlimitado(ilimitado);
+    guardar({ historial: ilimitado ? null : Number(historialTexto) || 10 });
+  };
+
+  const guardarLimite = () => {
+    const numero = Number(historialTexto);
+    guardar({ historial: Number.isFinite(numero) && numero >= 1 ? Math.floor(numero) : 10 });
+  };
+
+  if (cargando) return <p className="text-xs text-text-dim">Cargando…</p>;
+
+  return (
+    <div className="flex flex-col gap-3 text-xs">
+      <div className="flex flex-col gap-1.5">
+        <span className="text-text-faint">Capturas de pantalla</span>
+        {CATEGORIAS_CAPTURA.map((c) => (
+          <label key={c.valor} className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={capturas.includes(c.valor)}
+              disabled={guardando}
+              onChange={() => {
+                alternar(c.valor);
+              }}
+            />
+            <span className="text-text-bright">{c.etiqueta}</span>
+          </label>
+        ))}
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={historialIlimitado}
+            disabled={guardando}
+            onChange={(e) => {
+              cambiarIlimitado(e.target.checked);
+            }}
+          />
+          <span className="text-text-bright">Guardar todas las ejecuciones</span>
+        </label>
+        {!historialIlimitado && (
+          <label className="flex items-center gap-2 pl-5">
+            <span className="text-text-faint">Conservar las últimas</span>
+            <input
+              type="number"
+              min={1}
+              value={historialTexto}
+              disabled={guardando}
+              onChange={(e) => {
+                setHistorialTexto(e.target.value);
+              }}
+              onBlur={guardarLimite}
+              className="w-16 rounded-7 border border-border-soft bg-bg-sunken px-2 py-1 text-text-bright"
+            />
+            <span className="text-text-faint">ejecuciones</span>
+          </label>
+        )}
+      </div>
+      {error && <p className="text-danger">{error}</p>}
+    </div>
+  );
+}
+
 export function Configuracion() {
   // El `overflow-auto` de este wrapper es lo que le da scroll a la pestaña cuando el contenido no
   // cabe en fijos — pero en movibles ese mismo `overflow-auto` recorta cualquier panel arrastrado
@@ -622,6 +745,14 @@ export function Configuracion() {
           disposicionPorDefecto={{ x: (COL_W + GAP) * 2, y: FILA_2_Y, w: COL_W, h: FILA_H, z: 1 }}
         >
           <PanelApariencia />
+        </Panel>
+        <Panel
+          tabId="configuracion"
+          panelId="capturas"
+          titulo="📸 Capturas e informes"
+          disposicionPorDefecto={{ x: 0, y: FILA_3_Y, w: 100, h: FILA_H, z: 1 }}
+        >
+          <PanelCapturas />
         </Panel>
       </div>
     </div>
