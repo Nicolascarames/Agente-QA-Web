@@ -1,6 +1,6 @@
 // Mismo patrón de inyección de dependencias que `doctor.test.ts`: un `queryFn` falso construido a
 // mano en vez de lanzar un CLI de verdad — lento y no determinista.
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -258,6 +258,37 @@ describe("lanzar", () => {
       const historial = await leerHistorial(proyecto);
       expect(historial).toHaveLength(1);
       expect(historial[0]).toMatchObject({ costeUsd: 0.05, duracionMs: 1234, numTurnos: 3, resultados: [] });
+    } finally {
+      await rm(proyecto, { recursive: true, force: true });
+    }
+  });
+
+  it("archiva la ejecución (server/informes.ts) tras operation.completed, con el historial de las opciones", async () => {
+    const proyecto = await mkdtemp(path.join(tmpdir(), "agente-qa-web-agente-"));
+    try {
+      await mkdir(path.join(proyecto, "test-results"), { recursive: true });
+      await writeFile(
+        path.join(proyecto, "test-results", "results.json"),
+        JSON.stringify({ stats: { startTime: new Date().toISOString() }, suites: [] }),
+        "utf8",
+      );
+
+      const mensajeResultado = {
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        queued_turn_count: 0,
+        result: "ok",
+      } as unknown as SDKMessage;
+
+      const sesion = lanzar("hazlo", { cwd: proyecto, historial: 5, queryFn: queryFnFalsa([mensajeResultado]) });
+
+      const eventos: EventoAgente[] = [];
+      for await (const evento of sesion.suscribirse()) eventos.push(evento);
+      expect(eventos.map((e) => e.type)).toEqual(["operation.completed"]);
+
+      const entradas = await readdir(path.join(proyecto, "agente-qa-informes"));
+      expect(entradas).toHaveLength(1);
     } finally {
       await rm(proyecto, { recursive: true, force: true });
     }

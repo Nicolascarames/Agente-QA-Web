@@ -8,6 +8,7 @@ import { redactarSecretosProfundo, verificarLlamada } from "./barrera.js";
 import { textoPoliticaPuertas } from "./puertas.js";
 import { acumularReporte, leerReporteUltimaCorrida } from "./reporter.js";
 import { registrarEjecucion } from "./costes.js";
+import { archivarUltimaEjecucion } from "./informes.js";
 import { crearCola, crearDifusor } from "./difusor.js";
 import type { ModeloAgente, PoliticaPuertas } from "../shared/tipos.js";
 
@@ -67,6 +68,9 @@ export interface OpcionesLanzar {
    *  como "sin tope" (no se manda a `maxBudgetUsd`, que interpretaría 0 como corte inmediato). Sin
    *  indicar, 2 $. */
   presupuestoUsd?: number;
+  /** Spec de capturas (2026-09-26): cuántas ejecuciones archivadas en `agente-qa-informes/`
+   *  conservar tras el turno del agente. `null`/sin indicar, guarda todas. */
+  historial?: number | null;
   /** Credenciales de prueba de Configuración (`agente-qa.credenciales.json`, nunca versionado): el
    *  agente necesita ver el VALOR para poder escribirlo en un formulario, así que van también al
    *  `system prompt`, no solo al entorno — lo que sí protege `emitirSeguro` es que nunca salgan en
@@ -228,6 +232,11 @@ export function lanzar(peticionInicial: string, opciones: OpcionesLanzar): Sesio
             // corrida, así que sin esto un turno del agente que ejecuta un único spec borraría del
             // listado los tests de las corridas anteriores.
             await acumularReporte(opciones.cwd);
+            // Spec de capturas (2026-09-26): el agente también corre Playwright por su cuenta desde
+            // su propio Bash, así que necesita el mismo archivado que ya dispara `POST
+            // /api/tests/ejecutar` (server/app.ts) — `archivarUltimaEjecucion` nunca lanza y es
+            // idempotente, así que puede vivir en el mismo try sin riesgo añadido.
+            await archivarUltimaEjecucion(opciones.cwd, { historial: opciones.historial ?? null });
           } catch (error) {
             console.error("no se pudo registrar el historial de la ejecución", error);
           }
