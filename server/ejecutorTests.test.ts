@@ -86,3 +86,44 @@ describe("ejecutarPlaywright — troceado de líneas por onLinea", () => {
     expect(resultado).toEqual({ ok: true, codigo: 0, salida: "línea sin oyente\n" });
   });
 });
+
+describe("ejecutarPlaywright — reporter html y AGENTE_QA_CAPTURAS (spec 2026-09-26)", () => {
+  let procesoFalso: ProcesoFalso;
+
+  beforeEach(() => {
+    procesoFalso = crearProcesoFalso();
+    vi.mocked(spawn).mockReturnValue(procesoFalso as never);
+  });
+
+  it("pasa --reporter=list,json,html y PLAYWRIGHT_HTML_OPEN=never", async () => {
+    const promesa = ejecutarPlaywright("/repo");
+    procesoFalso.emit("close", 0);
+    await promesa;
+    expect(spawn).toHaveBeenCalledWith(
+      "npx",
+      expect.arrayContaining(["--reporter=list,json,html"]),
+      expect.objectContaining({ env: expect.objectContaining({ PLAYWRIGHT_HTML_OPEN: "never" }) }),
+    );
+  });
+
+  it("sin capturas explícitas, AGENTE_QA_CAPTURAS vale 'validaciones'", async () => {
+    const promesa = ejecutarPlaywright("/repo");
+    procesoFalso.emit("close", 0);
+    await promesa;
+    expect(spawn).toHaveBeenCalledWith("npx", expect.any(Array), expect.objectContaining({ env: expect.objectContaining({ AGENTE_QA_CAPTURAS: "validaciones" }) }));
+  });
+
+  it("con capturas: [] explícito, AGENTE_QA_CAPTURAS es una cadena vacía", async () => {
+    const promesa = ejecutarPlaywright("/repo", undefined, {}, undefined, []);
+    procesoFalso.emit("close", 0);
+    await promesa;
+    expect(spawn).toHaveBeenCalledWith("npx", expect.any(Array), expect.objectContaining({ env: expect.objectContaining({ AGENTE_QA_CAPTURAS: "" }) }));
+  });
+
+  it("con capturas: ['fallos','pasos'], AGENTE_QA_CAPTURAS las une con coma", async () => {
+    const promesa = ejecutarPlaywright("/repo", undefined, {}, undefined, ["fallos", "pasos"]);
+    procesoFalso.emit("close", 0);
+    await promesa;
+    expect(spawn).toHaveBeenCalledWith("npx", expect.any(Array), expect.objectContaining({ env: expect.objectContaining({ AGENTE_QA_CAPTURAS: "fallos,pasos" }) }));
+  });
+});

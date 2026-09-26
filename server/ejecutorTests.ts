@@ -1,11 +1,10 @@
-// Ejecuta Playwright de verdad sobre el proyecto activo — hasta ahora `server/reporter.ts` solo
-// LEÍA `test-results/results.json` (decisión del Bloque 7: "no hay runner en el servidor, fuera de
-// alcance"). El usuario pidió poder lanzar los tests desde la pestaña Ejecutar, así que ese runner
-// entra ahora: mismo comando que ya exige `skill/skills/qa/SKILL.md` §4 para que el JSON exista
-// (`PLAYWRIGHT_JSON_OUTPUT_NAME=test-results/results.json`, `--reporter=list,json`), lanzado por
-// variable de entorno sin tocar el `playwright.config.ts` del repo destino (ajeno).
+// Ejecuta Playwright de verdad sobre el proyecto activo. Mismo comando que exige
+// `skill/skills/qa/SKILL.md` §4 para que el JSON y el HTML existan
+// (`PLAYWRIGHT_JSON_OUTPUT_NAME`, `--reporter=list,json,html`, `PLAYWRIGHT_HTML_OPEN=never`):
+// `server/informes.ts` archiva `test-results/`/`playwright-report/` después de cada corrida, antes
+// de que la siguiente los vacíe.
 import { spawn } from "node:child_process";
-import type { ResultadoEjecucionPlaywright } from "../shared/tipos.js";
+import type { CategoriaCaptura, ResultadoEjecucionPlaywright } from "../shared/tipos.js";
 
 export type { ResultadoEjecucionPlaywright } from "../shared/tipos.js";
 
@@ -13,33 +12,38 @@ export type { ResultadoEjecucionPlaywright } from "../shared/tipos.js";
  * `rutaSpec`, si se pasa, limita la ejecución a ese fichero (botón por fila); sin ella, corre toda
  * la suite (botón "Ejecutar todos"). `npx` en Windows es un `.cmd`, así que hace falta `shell: true`
  * para poder lanzarlo — por eso `rutaSpec` se valida ANTES de llegar aquí (`rutaSpecSegura` en
- * `app.ts`, mismo patrón que `rutaGeneradaSegura`): con shell de por medio, un argumento sin validar
- * sería inyección de comandos, no solo path traversal.
+ * `app.ts`): con shell de por medio, un argumento sin validar sería inyección de comandos.
  *
- * `credenciales` (Configuración → Credenciales) se pasan como variables de entorno al proceso de
- * Playwright: si el agente escribió el `.spec.ts` leyendo `process.env.<NOMBRE>` en vez de un valor
- * hardcodeado (buena práctica para no dejar secretos en el código versionado), la ejecución real
- * necesita esas mismas variables presentes o el test fallaría por credenciales ausentes, no por un
- * fallo real de la aplicación.
+ * `credenciales` se pasan como variables de entorno al proceso de Playwright.
  *
- * `onLinea`, si se pasa, recibe cada línea completa de `stdout`/`stderr` (reporter `list` de
- * Playwright) tal como va saliendo, sin códigos ANSI — es el canal en vivo de `GET
- * /api/tests/eventos`; `salida` (el resultado devuelto) se sigue acumulando exactamente igual que
- * antes, el contrato de esta función no cambia para quien no pase `onLinea`.
+ * `onLinea`, si se pasa, recibe cada línea completa de `stdout`/`stderr` según va saliendo, sin
+ * códigos ANSI — canal en vivo de `GET /api/tests/eventos`.
+ *
+ * `capturas` (spec 2026-09-26) fija `AGENTE_QA_CAPTURAS` para `tests/soporte/agente-qa.ts`: sin
+ * indicar, "validaciones" (mismo defecto que el fichero de apoyo si la variable faltase del todo);
+ * una lista vacía apaga las capturas de esta ejecución.
  */
 export function ejecutarPlaywright(
   rootDir: string,
   rutaSpec?: string,
   credenciales: Record<string, string> = {},
-  onLinea?: (linea: string) => void
+  onLinea?: (linea: string) => void,
+  capturas: CategoriaCaptura[] = ["validaciones"],
 ): Promise<ResultadoEjecucionPlaywright> {
   return new Promise((resolve) => {
-    const args = ["playwright", "test", "--reporter=list,json"];
+    const args = ["playwright", "test", "--reporter=list,json,html"];
     if (rutaSpec) args.push(rutaSpec);
 
     const proceso = spawn("npx", args, {
       cwd: rootDir,
-      env: { ...process.env, ...credenciales, PLAYWRIGHT_JSON_OUTPUT_NAME: "test-results/results.json" },
+      env: {
+        ...process.env,
+        ...credenciales,
+        PLAYWRIGHT_JSON_OUTPUT_NAME: "test-results/results.json",
+        PLAYWRIGHT_HTML_OPEN: "never",
+        PLAYWRIGHT_HTML_OUTPUT_DIR: "playwright-report",
+        AGENTE_QA_CAPTURAS: capturas.join(","),
+      },
       shell: process.platform === "win32",
     });
 
@@ -49,7 +53,7 @@ export function ejecutarPlaywright(
       bufferLinea += fragmento;
       const lineas = bufferLinea.split(/\r?\n/);
       bufferLinea = lineas.pop() ?? "";
-      for (const linea of lineas) onLinea?.(linea.replace(/\[[0-9;]*[A-Za-z]/g, ""));
+      for (const linea of lineas) onLinea?.(linea.replace(/\x1b\[[0-9;]*[A-Za-z]/g, ""));
     }
     proceso.stdout?.on("data", (fragmento: Buffer) => {
       const texto = fragmento.toString();
@@ -65,7 +69,7 @@ export function ejecutarPlaywright(
       resolve({ ok: false, codigo: null, salida: `No se pudo lanzar Playwright: ${err.message}` });
     });
     proceso.on("close", (codigo) => {
-      if (bufferLinea !== "") onLinea?.(bufferLinea.replace(/\[[0-9;]*[A-Za-z]/g, ""));
+      if (bufferLinea !== "") onLinea?.(bufferLinea.replace(/\x1b\[[0-9;]*[A-Za-z]/g, ""));
       resolve({ ok: codigo === 0, codigo, salida });
     });
   });
