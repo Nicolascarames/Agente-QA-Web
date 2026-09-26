@@ -34,7 +34,16 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
-      - run: npm publish --access public
+      # La 1.0.0 se publicó a mano (el trusted publisher solo se configura con el paquete ya creado):
+      # si la versión ya está en npm no se republica, y el job sigue hasta crear la Release.
+      - name: Publicar en npm
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if npm view "agente-qa@$version" version >/dev/null 2>&1; then
+            echo "agente-qa@$version ya está en npm: no se republica"
+          else
+            npm publish --access public
+          fi
       - name: Release de GitHub
         env:
           GH_TOKEN: ${{ github.token }}
