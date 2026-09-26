@@ -1,11 +1,7 @@
 # PRÓXIMOS PASOS — Agente-QA-Web
 
-Actualizado: 2026-09-25 (Configuración → Apariencia: tamaño de letra global y paneles fijos/movibles
-por toda la ventana, verificado en vivo; antes, consumo del agente acotado: Sonnet, tope de gasto,
-entorno aislado, «Nueva conversación»). Antes, 2026-09-14 (puertas de confirmación con botones: la skill exige `AskUserQuestion`,
-política configurable, salto de pestaña, banner de sesión reanudada corregido — verificado en vivo
-contra una app real. Antes: paquete probado tal cual se instalaría desde npm, barrera de escrituras
-y credenciales en claro corregidas, deuda técnica cerrada, snapshot acotado cerrado con conclusión)
+Actualizado: 2026-09-26 (capturas en cada validación e informe visual por ejecución cerrados; la
+deuda que dejan, abajo en «Deuda anotada»; antes, Apariencia y consumo del agente acotado)
 
 Cola priorizada. **Una tarea = una línea.** El detalle vive en la spec.
 
@@ -101,14 +97,6 @@ Lo demás de la lista es deuda menor, ninguna bloquea nada.
 
 ## Después del plan
 
-- [ ] **Por hablar (pedido por el usuario, 2026-09-25): reportes visibles y capturas configurables
-      por validación.** Hoy `--reporter=list,json` (skill y `server/ejecutorTests.ts`) pisa el
-      `reporter: 'html'` del repo destino y no se genera `playwright-report/`; Reports solo agrega
-      estadísticas y `server/reporter.ts` ignora `attachments`; ningún config captura. Idea: ajuste
-      en Configuración (sin capturas / solo fallos / cada paso) → la skill adjunta captura tras cada
-      `test.step` según una variable de entorno → ejecutar con `list,json,html`. Decidir antes:
-      ¿basta abrir el informe HTML de Playwright o se quieren las capturas dentro de la app? Pasa por
-      brainstorming → spec antes de tocar código.
 - [x] **Continuidad de conversación y consola única.** Cerrado 2026-09-12. `server/agente.ts`/
       `server/app.ts`: `resume` del SDK reanuda el hilo anterior (bug real corregido: el agente
       perdía el contexto en cuanto terminaba un turno con una pregunta en texto plano). Se quitó el
@@ -214,7 +202,8 @@ Lo demás de la lista es deuda menor, ninguna bloquea nada.
       que avise ni que reinstale sola. Por ahora, tocar la skill y luego correr
       `agente-qa instalar` en cualquier proyecto que ya la tuviera. Sin decidir si merece un aviso
       automático (p.ej. el `doctor` comparando hashes) o si con documentarlo basta. Detalle en
-      `ESTADO.md`.
+      `ESTADO.md`. **Pendiente ya: reinstalar en `pruebas/sauce` y `pruebas/babia` (y cualquier repo
+      que la tuviera) — `SKILL.md` cambió con las capturas el 2026-09-26.**
 - [ ] **Comprobar un ciclo completo con Sonnet contra `pruebas/babia`** y comparar coste y turnos con
       los 8 $ / 90 turnos del 2026-09-25 (Opus). Si falla en flujos largos, subir a Opus solo esa
       petición desde Configuración, no cambiar el defecto.
@@ -223,6 +212,36 @@ Lo demás de la lista es deuda menor, ninguna bloquea nada.
       en claro en la línea de comandos (`USUARIO=… CONTRASENA=… npx playwright test`), visto en la
       transcripción del 2026-09-25 contra `pruebas/babia`. Hay que inyectarlas en el entorno del agente
       o que `playwright.config.ts` las lea de `agente-qa.credenciales.json`.
+
+- [ ] **Falta la prueba MANUAL de la interfaz de capturas en el navegador** (Configuración, Ejecutar
+      «Añadir capturas»/«Ver informe», Reports con iframe) contra `pruebas/sauce`: el pipeline de
+      Playwright/archivado está verificado en vivo, la UI solo por typecheck/lint/revisión.
+- [ ] **Comprobar con UNA ejecución real del agente** que antepone `AGENTE_QA_CAPTURAS=…` al comando:
+      las capturas de Configuración le llegan solo si el modelo obedece el `system prompt`.
+- [ ] **«Ver informe» abre el informe MÁS RECIENTE**, no necesariamente el de la ejecución recién
+      lanzada (si esa no archivó nada, abre el anterior). Arreglo: devolver el id archivado en la
+      respuesta de `POST /api/tests/ejecutar`.
+- [ ] **El archivado no es atómico**: una carpeta a medias sin `resumen.json` no se lista, no se
+      reintenta y cuenta para la poda. Arreglo: escribir en carpeta temporal y renombrar.
+- [ ] **En Ejecutar, un clic en una casilla de capturas antes de que responda `obtenerConfig()` se
+      pierde.**
+- [ ] **Menores de capturas**: un `paso()` que falla no lleva miniatura (su evidencia es la captura
+      `fallo`, que tampoco abre el lightbox); `informe.html` por `file://` desde rutas de Windows de
+      más de 260 caracteres rompe las imágenes (por HTTP, que usa la app, no); dos `paso()`/`validar()`
+      con el mismo título en un test se pisan la captura; `historialValido` trunca no enteros;
+      `decodeURIComponent` sin try/catch en el hook de `/informes/` (500 en vez de 400 con `%` mal
+      formado).
+
+### Cerradas 2026-09-26
+
+- [x] **Reportes visibles y capturas configurables por validación** (pedido por el usuario,
+      2026-09-25). Capturas en cada validación (`validar`/`paso` de `tests/soporte/agente-qa.ts`),
+      elegibles en Configuración y por ejecución; informe visual por ejecución en
+      `agente-qa-informes/` (`informe.html` + informe de Playwright), con sección «Ejecuciones» en
+      Reports. 269 tests, typecheck y lint limpios; pipeline verificado en vivo. Spec:
+      [`docs/superpowers/specs/2026-09-26-capturas-e-informe-visual.md`](docs/superpowers/specs/2026-09-26-capturas-e-informe-visual.md);
+      plan: [`docs/superpowers/plans/2026-09-26-capturas-e-informe-visual.md`](docs/superpowers/plans/2026-09-26-capturas-e-informe-visual.md).
+      Detalle en `ESTADO.md`.
 
 ### Cerradas 2026-09-25
 

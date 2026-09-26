@@ -101,10 +101,33 @@ listas se refrescan solas en cuanto el agente termina un turno, no hace falta re
 | **Dashboard** | Escenarios cubiertos, verdes, rojos, última ejecución, coste acumulado, elementos frágiles |
 | **Redactar** | Los `.feature` generados, editables a mano, con badge de cobertura por fichero. Si un fichero sale **no cubierto** o **desincronizado**, encima del editor aparece un botón («Generar el test» / «Sincronizar el spec») que manda la petición al agente por la consola |
 | **Generar** | Los `.page.ts` y `.spec.ts`, contenido completo editable, con el visor de diff debajo (Aceptar/Descartar) cuando hay cambios pendientes frente al commit. Si el proyecto no tiene git propio (o vive en una carpeta ignorada de otro repo, como `pruebas/babia`), en vez del diff sale un aviso gris: haz `git init` en la carpeta del proyecto para verlo |
-| **Ejecutar** | La lista de tests (título = fichero `.spec.ts`), **todos los de `tests/specs/`**: los que nunca se han ejecutado salen con ○ «sin ejecutar» hasta que les das a ▶. Los resultados se guardan en `agente-qa.resultados.json` (raíz del proyecto), así que no se pierden aunque ejecutes un solo spec o el agente corra Playwright a su manera. Botón ▶ por fila y un "▶ Ejecutar todos" arriba para lanzar Playwright de verdad desde la web, viendo la salida aparecer línea a línea mientras corre; el detalle junta los pasos del Gherkin con el código del spec, en la misma pestaña |
+| **Ejecutar** | La lista de tests (título = fichero `.spec.ts`), **todos los de `tests/specs/`**: los que nunca se han ejecutado salen con ○ «sin ejecutar» hasta que les das a ▶. Los resultados se guardan en `agente-qa.resultados.json` (raíz del proyecto), así que no se pierden aunque ejecutes un solo spec o el agente corra Playwright a su manera. Botón ▶ por fila y un "▶ Ejecutar todos" arriba para lanzar Playwright de verdad desde la web, viendo la salida aparecer línea a línea mientras corre; el detalle junta los pasos del Gherkin con el código del spec, en la misma pestaña. Además: casillas para elegir qué capturas sacar en esa ejecución, un aviso si el test no saca capturas (con botón «Añadir capturas») y «Ver informe» (ver [Capturas e informes](#capturas-e-informes)) |
 | **Reparar** | Solo los tests en rojo: veredicto sugerido (fallo del test o de la app), el `.spec.ts` completo editable, y el diff de corrección propuesto (Aplicar y reejecutar/Rechazar) |
-| **Reports** | Historial de ejecuciones, fallos agrupados por causa, tests inestables, pass rate |
-| **Configuración** | URL base, entorno y barrera de escrituras; credenciales de prueba (usuario/contraseña o cualquier variable con nombre libre); cuántas veces para el agente a pedir tu confirmación; modelo (Sonnet/Opus/Haiku) y tope de gasto por petición; diagnóstico en vivo de las cuatro comprobaciones del `doctor`; **Apariencia**: tamaño del texto de toda la app y paneles fijos o movibles |
+| **Reports** | Historial de ejecuciones, fallos agrupados por causa, tests inestables, pass rate; y la sección **Ejecuciones**, con el informe visual de cada una |
+| **Configuración** | URL base, entorno y barrera de escrituras; credenciales de prueba (usuario/contraseña o cualquier variable con nombre libre); cuántas veces para el agente a pedir tu confirmación; **Capturas e informes**; modelo (Sonnet/Opus/Haiku) y tope de gasto por petición; diagnóstico en vivo de las cuatro comprobaciones del `doctor`; **Apariencia**: tamaño del texto de toda la app y paneles fijos o movibles |
+
+### Capturas e informes
+
+Cada ejecución puede dejar capturas de pantalla y un informe visual para que veas qué comprobó el
+test, no solo si salió verde.
+
+- **Qué capturas hacer** (Configuración → **Capturas e informes**): tres casillas. **Validaciones**
+  (activada por defecto) recuadra el elemento comprobado en cada `Entonces` y guarda el valor
+  esperado; **Fallos** captura la página entera cuando un test falla; **Pasos** captura la página
+  entera en cada paso. Debajo eliges si guardar **todas las ejecuciones** o solo las últimas N
+  (10 por defecto al desactivar la opción de guardarlas todas).
+- **En Ejecutar**: las mismas casillas aparecen para esa ejecución concreta (no se guardan como
+  ajuste). Si el test que tienes delante no saca capturas —por ejemplo, se escribió antes de esta
+  función— sale un aviso «Este test no saca capturas» con un botón **Añadir capturas**, que le pide
+  al agente adaptar el test (te pregunta como siempre antes de cambiar nada). **Ver informe** te
+  lleva al informe de la última ejecución.
+- **Dónde están los informes**: en **Reports → Ejecuciones** (fecha, verdes, rojos, omitidos y
+  duración de cada una, con el informe abierto al lado; desde ahí también «Abrir informe de
+  Playwright» y «Abrir HTML suelto»). En disco, dentro de tu proyecto, en la carpeta
+  `agente-qa-informes/` (una subcarpeta por ejecución, fuera de git): `informe.html` se abre suelto
+  en cualquier navegador y el informe de Playwright va dentro.
+- **Si ya tenías la skill instalada en tu repo**, vuelve a ejecutar `npx agente-qa instalar` tras
+  actualizar: la copia local de la skill gana a la nueva y no sabría sacar capturas.
 
 ### Tamaño del texto y paneles
 
