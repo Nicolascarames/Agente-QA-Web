@@ -1,19 +1,21 @@
 # PRÓXIMOS PASOS — Agente-QA-Web
 
-Actualizado: 2026-09-26 (publicado `agente-qa@1.0.0` en npm y Release `v1.0.0`; quedan dos pasos manuales
-de la cuenta de npm, arriba del todo)
+Actualizado: 2026-09-26 (publicado `agente-qa@1.0.0` en npm y Release `v1.0.0`; quedan pasos manuales
+de la cuenta de npm para mañana, arriba del todo)
 
 Cola priorizada. **Una tarea = una línea.** El detalle vive en la spec.
 
 Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`](docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md)
 
-## Lo siguiente — dos pasos manuales en npmjs.com (2026-09-26)
+## Para mañana (2026-09-27) — pasos manuales en npmjs.com
 
 - [ ] **Configurar el trusted publisher** de `agente-qa`: página del paquete → Settings → Trusted
       Publisher → GitHub Actions, organización `Nicolascarames`, repo `Agente-QA-Web`, workflow
       `publicar.yml`. **Sin esto, el próximo tag falla en `npm publish`** (la 1.0.0 fue a mano).
 - [ ] **Revocar los tres tokens de npm** creados el 2026-09-26 para publicar la 1.0.0 (quedaron
       escritos en la conversación). Con el trusted publisher no hace falta ningún token.
+- [ ] **Marcar como obsoleto `@agente-qa/core`** (resto del monorepo antiguo `Agente_QA`, `0.1.6`):
+      `npm deprecate @agente-qa/core "Sustituido por agente-qa"`. Opcional; decide el usuario.
 
 ## Dónde lo dejamos (2026-09-14)
 
