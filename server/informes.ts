@@ -182,7 +182,8 @@ export async function archivarUltimaEjecucion(rootDir: string, config: { histori
     }
 
     const origenHtml = path.join(rootDir, "playwright-report");
-    if (existsSync(origenHtml)) {
+    const conInformePlaywright = existsSync(origenHtml);
+    if (conInformePlaywright) {
       await fs.cp(origenHtml, path.join(destino, "playwright"), { recursive: true });
     }
 
@@ -196,7 +197,7 @@ export async function archivarUltimaEjecucion(rootDir: string, config: { histori
       specs: [...acc.specs],
     };
     await fs.writeFile(path.join(destino, "resumen.json"), JSON.stringify(resumen, null, 2) + "\n", "utf8");
-    await fs.writeFile(path.join(destino, "informe.html"), generarInformeHtml(reporte, capturasCopiadas, acc.esperados), "utf8");
+    await fs.writeFile(path.join(destino, "informe.html"), generarInformeHtml(reporte, capturasCopiadas, acc.esperados, conInformePlaywright), "utf8");
 
     await asegurarGitignore(rootDir, ENTRADA_GITIGNORE_INFORMES);
 
@@ -220,7 +221,9 @@ export async function listarInformes(rootDir: string): Promise<ResumenInforme[]>
   for (const id of entradas) {
     try {
       const bruto = await fs.readFile(path.join(base, id, "resumen.json"), "utf8");
-      resumenes.push(JSON.parse(bruto) as ResumenInforme);
+      const resumen = JSON.parse(bruto) as ResumenInforme;
+      resumen.conInformePlaywright = existsSync(path.join(base, id, "playwright", "index.html"));
+      resumenes.push(resumen);
     } catch {
       // resumen.json corrupto o ausente: se omite esa ejecución en vez de tumbar la lista entera.
     }
@@ -279,7 +282,12 @@ function htmlPaso(titulo: string, duracionMs: number | null, c: CapturasDePaso |
  *  respaldo, porque `reporte` ya trae sus propios adjuntos `:esperado` con `body`, que esta función
  *  decodifica directamente por su cuenta (Pieza 4 de la spec: cada captura muestra el texto del
  *  paso Y el valor esperado). */
-export function generarInformeHtml(reporte: ReporteCrudo, capturasCopiadas: string[], esperados: Map<string, string> = new Map()): string {
+export function generarInformeHtml(
+  reporte: ReporteCrudo,
+  capturasCopiadas: string[],
+  esperados: Map<string, string> = new Map(),
+  conInformePlaywright = false,
+): string {
   const copiadas = new Set(capturasCopiadas);
   let totalVerdes = 0;
   let totalRojos = 0;
@@ -397,7 +405,7 @@ export function generarInformeHtml(reporte: ReporteCrudo, capturasCopiadas: stri
     <span class="rojos">${totalRojos} rojos</span>
     <span class="omitidos">${totalOmitidos} omitidos</span>
     <span>${duracionS}s</span>
-    <a class="enlace" href="playwright/index.html" target="_blank" rel="noopener">Informe de Playwright</a>
+    ${conInformePlaywright ? '<a class="enlace" href="playwright/index.html" target="_blank" rel="noopener">Informe de Playwright</a>' : ""}
   </header>
   ${secciones}
   <dialog id="lightbox"><img id="lightbox-img" src="" alt="" /></dialog>

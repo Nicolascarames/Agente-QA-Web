@@ -14,9 +14,9 @@ const COL_W = (100 - 2 * GAP) / 3;
 const MITAD = (100 - GAP) / 2;
 // Tres filas (antes dos): la nueva fila "Ejecuciones" (informes visuales, spec 2026-09-26) necesita
 // su propio espacio a todo el ancho, debajo de "Fallos agrupados"/"Historial".
-const FILA_STATS_H = 27;
+const FILA_STATS_H = 11;
 const FILA_INF_Y = FILA_STATS_H + GAP;
-const FILA_INF_H = 45;
+const FILA_INF_H = 21;
 const FILA_EJEC_Y = FILA_INF_Y + FILA_INF_H + GAP;
 const FILA_EJEC_H = 100 - FILA_EJEC_Y;
 
@@ -72,6 +72,7 @@ function PanelEjecuciones({
 } = {}) {
   const [informes, setInformes] = useState<ResumenInforme[] | null>(null);
   const [abierto, setAbierto] = useState<string | null>(null);
+  const informeAbierto = informes?.find((informe) => informe.id === abierto);
 
   useEffect(() => {
     obtenerInformes()
@@ -122,14 +123,16 @@ function PanelEjecuciones({
         ) : (
           <>
             <div className="flex gap-2">
-              <a
-                href={`/informes/${abierto}/playwright/index.html`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-6 border border-border-soft bg-bg-sunken px-2 py-1 text-2xs text-text-bright"
-              >
-                Abrir informe de Playwright
-              </a>
+              {informeAbierto?.conInformePlaywright && (
+                <a
+                  href={`/informes/${abierto}/playwright/index.html`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-6 border border-border-soft bg-bg-sunken px-2 py-1 text-2xs text-text-bright"
+                >
+                  Abrir informe de Playwright
+                </a>
+              )}
               <a
                 href={`/informes/${abierto}/informe.html`}
                 target="_blank"

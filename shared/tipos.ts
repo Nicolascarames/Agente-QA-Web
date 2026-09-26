@@ -179,6 +179,9 @@ export interface ResumenInforme {
    *  ejecuciones archivadas antes de este campo no lo traen en su `resumen.json`. */
   omitidos: number;
   specs: string[];
+  /** Calculado al listar, no se guarda en `resumen.json`: solo hay informe de Playwright si el
+   *  proyecto tiene el reporter `html` activo. */
+  conInformePlaywright?: boolean;
 }
 
 /** Respuesta de `GET /api/generados/diff`. `sinControlDeVersiones`, si está presente, explica por

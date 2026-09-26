@@ -8,15 +8,11 @@ import type { CoberturaEscenario, ElementoFragil, FilaTest, RegistroEjecucion } 
 // caja se queda en guion, el resto de la vista sigue viva.
 type CargaBloque<T> = { estado: "cargando" } | { estado: "error" } | { estado: "listo"; datos: T };
 
-// Geometría de las seis cajas de estadística (Bloque 8), en dos filas de tres a todo el ancho y
-// alto del contenedor. "En curso ahora"/"Actividad reciente" (paneles del sistema de configuración
-// anterior, `.agente-qa/` y `agente-qa-mcp metrics`, ninguno de los dos vuelve — ver ESTADO.md) se
-// retiraron: las seis cajas ocupan ahora las dos filas completas. Separación uniforme de 1.5 (GAP)
-// en horizontal y vertical, sin dejar sobrante: cada fila/columna llega hasta el borde del
-// contenedor.
+// Seis cajas de estadística en dos filas de tres, a todo el ancho. Misma altura que las cajas de
+// Reports (`FILA_STATS_H`): compactas arriba, el resto del alto queda libre a propósito.
 const GAP = 1.5;
 const COL_W = (100 - 2 * GAP) / 3;
-const FILA_H = (100 - GAP) / 2;
+const FILA_H = 11;
 const GEOMETRIA_STATS: DisposicionPanel[] = [0, 1, 2, 0, 1, 2].map((col, i) => ({
   x: col * (COL_W + GAP),
   y: i < 3 ? 0 : FILA_H + GAP,
@@ -168,9 +164,9 @@ function CajaEstadistica({
             style={{ backgroundImage: "linear-gradient(90deg, var(--bg-elev) 25%, var(--border) 37%, var(--bg-elev) 63%)" }}
           />
         ) : (
-          <div>
+          <div className="flex items-baseline gap-2">
             <div className={`animate-fade-in text-3xl font-extrabold ${destacado ? "text-ok" : "text-text-bright"}`}>{valor}</div>
-            {subtitulo && <div className="mt-0.5 text-2xs text-text-faint">{subtitulo}</div>}
+            {subtitulo && <div className="text-2xs text-text-faint">{subtitulo}</div>}
           </div>
         )}
       </div>
