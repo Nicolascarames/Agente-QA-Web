@@ -15,9 +15,11 @@ import { ejecutarDoctor } from "./doctor.js";
 import { ejecutarPlaywright } from "./ejecutorTests.js";
 import { crearDifusor } from "./difusor.js";
 import { esEventoTerminal } from "../shared/eventos.js";
+import { archivarUltimaEjecucion, idInformeValido, listarInformes } from "./informes.js";
 import type {
   ConfigRaiz,
   ConfigCredenciales,
+  CategoriaCaptura,
   CoberturaEscenario,
   ElementoFragil,
   EstadoCorridaActiva,
@@ -28,6 +30,7 @@ import type {
   RegistroEjecucion,
   ResultadoDoctor,
   ResultadoEjecucionPlaywright,
+  ResumenInforme,
   RespuestaComando,
   RespuestaDiff,
   ResultadoTest,
@@ -45,6 +48,8 @@ const CONFIG_RAIZ_POR_DEFECTO: ConfigRaiz = {
   puertas: "escenario",
   modelo: "sonnet",
   presupuestoUsd: 2,
+  capturas: ["validaciones"],
+  historial: null,
 };
 
 /** Extrae `session_id` de un evento del agente si lo trae, para poder reanudar la conversación
@@ -64,7 +69,13 @@ export interface AppOptions {
   /** Inyectable para test — por defecto `ejecutarPlaywright()` real de `ejecutorTests.ts`, que lanza
    *  un proceso de verdad. Sin esto, testear `/api/tests/ejecutar` lanzaría Playwright en serio en
    *  cada corrida de `npm test`. */
-  ejecutarFn?: (rootDir: string, rutaSpec?: string, credenciales?: Record<string, string>, onLinea?: (linea: string) => void) => Promise<ResultadoEjecucionPlaywright>;
+  ejecutarFn?: (
+    rootDir: string,
+    rutaSpec?: string,
+    credenciales?: Record<string, string>,
+    onLinea?: (linea: string) => void,
+    capturas?: CategoriaCaptura[],
+  ) => Promise<ResultadoEjecucionPlaywright>;
 }
 
 /** Difusor del progreso en vivo de `/api/tests/ejecutar` (`GET /api/tests/eventos`): a nivel de
@@ -159,12 +170,17 @@ export function buildApp(opts: AppOptions): FastifyInstance {
     return /^[a-zA-Z0-9_\-./]+\.spec\.ts$/.test(ruta) && !ruta.includes("..") ? ruta : null;
   }
 
-  app.post<{ Body: { ruta?: string } }>("/api/tests/ejecutar", async (req, reply): Promise<void> => {
+  app.post<{ Body: { ruta?: string; capturas?: CategoriaCaptura[] } }>("/api/tests/ejecutar", async (req, reply): Promise<void> => {
     const rutaPedida = req.body?.ruta;
     if (rutaPedida !== undefined && rutaSpecSegura(rutaPedida) === null) {
       await reply.status(400).send({ error: "ruta de spec inválida" });
       return;
     }
+    const config = (await leerConfigRaiz(proyectoActivo)) ?? CONFIG_RAIZ_POR_DEFECTO;
+    // `capturas` puede llegar como `[]` a propósito (ninguna captura en ESTA ejecución): un chequeo
+    // truthy aquí (`req.body?.capturas || config.capturas`) perdería esa elección y usaría siempre
+    // el defecto de config. Solo `undefined` (el campo no llegó) cae al config.
+    const capturas = req.body?.capturas !== undefined ? req.body.capturas : config.capturas;
     const credenciales = Object.fromEntries((await leerCredenciales(proyectoActivo)).variables.map((v) => [v.nombre, v.valor]));
     // Canal paralelo para la pestaña Ejecutar (`GET /api/tests/eventos`): el contrato de esta
     // respuesta no cambia, esto solo da progreso en vivo mientras Playwright corre.
@@ -174,7 +190,7 @@ export function buildApp(opts: AppOptions): FastifyInstance {
     try {
       resultado = await ejecutarFn(proyectoActivo, rutaPedida, credenciales, (texto) => {
         difusorTests.emitir({ tipo: "linea", texto });
-      });
+      }, capturas);
     } finally {
       difusorTests.emitir({ tipo: "fin", ok: resultado?.ok ?? false, codigo: resultado?.codigo ?? null });
     }
@@ -197,6 +213,7 @@ export function buildApp(opts: AppOptions): FastifyInstance {
     // toda la suite (o un botón por fila de un solo spec) borraría del listado los tests de
     // corridas anteriores en cuanto Playwright vacía `test-results/`.
     await acumularReporte(proyectoActivo);
+    await archivarUltimaEjecucion(proyectoActivo, { historial: config.historial });
     await registrarEjecucion(proyectoActivo, {
       costeUsd: 0,
       duracionMs: Date.now() - inicio,
@@ -235,6 +252,25 @@ export function buildApp(opts: AppOptions): FastifyInstance {
   app.get("/api/historial", async (): Promise<RegistroEjecucion[]> => leerHistorial(proyectoActivo));
 
   app.get("/api/fragiles", async (): Promise<ElementoFragil[]> => listarFragiles(proyectoActivo));
+
+  // --- Informes visuales (spec 2026-09-26) --------------------------------------------------------
+
+  app.get("/api/informes", async (): Promise<ResumenInforme[]> => listarInformes(proyectoActivo));
+
+  const informesDir = path.join(proyectoActivo, "agente-qa-informes");
+
+  // Defensa en profundidad: `@fastify/static` ya normaliza `..`, pero el resto del repo valida
+  // explícitamente cualquier segmento que llegue a una ruta de disco (`rutaGeneradaSegura`,
+  // `rutaSpecSegura`, `nombreEscenarioSeguro`) — este hook sigue el mismo patrón para `/informes/`.
+  app.addHook("onRequest", async (request, reply) => {
+    if (!request.url.startsWith("/informes/")) return;
+    const id = decodeURIComponent(request.url.split("/")[2] ?? "");
+    if (!idInformeValido(id)) {
+      await reply.status(400).send({ error: "id de informe inválido" });
+    }
+  });
+
+  app.register(fastifyStatic, { root: informesDir, prefix: "/informes/", decorateReply: false });
 
   // --- Consola global (Bloque 4: conectada al agente real vía el SDK) --------------------
 

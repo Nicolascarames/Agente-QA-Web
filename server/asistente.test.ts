@@ -31,6 +31,8 @@ function depsBase(overrides: Partial<DependenciasAsistente> = {}): Partial<Depen
           puertas: "escenario",
           modelo: "sonnet",
           presupuestoUsd: 2,
+          capturas: ["validaciones"],
+          historial: null,
         }),
       escribirConfigRaiz: () => Promise.resolve(),
       leerCredenciales: () => Promise.resolve({ schemaVersion: 1, variables: [] }),

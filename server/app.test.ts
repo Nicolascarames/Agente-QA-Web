@@ -111,6 +111,8 @@ describe("buildApp", () => {
       puertas: "por-fichero",
       modelo: "sonnet",
       presupuestoUsd: 2,
+      capturas: ["validaciones"],
+      historial: null,
     });
     const { sesion } = crearSesionFalsa();
     const lanzarFn = vi.fn(() => sesion);
@@ -580,7 +582,7 @@ describe("buildApp", () => {
 
     const respuesta = await app.inject({ method: "POST", url: "/api/tests/ejecutar", payload: { ruta: "login.spec.ts" } });
     expect(respuesta.statusCode).toBe(200);
-    expect(ejecutarFn).toHaveBeenCalledWith(proyecto, "login.spec.ts", { USUARIO: "admin" }, expect.any(Function));
+    expect(ejecutarFn).toHaveBeenCalledWith(proyecto, "login.spec.ts", { USUARIO: "admin" }, expect.any(Function), ["validaciones"]);
     await app.close();
   });
 
@@ -589,7 +591,7 @@ describe("buildApp", () => {
     const app = buildApp({ proyectoInicial: proyecto, ejecutarFn });
     const respuesta = await app.inject({ method: "POST", url: "/api/tests/ejecutar", payload: {} });
     expect(respuesta.statusCode).toBe(200);
-    expect(ejecutarFn).toHaveBeenCalledWith(proyecto, undefined, {}, expect.any(Function));
+    expect(ejecutarFn).toHaveBeenCalledWith(proyecto, undefined, {}, expect.any(Function), ["validaciones"]);
     await app.close();
   });
 
@@ -606,5 +608,72 @@ describe("buildApp", () => {
     // inventado — a diferencia de una ejecución del agente (`server/agente.ts`), que sí trae ambos.
     expect(registros[0]).toMatchObject({ costeUsd: 0, numTurnos: 0, resultados: [] });
     await app.close();
+  });
+
+  describe("POST /api/tests/ejecutar — capturas (spec 2026-09-26)", () => {
+    it("capturas: [] explícito no cae al defecto de config (['validaciones'])", async () => {
+      await writeFile(
+        path.join(proyecto, "agente-qa.config.json"),
+        JSON.stringify({ appUrl: "https://x", capturas: ["fallos"] }),
+        "utf8",
+      );
+      const ejecutarFn = vi.fn(async (rootDir: string, _ruta?: string, _cred?: Record<string, string>, _onLinea?: unknown, capturas?: string[]) => {
+        await mkdir(path.join(rootDir, "test-results"), { recursive: true });
+        await writeFile(path.join(rootDir, "test-results", "results.json"), JSON.stringify({ suites: [] }), "utf8");
+        return { ok: true, codigo: 0, salida: "" };
+      });
+      const app = buildApp({ proyectoInicial: proyecto, ejecutarFn });
+      await app.inject({ method: "POST", url: "/api/tests/ejecutar", payload: { capturas: [] } });
+      expect(ejecutarFn).toHaveBeenCalledWith(proyecto, undefined, expect.any(Object), expect.any(Function), []);
+      await app.close();
+    });
+
+    it("sin capturas en el body, usa el capturas de la config", async () => {
+      await writeFile(path.join(proyecto, "agente-qa.config.json"), JSON.stringify({ appUrl: "https://x", capturas: ["fallos"] }), "utf8");
+      const ejecutarFn = vi.fn(async (rootDir: string) => {
+        await mkdir(path.join(rootDir, "test-results"), { recursive: true });
+        await writeFile(path.join(rootDir, "test-results", "results.json"), JSON.stringify({ suites: [] }), "utf8");
+        return { ok: true, codigo: 0, salida: "" };
+      });
+      const app = buildApp({ proyectoInicial: proyecto, ejecutarFn });
+      await app.inject({ method: "POST", url: "/api/tests/ejecutar", payload: {} });
+      expect(ejecutarFn).toHaveBeenCalledWith(proyecto, undefined, expect.any(Object), expect.any(Function), ["fallos"]);
+      await app.close();
+    });
+
+    it("archiva la ejecución tras ejecutarFn, visible en GET /api/informes", async () => {
+      const ejecutarFn = vi.fn(async (rootDir: string) => {
+        await mkdir(path.join(rootDir, "test-results"), { recursive: true });
+        await writeFile(
+          path.join(rootDir, "test-results", "results.json"),
+          JSON.stringify({ stats: { startTime: "2026-09-26T10:00:00.000Z", duration: 100 }, suites: [] }),
+          "utf8",
+        );
+        return { ok: true, codigo: 0, salida: "" };
+      });
+      const app = buildApp({ proyectoInicial: proyecto, ejecutarFn });
+      await app.inject({ method: "POST", url: "/api/tests/ejecutar", payload: {} });
+      const respuesta = await app.inject({ method: "GET", url: "/api/informes" });
+      expect(respuesta.json()).toEqual([expect.objectContaining({ id: "2026-09-26_10-00-00" })]);
+      await app.close();
+    });
+  });
+
+  describe("GET /informes/<id>/* — validación de path traversal", () => {
+    // Un ".." literal en la URL nunca llega a este hook: `light-my-request` (`.inject()`) construye
+    // la petición con `new URL()`, que ya colapsa segmentos ".."/".."  antes de que Fastify vea nada
+    // (comprobado: con "/informes/../../etc/informe.html", `request.url` en el hook ya es
+    // "/etc/informe.html" — pierde el prefijo "/informes/" y ni siquiera llega a esta ruta). El bypass
+    // real que la defensa en profundidad cubre es la barra codificada (`..%2f`): la normalización de
+    // la URL solo colapsa un segmento que sea EXACTAMENTE ".."/".%2e"/"%2e."/"%2e%2e", así que
+    // "..%2f..%2fetc%2finforme.html" sobrevive como un único segmento bajo "/informes/" y solo se
+    // descubre como traversal al hacer `decodeURIComponent` — justo lo que hace el hook antes de
+    // `idInformeValido`.
+    it("rechaza un id con barra codificada (../ vía %2f) antes de tocar el filesystem", async () => {
+      const app = buildApp({ proyectoInicial: proyecto });
+      const respuesta = await app.inject({ method: "GET", url: "/informes/..%2f..%2fetc%2finforme.html" });
+      expect(respuesta.statusCode).toBe(400);
+      await app.close();
+    });
   });
 });

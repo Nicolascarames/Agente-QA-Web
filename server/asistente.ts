@@ -197,6 +197,8 @@ async function ejecutarRamaA(cwd: string, deps: DependenciasAsistente): Promise<
       puertas: "escenario",
       modelo: "sonnet",
       presupuestoUsd: 2,
+      capturas: ["validaciones"],
+      historial: null,
     };
     await proyecto.escribirConfigRaiz(cwd, config);
     escribir(`Creado ${configRaizPath(cwd)}`);
