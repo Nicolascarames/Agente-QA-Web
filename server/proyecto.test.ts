@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  asegurarGitignore,
   configRaizPath,
   credencialesPath,
   escribirConfigRaiz,
@@ -64,6 +65,8 @@ describe("leerConfigRaiz / escribirConfigRaiz", () => {
       puertas: "por-artefacto",
       modelo: "opus",
       presupuestoUsd: 5,
+      capturas: ["validaciones"],
+      historial: null,
     });
     expect(await leerConfigRaiz(proyecto)).toEqual({
       schemaVersion: 1,
@@ -74,6 +77,8 @@ describe("leerConfigRaiz / escribirConfigRaiz", () => {
       puertas: "por-artefacto",
       modelo: "opus",
       presupuestoUsd: 5,
+      capturas: ["validaciones"],
+      historial: null,
     });
   });
 
@@ -88,6 +93,8 @@ describe("leerConfigRaiz / escribirConfigRaiz", () => {
       puertas: "escenario",
       modelo: "sonnet",
       presupuestoUsd: 2,
+      capturas: ["validaciones"],
+      historial: null,
     });
   });
 
@@ -162,5 +169,78 @@ describe("leerCredenciales / escribirCredenciales", () => {
     const lineas = gitignore.split(/\r?\n/).filter((l) => l.trim() === "agente-qa.credenciales.json");
     expect(lineas).toHaveLength(1);
     expect(gitignore).toContain("node_modules/");
+  });
+});
+
+describe("leerConfigRaiz — capturas e historial (spec 2026-09-26)", () => {
+  let proyecto: string;
+
+  beforeEach(async () => {
+    proyecto = await mkdtemp(path.join(tmpdir(), "agente-qa-web-capturas-"));
+  });
+
+  afterEach(async () => {
+    await rm(proyecto, { recursive: true, force: true });
+  });
+
+  it("capturas por defecto es ['validaciones'] si el campo no existe", async () => {
+    await writeFile(configRaizPath(proyecto), JSON.stringify({ appUrl: "https://x" }), "utf8");
+    const config = await leerConfigRaiz(proyecto);
+    expect(config?.capturas).toEqual(["validaciones"]);
+  });
+
+  it("respeta capturas: [] explícito (ninguna captura)", async () => {
+    await writeFile(configRaizPath(proyecto), JSON.stringify({ appUrl: "https://x", capturas: [] }), "utf8");
+    const config = await leerConfigRaiz(proyecto);
+    expect(config?.capturas).toEqual([]);
+  });
+
+  it("descarta categorías desconocidas sin tumbar la lectura", async () => {
+    await writeFile(configRaizPath(proyecto), JSON.stringify({ appUrl: "https://x", capturas: ["fallos", "inventada"] }), "utf8");
+    const config = await leerConfigRaiz(proyecto);
+    expect(config?.capturas).toEqual(["fallos"]);
+  });
+
+  it("historial por defecto es null (guarda todo) si el campo no existe", async () => {
+    await writeFile(configRaizPath(proyecto), JSON.stringify({ appUrl: "https://x" }), "utf8");
+    const config = await leerConfigRaiz(proyecto);
+    expect(config?.historial).toBeNull();
+  });
+
+  it("historial acepta un número entero >= 1", async () => {
+    await writeFile(configRaizPath(proyecto), JSON.stringify({ appUrl: "https://x", historial: 15 }), "utf8");
+    const config = await leerConfigRaiz(proyecto);
+    expect(config?.historial).toBe(15);
+  });
+
+  it("historial inválido (0, negativo, no numérico) cae a null en vez de tumbar la lectura", async () => {
+    await writeFile(configRaizPath(proyecto), JSON.stringify({ appUrl: "https://x", historial: -3 }), "utf8");
+    const config = await leerConfigRaiz(proyecto);
+    expect(config?.historial).toBeNull();
+  });
+});
+
+describe("asegurarGitignore (generalizada de la spec de capturas)", () => {
+  let proyecto: string;
+
+  beforeEach(async () => {
+    proyecto = await mkdtemp(path.join(tmpdir(), "agente-qa-web-gitignore-"));
+  });
+
+  afterEach(async () => {
+    await rm(proyecto, { recursive: true, force: true });
+  });
+
+  it("crea .gitignore con la entrada si no existe el fichero", async () => {
+    await asegurarGitignore(proyecto, "agente-qa-informes/");
+    const contenido = await readFile(path.join(proyecto, ".gitignore"), "utf8");
+    expect(contenido).toContain("agente-qa-informes/");
+  });
+
+  it("no duplica la entrada si ya está", async () => {
+    await asegurarGitignore(proyecto, "agente-qa-informes/");
+    await asegurarGitignore(proyecto, "agente-qa-informes/");
+    const contenido = await readFile(path.join(proyecto, ".gitignore"), "utf8");
+    expect(contenido.split("\n").filter((l) => l.trim() === "agente-qa-informes/")).toHaveLength(1);
   });
 });

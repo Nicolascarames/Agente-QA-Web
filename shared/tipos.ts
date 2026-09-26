@@ -21,6 +21,8 @@ export type PoliticaPuertas = "escenario" | "escenario-y-codigo" | "por-artefact
  *  suscripción para una mejora que, en el flujo de QA de este repo, casi nunca se nota. */
 export type ModeloAgente = "sonnet" | "opus" | "haiku";
 
+export type CategoriaCaptura = "validaciones" | "fallos" | "pasos";
+
 export interface ConfigRaiz {
   schemaVersion: 1;
   appUrl: string;
@@ -30,6 +32,8 @@ export interface ConfigRaiz {
   puertas: PoliticaPuertas;
   modelo: ModeloAgente;
   presupuestoUsd: number;
+  capturas: CategoriaCaptura[];
+  historial: number | null;
 }
 
 /** Un par nombre/valor que el agente puede usar en pruebas (usuario, contraseña, o cualquier otra
@@ -163,6 +167,15 @@ export interface ResultadoEjecucionPlaywright {
   ok: boolean;
   codigo: number | null;
   salida: string;
+}
+
+export interface ResumenInforme {
+  id: string;
+  fecha: string;
+  duracionMs: number;
+  verdes: number;
+  rojos: number;
+  specs: string[];
 }
 
 /** Respuesta de `GET /api/generados/diff`. `sinControlDeVersiones`, si está presente, explica por

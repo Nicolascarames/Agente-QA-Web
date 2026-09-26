@@ -1,6 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { ConfigCredenciales, ConfigRaiz, ModeloAgente, PoliticaPuertas } from "../shared/tipos.js";
+import type { CategoriaCaptura, ConfigCredenciales, ConfigRaiz, ModeloAgente, PoliticaPuertas } from "../shared/tipos.js";
 
 /** Resuelve el proyecto activo: `--project <ruta>` del argv gana, si no, la ruta de `npm run dev` (env), si no, cwd. */
 export function resolverProyectoInicial(argv: readonly string[], cwd: string, env: NodeJS.ProcessEnv = process.env): string {
@@ -51,6 +51,18 @@ function modeloValido(valor: unknown): ModeloAgente {
   return (MODELOS_VALIDOS as readonly unknown[]).includes(valor) ? (valor as ModeloAgente) : "sonnet";
 }
 
+const CATEGORIAS_CAPTURA_VALIDAS: readonly CategoriaCaptura[] = ["validaciones", "fallos", "pasos"];
+
+function capturasValidas(valor: unknown): CategoriaCaptura[] {
+  if (!Array.isArray(valor)) return ["validaciones"];
+  return valor.filter((v): v is CategoriaCaptura => (CATEGORIAS_CAPTURA_VALIDAS as readonly unknown[]).includes(v));
+}
+
+function historialValido(valor: unknown): number | null {
+  if (typeof valor === "number" && Number.isFinite(valor) && valor >= 1) return Math.floor(valor);
+  return null;
+}
+
 /**
  * Lee `agente-qa.config.json` de la raíz del repo. `null` si no existe o no tiene forma válida:
  * quien llama decide qué hacer — `bin/agente-qa.mjs` lo crea preguntando la URL base.
@@ -74,6 +86,8 @@ export async function leerConfigRaiz(rootDir: string): Promise<ConfigRaiz | null
     puertas: politicaPuertasValida(candidato.puertas),
     modelo: modeloValido(candidato.modelo),
     presupuestoUsd: typeof candidato.presupuestoUsd === "number" ? candidato.presupuestoUsd : 2,
+    capturas: capturasValidas(candidato.capturas),
+    historial: historialValido(candidato.historial),
   };
 }
 
@@ -110,13 +124,12 @@ export async function leerCredenciales(rootDir: string): Promise<ConfigCredencia
   return { schemaVersion: 1, variables };
 }
 
-const ENTRADA_GITIGNORE = "agente-qa.credenciales.json";
+const ENTRADA_GITIGNORE_CREDENCIALES = "agente-qa.credenciales.json";
 
-/** El repo destino es de quien lo usa: esta app no puede asumir que ya ignora
- *  `agente-qa.credenciales.json`. Sin esto, guardar una contraseña de prueba desde Configuración y
- *  hacer `git add -A` a la ligera la manda al historial de git — se añade la línea al `.gitignore`
- *  de la raíz (se crea si no existe) la primera vez que se escribe el fichero, solo si no está ya. */
-async function asegurarGitignoreCredenciales(rootDir: string): Promise<void> {
+/** Generalizada (spec de capturas, 2026-09-26): antes solo servía a `agente-qa.credenciales.json`,
+ *  hardcodeada dentro de `escribirCredenciales`. `server/informes.ts` la reutiliza para ignorar
+ *  `agente-qa-informes/` la primera vez que se archiva una ejecución. */
+export async function asegurarGitignore(rootDir: string, entrada: string): Promise<void> {
   const ruta = path.join(rootDir, ".gitignore");
   let actual = "";
   try {
@@ -124,12 +137,12 @@ async function asegurarGitignoreCredenciales(rootDir: string): Promise<void> {
   } catch {
     // Sin .gitignore todavía: se crea con solo esta línea.
   }
-  if (actual.split(/\r?\n/).some((linea) => linea.trim() === ENTRADA_GITIGNORE)) return;
+  if (actual.split(/\r?\n/).some((linea) => linea.trim() === entrada)) return;
   const separador = actual.length > 0 && !actual.endsWith("\n") ? "\n" : "";
-  await fs.writeFile(ruta, `${actual}${separador}${ENTRADA_GITIGNORE}\n`, "utf8");
+  await fs.writeFile(ruta, `${actual}${separador}${entrada}\n`, "utf8");
 }
 
 export async function escribirCredenciales(rootDir: string, credenciales: ConfigCredenciales): Promise<void> {
-  await asegurarGitignoreCredenciales(rootDir);
+  await asegurarGitignore(rootDir, ENTRADA_GITIGNORE_CREDENCIALES);
   await fs.writeFile(credencialesPath(rootDir), JSON.stringify(credenciales, null, 2) + "\n", "utf8");
 }
