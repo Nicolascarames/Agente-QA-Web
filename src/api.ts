@@ -1,4 +1,5 @@
 import type {
+  CategoriaCaptura,
   CoberturaEscenario,
   ConfigCredenciales,
   ConfigRaiz,
@@ -8,6 +9,7 @@ import type {
   EventoTest,
   FilaTest,
   RegistroEjecucion,
+  ResumenInforme,
   ResultadoDoctor,
   ResultadoEjecucionPlaywright,
   RespuestaComando,
@@ -177,12 +179,16 @@ export function obtenerTestsRojos(): Promise<ResultadoTestRojo[]> {
   return pedirJson<ResultadoTestRojo[]>("/api/tests/rojos");
 }
 
-/** `ruta`, si se pasa, corre solo ese `.spec.ts` (botón por fila); sin ella, corre la suite entera. */
-export function ejecutarTests(ruta?: string): Promise<ResultadoEjecucionPlaywright> {
+/** `capturas`, si se pasa, vale solo para ESTA ejecución (Ejecutar la envía siempre una vez cargada
+ *  la config; sin ella, el servidor usa el capturas guardado en Configuración). */
+export function ejecutarTests(ruta?: string, capturas?: CategoriaCaptura[]): Promise<ResultadoEjecucionPlaywright> {
+  const body: { ruta?: string; capturas?: CategoriaCaptura[] } = {};
+  if (ruta) body.ruta = ruta;
+  if (capturas) body.capturas = capturas;
   return pedirJsonEstricto<ResultadoEjecucionPlaywright>("/api/tests/ejecutar", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(ruta ? { ruta } : {}),
+    body: JSON.stringify(body),
   });
 }
 
@@ -215,4 +221,8 @@ export function obtenerHistorial(): Promise<RegistroEjecucion[]> {
 
 export function obtenerFragiles(): Promise<ElementoFragil[]> {
   return pedirJson<ElementoFragil[]>("/api/fragiles");
+}
+
+export function obtenerInformes(): Promise<ResumenInforme[]> {
+  return pedirJson<ResumenInforme[]>("/api/informes");
 }
