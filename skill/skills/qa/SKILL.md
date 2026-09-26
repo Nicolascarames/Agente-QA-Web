@@ -36,6 +36,13 @@ El trabajo avanza en tres pasos:
 2. **Page Objects** — los métodos con los que el test va a actuar sobre la página.
 3. **Test** — el `.spec.ts` que ejecuta el escenario y lo pone en verde.
 
+Antes de escribir el `.spec.ts`, si `tests/soporte/agente-qa.ts` todavía no existe en este repo,
+cópialo tal cual desde [plantillas/agente-qa.ts](../plantillas/agente-qa.ts). Los specs importan
+`test`, `expect`, `paso` y `validar` desde `../soporte/agente-qa` — nunca `test`/`expect` sueltos de
+`@playwright/test`. Usan `paso(titulo, fn)` en vez de `test.step(titulo, fn)` (mismo título, la
+trazabilidad no cambia), y cada `Entonces` termina con `validar(locator, esperado)` sobre el
+elemento que acaba de comprobar, después de su `expect`.
+
 **Cuántas de estas puertas paran de verdad a esperar tu confirmación lo decide el bloque "Política
 de confirmación" que recibes al principio de tus instrucciones** (lo añade la app según lo que el
 usuario eligió en Configuración). Puede ser solo la primera, dos, las tres, o cada fichero que
@@ -58,7 +65,7 @@ No toques el fichero del siguiente paso hasta que la puerta actual esté confirm
 El test se ha ejecutado con:
 
 ```
-PLAYWRIGHT_JSON_OUTPUT_NAME=test-results/results.json npx playwright test --reporter=list,json
+PLAYWRIGHT_JSON_OUTPUT_NAME=test-results/results.json PLAYWRIGHT_HTML_OPEN=never npx playwright test --reporter=list,json,html
 ```
 
 y está verde. **No hay otra definición.**
@@ -79,6 +86,7 @@ tests/
   features/   *.feature       — el Gherkin
   pages/      *.page.ts       — Page Objects
   specs/      *.spec.ts       — los tests
+  soporte/    agente-qa.ts    — test/expect/paso/validar ampliados con capturas (copiado de la skill)
 ```
 
 Un escenario, un fichero `.feature`. Una pantalla o componente, un Page Object. Un `.feature`,
