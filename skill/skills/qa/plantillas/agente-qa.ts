@@ -70,26 +70,42 @@ export async function paso<T>(titulo: string, fn: () => Promise<T>): Promise<T> 
 }
 
 /** Se usa dentro de un paso `Entonces`, después de sus `expect` — la aserción ya la hizo `expect`,
- *  así que un elemento no visible aquí no captura ni falla, solo se omite. Recuadra el elemento con
- *  un `outline` inyectado, captura la pantalla visible y lo quita para no dejarlo pintado si la
- *  página se reutiliza en el siguiente paso. */
+ *  así que la captura es de mejor esfuerzo: un elemento no visible, un locator que casa con varios
+ *  elementos (p.ej. tras `toHaveCount(3)`) o cualquier fallo al capturar se traga en silencio y
+ *  nunca tumba un test que ya pasó. Trabaja sobre `.first()`, se desplaza hasta el elemento para que
+ *  salga en la imagen aunque esté bajo el pliegue, lo recuadra con un `outline` inyectado, captura
+ *  la pantalla visible y lo quita para no dejarlo pintado si la página se reutiliza en el
+ *  siguiente paso. */
 export async function validar(locator: Locator, esperado: unknown): Promise<void> {
   if (!categoriasCapturaActivas().includes("validaciones")) return;
-  if (!(await locator.isVisible())) return;
-  const titulo = pasoActual ?? "validacion";
-  await locator.evaluate((el: HTMLElement) => {
-    el.dataset.agenteQaOutlinePrevio = el.style.outline;
-    el.style.outline = "3px solid #ff3860";
-  });
-  const ruta = test.info().outputPath(`agente-qa-validacion-${sanitizarNombreFichero(titulo)}.png`);
-  await locator.page().screenshot({ path: ruta });
-  await locator.evaluate((el: HTMLElement) => {
-    el.style.outline = el.dataset.agenteQaOutlinePrevio ?? "";
-    delete el.dataset.agenteQaOutlinePrevio;
-  });
-  await test.info().attach(`agente-qa:validacion:${titulo}`, { path: ruta, contentType: "image/png" });
-  await test.info().attach(`agente-qa:validacion:${titulo}:esperado`, {
-    body: Buffer.from(String(esperado)),
-    contentType: "text/plain",
-  });
+  const elemento = locator.first();
+  let recuadrado = false;
+  try {
+    if (!(await elemento.isVisible())) return;
+    const titulo = pasoActual ?? "validacion";
+    await elemento.scrollIntoViewIfNeeded();
+    await elemento.evaluate((el: HTMLElement) => {
+      el.dataset.agenteQaOutlinePrevio = el.style.outline;
+      el.style.outline = "3px solid #ff3860";
+    });
+    recuadrado = true;
+    const ruta = test.info().outputPath(`agente-qa-validacion-${sanitizarNombreFichero(titulo)}.png`);
+    await elemento.page().screenshot({ path: ruta });
+    await test.info().attach(`agente-qa:validacion:${titulo}`, { path: ruta, contentType: "image/png" });
+    await test.info().attach(`agente-qa:validacion:${titulo}:esperado`, {
+      body: Buffer.from(String(esperado)),
+      contentType: "text/plain",
+    });
+  } catch {
+    // Captura de mejor esfuerzo: ver el comentario de la función.
+  } finally {
+    if (recuadrado) {
+      await elemento
+        .evaluate((el: HTMLElement) => {
+          el.style.outline = el.dataset.agenteQaOutlinePrevio ?? "";
+          delete el.dataset.agenteQaOutlinePrevio;
+        })
+        .catch(() => undefined);
+    }
+  }
 }
