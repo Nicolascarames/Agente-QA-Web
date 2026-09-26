@@ -52,6 +52,28 @@ describe("instalar", () => {
     expect(copilotMd).toBe(agentsMd);
   });
 
+  it("copia la plantilla junto al SKILL.md instalado, para que su enlace relativo no quede roto", async () => {
+    const resultado = await instalar(proyecto, { solo: "claude" });
+
+    const rutaRelativa = path.join(".claude", "skills", "qa", "plantillas", "agente-qa.ts");
+    expect(resultado.escritos).toContain(rutaRelativa);
+    const instalada = await readFile(path.join(proyecto, rutaRelativa), "utf8");
+    const original = await readFile(path.join(process.cwd(), "skill", "skills", "qa", "plantillas", "agente-qa.ts"), "utf8");
+    expect(instalada).toBe(original);
+    const skillMd = sinCr(await readFile(path.join(proyecto, ".claude", "skills", "qa", "SKILL.md"), "utf8"));
+    expect(skillMd).toContain("](plantillas/agente-qa.ts)");
+  });
+
+  it("los envoltorios de Codex y Copilot llevan la plantilla en un apéndice y ningún enlace a ella", async () => {
+    await instalar(proyecto, { solo: "codex" });
+
+    const agentsMd = sinCr(await readFile(path.join(proyecto, "AGENTS.md"), "utf8"));
+    expect(agentsMd).not.toContain("](plantillas/agente-qa.ts)");
+    expect(agentsMd).toContain("Apéndice: tests/soporte/agente-qa.ts");
+    expect(agentsMd).toContain("```ts");
+    expect(agentsMd).toContain("export async function validar(");
+  });
+
   it("--solo codex escribe solo AGENTS.md", async () => {
     const resultado = await instalar(proyecto, { solo: "codex" });
 

@@ -106,6 +106,7 @@ export async function instalar(rootDir: string, opciones: OpcionesInstalar = {})
   const skillMd = await fs.readFile(path.join(rutaSkillQa, "SKILL.md"), "utf8");
   const localizadores = await fs.readFile(path.join(rutaSkillQa, "referencias", "localizadores.md"), "utf8");
   const plantillas = await fs.readFile(path.join(rutaSkillQa, "referencias", "plantillas.md"), "utf8");
+  const plantillaSoporte = await fs.readFile(path.join(rutaSkillQa, "plantillas", "agente-qa.ts"), "utf8");
   const { frontmatter, cuerpo } = separarFrontmatter(skillMd);
   const comentarioMarcador = `<!-- ${MARCADOR} -->`;
 
@@ -120,11 +121,23 @@ export async function instalar(rootDir: string, opciones: OpcionesInstalar = {})
       await fs.mkdir(path.dirname(path.join(rootDir, rutaLocalizadoresRelativa)), { recursive: true });
       await fs.writeFile(path.join(rootDir, rutaLocalizadoresRelativa), localizadores, "utf8");
       await fs.writeFile(path.join(rootDir, rutaPlantillasRelativa), plantillas, "utf8");
-      resultado.escritos.push(rutaLocalizadoresRelativa, rutaPlantillasRelativa);
+      // El SKILL.md instalado enlaza `plantillas/agente-qa.ts` en relativo: sin este fichero a su lado
+      // el enlace apunta a la nada y el agente no tiene de dónde copiar `tests/soporte/agente-qa.ts`.
+      const rutaSoporteRelativa = path.join(".claude", "skills", "qa", "plantillas", "agente-qa.ts");
+      await fs.mkdir(path.dirname(path.join(rootDir, rutaSoporteRelativa)), { recursive: true });
+      await fs.writeFile(path.join(rootDir, rutaSoporteRelativa), plantillaSoporte, "utf8");
+      resultado.escritos.push(rutaLocalizadoresRelativa, rutaPlantillasRelativa, rutaSoporteRelativa);
     }
   }
 
-  const contenidoEnvoltorio = [comentarioMarcador, cuerpo, localizadores, plantillas].join("\n\n---\n\n");
+  // Los envoltorios aplanan SKILL.md en un solo fichero, donde el enlace relativo a la plantilla no
+  // tiene a dónde apuntar: se sustituye por una referencia en palabras al apéndice que la lleva entera.
+  const cuerpoEnvoltorio = cuerpo.replace(
+    "[plantillas/agente-qa.ts](plantillas/agente-qa.ts)",
+    "el bloque de código del «Apéndice: tests/soporte/agente-qa.ts» al final de este fichero",
+  );
+  const apendicePlantilla = `# Apéndice: tests/soporte/agente-qa.ts\n\n\`\`\`ts\n${plantillaSoporte.trimEnd()}\n\`\`\``;
+  const contenidoEnvoltorio = [comentarioMarcador, cuerpoEnvoltorio, localizadores, plantillas, apendicePlantilla].join("\n\n---\n\n");
 
   if (destinos.includes("codex")) {
     const rutaRelativa = "AGENTS.md";
