@@ -46,8 +46,14 @@ export interface ReporteCrudo {
   suites?: SuiteCruda[];
 }
 
-function idDeInforme(startTime: string | undefined): string {
+/** Un `startTime` ausente o no parseable cae a la hora actual: con `NaN-NaN-…` la carpeta no pasaría
+ *  `idInformeValido`, así que nunca se listaría ni se podaría. */
+function fechaDeInforme(startTime: string | undefined): Date {
   const fecha = startTime ? new Date(startTime) : new Date();
+  return Number.isNaN(fecha.getTime()) ? new Date() : fecha;
+}
+
+function idDeInforme(fecha: Date): string {
   const parte = (n: number) => String(n).padStart(2, "0");
   return `${fecha.getUTCFullYear()}-${parte(fecha.getUTCMonth() + 1)}-${parte(fecha.getUTCDate())}_${parte(fecha.getUTCHours())}-${parte(fecha.getUTCMinutes())}-${parte(fecha.getUTCSeconds())}`;
 }
@@ -130,7 +136,8 @@ export async function archivarUltimaEjecucion(rootDir: string, config: { histori
     const reporte = await leerResultadosCrudos(rootDir);
     if (!reporte) return;
 
-    const id = idDeInforme(reporte.stats?.startTime);
+    const fecha = fechaDeInforme(reporte.stats?.startTime);
+    const id = idDeInforme(fecha);
     const destino = path.join(rootDir, "agente-qa-informes", id);
     if (existsSync(destino)) return;
 
@@ -158,7 +165,7 @@ export async function archivarUltimaEjecucion(rootDir: string, config: { histori
 
     const resumen: ResumenInforme = {
       id,
-      fecha: reporte.stats?.startTime ?? new Date().toISOString(),
+      fecha: fecha.toISOString(),
       duracionMs: reporte.stats?.duration ?? 0,
       verdes: acc.verdes,
       rojos: acc.rojos,

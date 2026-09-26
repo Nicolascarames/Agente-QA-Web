@@ -82,6 +82,18 @@ describe("archivarUltimaEjecucion", () => {
     expect(entradas).toEqual(["2026-09-26_09-00-00", "2026-09-26_10-00-00"]);
   });
 
+  it("un startTime no parseable no genera una carpeta inlistable: cae a la hora actual", async () => {
+    await mkdir(path.join(proyecto, "test-results"), { recursive: true });
+    await writeFile(path.join(proyecto, "test-results", "results.json"), JSON.stringify(reporteEjemplo("no-es-una-fecha")), "utf8");
+
+    await archivarUltimaEjecucion(proyecto, { historial: null });
+
+    const entradas = await readdir(path.join(proyecto, "agente-qa-informes"));
+    expect(entradas).toHaveLength(1);
+    expect(idInformeValido(entradas[0] ?? "")).toBe(true);
+    await expect(listarInformes(proyecto)).resolves.toHaveLength(1);
+  });
+
   it("un results.json corrupto no lanza", async () => {
     await mkdir(path.join(proyecto, "test-results"), { recursive: true });
     await writeFile(path.join(proyecto, "test-results", "results.json"), "{ esto no es json", "utf8");
