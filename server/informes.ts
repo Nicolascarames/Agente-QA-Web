@@ -20,9 +20,19 @@ interface AdjuntoCrudo {
   body?: string;
 }
 
+interface PasoCrudo {
+  title: string;
+  duration?: number;
+  error?: { message?: string };
+  steps?: PasoCrudo[];
+}
+
 interface ResultadoCrudo {
   status?: string;
   attachments?: AdjuntoCrudo[];
+  steps?: PasoCrudo[];
+  error?: { message?: string };
+  errors?: { message?: string }[];
 }
 
 interface TestCrudo {
@@ -65,9 +75,20 @@ export function idInformeValido(id: string): boolean {
   return /^[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}$/.test(id);
 }
 
+type EstadoInforme = "verde" | "rojo" | "omitido";
+
+/** `passed` es verde y `skipped` es su propio estado (igual que `server/reporter.ts`); todo lo demás
+ *  (`failed`, `timedOut`, `interrupted`) cuenta como rojo. */
+function clasificarEstado(status: string | undefined): EstadoInforme {
+  if (status === "passed") return "verde";
+  if (status === "skipped") return "omitido";
+  return "rojo";
+}
+
 interface Recuento {
   verdes: number;
   rojos: number;
+  omitidos: number;
   specs: Set<string>;
   adjuntos: { name: string; path: string }[];
   /** Valor esperado de cada `validar()`, clave = título del paso (mismo texto que sigue a
@@ -83,7 +104,9 @@ function recorrerSuite(suite: SuiteCruda, acc: Recuento): void {
       const resultados = test.results ?? [];
       const ultimo = resultados[resultados.length - 1];
       if (!ultimo) continue;
-      if (ultimo.status === "passed") acc.verdes++;
+      const estado = clasificarEstado(ultimo.status);
+      if (estado === "verde") acc.verdes++;
+      else if (estado === "omitido") acc.omitidos++;
       else acc.rojos++;
       for (const adjunto of ultimo.attachments ?? []) {
         if (!adjunto.name?.startsWith("agente-qa:")) continue;
@@ -141,7 +164,7 @@ export async function archivarUltimaEjecucion(rootDir: string, config: { histori
     const destino = path.join(rootDir, "agente-qa-informes", id);
     if (existsSync(destino)) return;
 
-    const acc: Recuento = { verdes: 0, rojos: 0, specs: new Set(), adjuntos: [], esperados: new Map() };
+    const acc: Recuento = { verdes: 0, rojos: 0, omitidos: 0, specs: new Set(), adjuntos: [], esperados: new Map() };
     for (const suite of reporte.suites ?? []) recorrerSuite(suite, acc);
 
     await fs.mkdir(path.join(destino, "capturas"), { recursive: true });
@@ -169,6 +192,7 @@ export async function archivarUltimaEjecucion(rootDir: string, config: { histori
       duracionMs: reporte.stats?.duration ?? 0,
       verdes: acc.verdes,
       rojos: acc.rojos,
+      omitidos: acc.omitidos,
       specs: [...acc.specs],
     };
     await fs.writeFile(path.join(destino, "resumen.json"), JSON.stringify(resumen, null, 2) + "\n", "utf8");
@@ -211,6 +235,43 @@ function escaparHtml(texto: string): string {
   return texto.replace(/[&<>"']/g, (c) => mapa[c] ?? c);
 }
 
+interface PasoAplanado {
+  titulo: string;
+  duracionMs: number;
+}
+
+// Misma aplanación que `aplanarPasos` de server/reporter.ts, pero conservando la duración.
+function aplanarPasos(pasos: PasoCrudo[] | undefined): PasoAplanado[] {
+  const resultado: PasoAplanado[] = [];
+  for (const paso of pasos ?? []) {
+    resultado.push({ titulo: paso.title, duracionMs: paso.duration ?? 0 });
+    resultado.push(...aplanarPasos(paso.steps));
+  }
+  return resultado;
+}
+
+// Los mensajes de error de Playwright traen códigos de color ANSI; la regex se construye sin
+// literal porque `no-control-regex` rechaza el carácter ESC escrito directamente.
+const CODIGOS_ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
+
+interface CapturasDePaso {
+  imgValidacion?: string;
+  imgPaso?: string;
+  esperado?: string;
+}
+
+function htmlImagen(fichero: string, alt: string): string {
+  return `<img class="miniatura" src="capturas/${escaparHtml(fichero)}" alt="${escaparHtml(alt)}" />`;
+}
+
+function htmlPaso(titulo: string, duracionMs: number | null, c: CapturasDePaso | undefined): string {
+  const duracion = duracionMs === null ? "" : ` <span class="duracion">${duracionMs} ms</span>`;
+  const esperado = c?.esperado ? ` — esperado: <code>${escaparHtml(c.esperado)}</code>` : "";
+  // La captura recuadrada de la validación va antes que la de página completa del paso.
+  const imagenes = `${c?.imgValidacion ? htmlImagen(c.imgValidacion, titulo) : ""}${c?.imgPaso ? htmlImagen(c.imgPaso, titulo) : ""}`;
+  return `<li><p>${escaparHtml(titulo)}${duracion}${esperado}</p>${imagenes}</li>`;
+}
+
 /** Imita el informe HTML de Playwright (spec: "de momento imita el de Playwright, el diseño propio
  *  llega en otra tarea"). Pura: recibe el JSON crudo ya leído y los basenames de las capturas ya
  *  copiadas a `capturas/`, junto a este fichero. `esperados` (opcional) es el mapa titulo→texto
@@ -222,6 +283,7 @@ export function generarInformeHtml(reporte: ReporteCrudo, capturasCopiadas: stri
   const copiadas = new Set(capturasCopiadas);
   let totalVerdes = 0;
   let totalRojos = 0;
+  let totalOmitidos = 0;
   const porFichero = new Map<string, string[]>();
 
   function recorrerParaHtml(suite: SuiteCruda): void {
@@ -231,13 +293,15 @@ export function generarInformeHtml(reporte: ReporteCrudo, capturasCopiadas: stri
         const resultados = test.results ?? [];
         const ultimo = resultados[resultados.length - 1];
         if (!ultimo) continue;
-        const ok = ultimo.status === "passed";
-        if (ok) totalVerdes++;
+        const estado = clasificarEstado(ultimo.status);
+        if (estado === "verde") totalVerdes++;
+        else if (estado === "omitido") totalOmitidos++;
         else totalRojos++;
 
         const adjuntos = (ultimo.attachments ?? []).filter((a) => a.name?.startsWith("agente-qa:") && a.path && copiadas.has(path.basename(a.path)));
         const fallo = adjuntos.find((a) => a.name === "agente-qa:fallo");
-        const capturasPorPaso = new Map<string, { img?: string; esperado?: string }>();
+        // Playwright cuelga los adjuntos del resultado, no del paso: se cruzan con los pasos por título.
+        const capturasPorPaso = new Map<string, CapturasDePaso>();
         for (const adjunto of adjuntos) {
           if (!adjunto.name || !adjunto.path) continue;
           const esValidacion = adjunto.name.startsWith("agente-qa:validacion:") && !adjunto.name.endsWith(":esperado");
@@ -245,7 +309,10 @@ export function generarInformeHtml(reporte: ReporteCrudo, capturasCopiadas: stri
           if (!esValidacion && !esPaso) continue;
           const titulo = esValidacion ? adjunto.name.slice("agente-qa:validacion:".length) : adjunto.name.slice("agente-qa:paso:".length);
           const entrada = capturasPorPaso.get(titulo) ?? {};
-          entrada.img = path.basename(adjunto.path);
+          // `validar()` (dentro del paso) y `paso()` (al terminarlo) comparten título: se guardan
+          // las dos imágenes por separado para que la de página completa no pise la recuadrada.
+          if (esValidacion) entrada.imgValidacion = path.basename(adjunto.path);
+          else entrada.imgPaso = path.basename(adjunto.path);
           capturasPorPaso.set(titulo, entrada);
         }
         // Los `:esperado` van por `body` (texto en base64), no por `path`, así que quedan fuera del
@@ -262,17 +329,26 @@ export function generarInformeHtml(reporte: ReporteCrudo, capturasCopiadas: stri
           capturasPorPaso.set(titulo, entrada);
         }
 
+        // Cada paso consume su entrada al casar: dos pasos con el mismo título no repiten la imagen.
+        const pendientes = new Map(capturasPorPaso);
+        const pasosHtml = aplanarPasos(ultimo.steps).map((p) => {
+          const c = pendientes.get(p.titulo);
+          pendientes.delete(p.titulo);
+          return htmlPaso(p.titulo, p.duracionMs, c);
+        });
+        // Capturas cuyo título no casa con ningún paso (p.ej. un `validar()` fuera de `paso()`): no se pierden.
+        for (const [titulo, c] of pendientes) pasosHtml.push(htmlPaso(titulo, null, c));
+
+        const mensajeError = ultimo.error?.message ?? ultimo.errors?.[0]?.message;
+        const clase = estado === "verde" ? "ok" : estado === "omitido" ? "skip" : "fail";
+        const icono = estado === "verde" ? "✅" : estado === "omitido" ? "⏭️" : "❌";
         const bloque = `
-          <details class="test ${ok ? "ok" : "fail"}">
-            <summary>${ok ? "✅" : "❌"} ${escaparHtml(spec.title)}</summary>
+          <details class="test ${clase}">
+            <summary>${icono} ${escaparHtml(spec.title)}</summary>
+            ${estado === "rojo" && mensajeError ? `<pre class="error">${escaparHtml(mensajeError.replace(CODIGOS_ANSI, ""))}</pre>` : ""}
             ${fallo ? `<div class="fallo"><img src="capturas/${escaparHtml(path.basename(fallo.path ?? ""))}" alt="captura de fallo" /></div>` : ""}
             <ul class="pasos">
-              ${[...capturasPorPaso.entries()]
-                .map(
-                  ([titulo, c]) =>
-                    `<li><p>${escaparHtml(titulo)}${c.esperado ? ` — esperado: <code>${escaparHtml(c.esperado)}</code>` : ""}</p>${c.img ? `<img class="miniatura" src="capturas/${escaparHtml(c.img)}" alt="${escaparHtml(titulo)}" />` : ""}</li>`,
-                )
-                .join("")}
+              ${pasosHtml.join("")}
             </ul>
           </details>`;
         const lista = porFichero.get(fichero) ?? [];
@@ -298,9 +374,12 @@ export function generarInformeHtml(reporte: ReporteCrudo, capturasCopiadas: stri
 <style>
   body { font-family: system-ui, sans-serif; margin: 0; padding: 1.5rem; background: #0d1117; color: #e6edf3; }
   header { display: flex; gap: 1.5rem; align-items: baseline; margin-bottom: 1rem; }
-  header .verdes { color: #3fb950; } header .rojos { color: #f85149; }
+  header .verdes { color: #3fb950; } header .rojos { color: #f85149; } header .omitidos { color: #d29922; }
   details.test { border: 1px solid #30363d; border-radius: 6px; margin-bottom: 0.5rem; padding: 0.5rem 0.75rem; }
   details.test.fail { border-color: #f85149; }
+  details.test.skip { border-color: #d29922; }
+  pre.error { white-space: pre-wrap; color: #f85149; background: #161b22; padding: 0.5rem; border-radius: 4px; }
+  span.duracion { color: #8b949e; font-size: 0.85em; }
   summary { cursor: pointer; font-weight: 600; }
   ul.pasos { list-style: none; padding-left: 0.5rem; }
   img.miniatura { max-width: 160px; border-radius: 4px; cursor: zoom-in; display: block; margin-top: 0.25rem; }
@@ -313,8 +392,10 @@ export function generarInformeHtml(reporte: ReporteCrudo, capturasCopiadas: stri
 <body>
   <header>
     <h1>Informe agente-qa</h1>
+    <span>${totalVerdes + totalRojos + totalOmitidos} tests</span>
     <span class="verdes">${totalVerdes} verdes</span>
     <span class="rojos">${totalRojos} rojos</span>
+    <span class="omitidos">${totalOmitidos} omitidos</span>
     <span>${duracionS}s</span>
     <a class="enlace" href="playwright/index.html" target="_blank" rel="noopener">Informe de Playwright</a>
   </header>

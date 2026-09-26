@@ -109,6 +109,7 @@ function PanelEjecuciones({
               <span className="text-text-bright">{new Date(informe.fecha).toLocaleString()}</span>
               <span className="text-text-faint">
                 <span className="text-ok">{informe.verdes} verdes</span> · <span className="text-danger">{informe.rojos} rojos</span> ·{" "}
+                {informe.omitidos > 0 ? `${informe.omitidos} omitidos · ` : ""}
                 {(informe.duracionMs / 1000).toFixed(1)}s
               </span>
             </button>

@@ -175,6 +175,9 @@ export interface ResumenInforme {
   duracionMs: number;
   verdes: number;
   rojos: number;
+  /** Tests `skipped`, contados aparte de los rojos (igual que `server/reporter.ts`). Las
+   *  ejecuciones archivadas antes de este campo no lo traen en su `resumen.json`. */
+  omitidos: number;
   specs: string[];
 }
 
