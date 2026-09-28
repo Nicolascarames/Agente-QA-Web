@@ -51,7 +51,9 @@ function parsearEscenarios(contenido: string): EscenarioParseado[] {
 // (excluye `test.step(`/`test.describe(`, que nunca aparecen como substring "test(") -------------
 
 const TEST_INICIO_RE = /(?<!\.)\btest\(/g;
-const PASO_SPEC_RE = /test\.step\(\s*(['"`])(.*?)\1/g;
+// `paso(titulo, fn)` es el helper de la skill (plantillas/agente-qa.ts) que envuelve `test.step`
+// con el mismo título: los specs que genera el agente usan ese, no `test.step` directo.
+const PASO_SPEC_RE = /(?<![\w.$])(?:test\.step|paso)\(\s*(['"`])(.*?)\1/g;
 
 function bloquesDeTests(contenido: string): string[] {
   const indices: number[] = [];

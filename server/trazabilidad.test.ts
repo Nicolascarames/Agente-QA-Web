@@ -85,6 +85,26 @@ Escenario: añade un producto
     expect(cobertura.map((c) => c.estado)).toEqual(["cubierto"]);
   });
 
+  it("cubierto: el spec usa el helper paso() de la skill en vez de test.step()", async () => {
+    const specConPaso = `import { test, paso } from '../soporte/agente-qa';
+
+test.describe('añadir al carrito', () => {
+  test('añade un producto', async ({ page }) => {
+    await paso('Dado que estoy en el inventario', async () => {});
+    await paso("Cuando añado el producto al carrito", async () => {});
+    await paso(\`Entonces el contador muestra 1\`, async () => {});
+  });
+});
+`;
+    await writeFile(path.join(proyecto, "tests", "features", "anadir-al-carrito.feature"), FEATURE_ANADIR, "utf8");
+    await mkdir(path.join(proyecto, "tests", "specs"), { recursive: true });
+    await writeFile(path.join(proyecto, "tests", "specs", "anadir-al-carrito.spec.ts"), specConPaso, "utf8");
+
+    const cobertura = await cruzarTrazabilidad(proyecto);
+
+    expect(cobertura.map((c) => c.estado)).toEqual(["cubierto"]);
+  });
+
   it("desincronizado: el .spec.ts existe pero ningún bloque test( calza con los pasos actuales", async () => {
     await writeFile(path.join(proyecto, "tests", "features", "anadir-al-carrito.feature"), FEATURE_ANADIR, "utf8");
     await mkdir(path.join(proyecto, "tests", "specs"), { recursive: true });

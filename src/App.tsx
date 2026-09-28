@@ -120,7 +120,7 @@ export default function App() {
   // El indicador "● en curso" y el panel de consola global comparten el mismo hook: vive aquí
   // (nunca se desmonta al cambiar de pestaña).
   const corridaGlobal = useCorridaGlobal();
-  const { corridaActiva, eventos, marcarCorridaActiva, agregarMensajeUsuario } = corridaGlobal;
+  const { corridaActiva, eventos, marcarCorridaActiva, agregarMensajeUsuario, vaciarEventos } = corridaGlobal;
 
   // Una sola fila dentro de `<main>`: la pestaña activa a la izquierda y la consola pegada al
   // borde derecho, ambas del mismo alto (viewport menos la topbar) — así las secciones movibles
@@ -328,6 +328,7 @@ export default function App() {
                 eventos={eventos}
                 marcarCorridaActiva={marcarCorridaActiva}
                 agregarMensajeUsuario={agregarMensajeUsuario}
+                vaciarEventos={vaciarEventos}
                 borradorConsola={borradorConsola}
                 onBorradorAplicado={() => {
                   setBorradorConsola(null);

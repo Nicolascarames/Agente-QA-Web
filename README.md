@@ -78,9 +78,10 @@ ahí lo que quieres probar, en castellano y en una sola frase con todo lo necesa
 - **Puedes seguir la conversación**: un segundo mensaje recuerda lo que hablasteis antes, no hace
   falta repetir el contexto desde cero. Los botones de las preguntas también siguen en la misma
   conversación.
-- **Cuando cambies de tarea, pulsa «Nueva conversación»** (en la cabecera de la consola). Cada paso
-  del agente relee toda la conversación, así que arrastrar la anterior gasta límite de tu
-  suscripción sin aportar nada. Si el contexto pasa de 100k tokens, la consola te lo avisa.
+- **Cuando cambies de tarea, pulsa «Nueva conversación»** (bajo la caja de texto de la consola). Cada
+  paso del agente relee toda la conversación, así que arrastrar la anterior gasta límite de tu
+  suscripción sin aportar nada. Si el contexto pasa de 100k tokens, la consola te lo avisa. El botón
+  vacía el chat entero y el agente empieza de cero.
 - **Cada petición tiene un tope de gasto** (2 $ por defecto). Si se alcanza, el agente para y la
   consola lo dice. Lo cambias en Configuración → Modelo y gasto, igual que el modelo (Sonnet por
   defecto; Opus solo para casos difíciles, porque consume varias veces más).
@@ -100,7 +101,7 @@ listas se refrescan solas en cuanto el agente termina un turno, no hace falta re
 | **Empezar** | Si te falta algo por configurar (sesión, Playwright, URL, credenciales) y cómo se arregla; tus tres primeros pasos, con un botón que escribe la petición de ejemplo en la consola; y qué hace cada pestaña |
 | **Dashboard** | Escenarios cubiertos, verdes, rojos, última ejecución, coste acumulado, elementos frágiles |
 | **Redactar** | Los `.feature` generados, editables a mano, con badge de cobertura por fichero. Si un fichero sale **no cubierto** o **desincronizado**, encima del editor aparece un botón («Generar el test» / «Sincronizar el spec») que manda la petición al agente por la consola |
-| **Generar** | Los `.page.ts` y `.spec.ts`, contenido completo editable, con el visor de diff debajo (Aceptar/Descartar) cuando hay cambios pendientes frente al commit. Si el proyecto no tiene git propio (o vive en una carpeta ignorada de otro repo, como `pruebas/babia`), en vez del diff sale un aviso gris: haz `git init` en la carpeta del proyecto para verlo |
+| **Generar** | Los `.page.ts` y `.spec.ts`, contenido completo editable, con el visor de diff debajo (Aceptar/Descartar) cuando hay cambios pendientes frente al commit. Si el proyecto no tiene git propio (o vive en una carpeta ignorada por otro repo), en vez del diff sale un aviso gris: haz `git init` en la carpeta del proyecto para verlo |
 | **Ejecutar** | La lista de tests (título = fichero `.spec.ts`), **todos los de `tests/specs/`**: los que nunca se han ejecutado salen con ○ «sin ejecutar» hasta que les das a ▶. Los resultados se guardan en `agente-qa.resultados.json` (raíz del proyecto), así que no se pierden aunque ejecutes un solo spec o el agente corra Playwright a su manera. Botón ▶ por fila y un "▶ Ejecutar todos" arriba para lanzar Playwright de verdad desde la web, viendo la salida aparecer línea a línea mientras corre; el detalle junta los pasos del Gherkin con el código del spec, en la misma pestaña. Además: casillas para elegir qué capturas sacar en esa ejecución, un aviso si el test no saca capturas (con botón «Añadir capturas») y «Ver informe» (ver [Capturas e informes](#capturas-e-informes)) |
 | **Reparar** | Solo los tests en rojo: veredicto sugerido (fallo del test o de la app), el `.spec.ts` completo editable, y el diff de corrección propuesto (Aplicar y reejecutar/Rechazar) |
 | **Reports** | Historial de ejecuciones, fallos agrupados por causa, tests inestables, pass rate; y la sección **Ejecuciones**, con el informe visual de cada una |
@@ -178,11 +179,15 @@ npm run empezar
 ```
 
 `npm run empezar` repite los mismos pasos 1–3 del asistente de arriba (Node, sesión, binario del
-SDK), compila si hace falta y te deja elegir `pruebas/sauce/` (repo de pruebas contra
-[SauceDemo](https://www.saucedemo.com), ya montado, fuera de git) como proyecto de tests antes de
-levantar **dos procesos**: Vite (cliente, `http://localhost:5173`) y Fastify (servidor,
-`http://localhost:3939`, con `/api/*` proxeado desde Vite). Abre `http://localhost:5173` en el
-navegador. Los dos procesos escriben a la misma consola sin prefijo (`[vite]`/`[server]`): si ves
+SDK), compila si hace falta y levanta **dos procesos**: Vite (cliente, `http://localhost:5173`) y
+Fastify (servidor, `http://localhost:3939`, con `/api/*` proxeado desde Vite). Abre
+`http://localhost:5173` en el navegador.
+
+Para desarrollar contra la aplicación de otro repo en vez de contra este mismo:
+
+```bash
+npm run dev -- --project C:\ruta\al\otro\repo
+``` Los dos procesos escriben a la misma consola sin prefijo (`[vite]`/`[server]`): si ves
 solo el arranque de Vite y nada del servidor, tarda unos segundos en aparecer, es normal.
 
 **Si la página carga pero todo lo que empieza por `/api/` falla** (Dashboard vacío, consola sin

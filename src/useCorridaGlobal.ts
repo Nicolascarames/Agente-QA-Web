@@ -22,6 +22,8 @@ export interface EstadoCorridaGlobal {
   eventos: EventoNdjson[];
   marcarCorridaActiva: (etiqueta: string | null) => void;
   agregarMensajeUsuario: (texto: string) => void;
+  /** «Nueva conversación»: vacía el chat entero (y con él el aviso de tokens de contexto). */
+  vaciarEventos: () => void;
 }
 
 /**
@@ -97,5 +99,9 @@ export function useCorridaGlobal(): EstadoCorridaGlobal {
     );
   }, []);
 
-  return { corridaActiva, eventos: estado.eventos, marcarCorridaActiva, agregarMensajeUsuario };
+  const vaciarEventos = useCallback(() => {
+    setEstado(ESTADO_CONSOLA_INICIAL);
+  }, []);
+
+  return { corridaActiva, eventos: estado.eventos, marcarCorridaActiva, agregarMensajeUsuario, vaciarEventos };
 }

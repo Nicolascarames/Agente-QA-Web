@@ -332,6 +332,9 @@ export interface ConsolaGlobalProps {
   eventos: EventoNdjson[];
   marcarCorridaActiva: (etiqueta: string | null) => void;
   agregarMensajeUsuario: (texto: string) => void;
+  /** Vacía el historial de eventos (vive en `useCorridaGlobal`). Sin pasarla, «Nueva conversación»
+   *  solo corta el `resume` y deja el chat a la vista. */
+  vaciarEventos?: () => void;
   /** Empezar (Bloque «primeros pasos»): texto que otra pestaña quiere dejar escrito aquí sin
    *  enviarlo. `null` cuando no hay nada pendiente — App.tsx es quien lo posee, esta consola no
    *  conoce a quien lo pide. */
@@ -352,6 +355,7 @@ export function ConsolaGlobal({
   eventos,
   marcarCorridaActiva,
   agregarMensajeUsuario,
+  vaciarEventos,
   borradorConsola,
   onBorradorAplicado,
   onAbrirPestana,
@@ -360,10 +364,6 @@ export function ConsolaGlobal({
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [preguntaPendiente, setPreguntaPendiente] = useState<PreguntaAgente | null>(null);
-  // Líneas propias de la consola (no vienen del agente): hoy solo el aviso de "Nueva conversación".
-  // `eventos` es de quien la posee (`useCorridaGlobal`, vive en App.tsx) y no expone un reset — se
-  // acumula aparte y se pinta detrás de la lista, en vez de fingir un evento que nadie mandó.
-  const [lineasInfo, setLineasInfo] = useState<string[]>([]);
   // Opción con el foco del teclado en la pregunta activa: arranca en la primera (la que el propio
   // modelo suele poner primero suele ser la recomendada, ver convención de AskUserQuestion).
   const [opcionEnfocada, setOpcionEnfocada] = useState(0);
@@ -524,13 +524,15 @@ export function ConsolaGlobal({
     void enviar().then(() => interrumpirCorrida().catch(manejarError));
   };
 
-  // Corta `resume`: el próximo comando arranca sin el contexto acumulado hasta ahora. Deshabilitado
-  // con una corrida en marcha — pararla es una decisión aparte, no algo que este botón deba decidir.
+  // Corta `resume` y vacía el chat (con él desaparece el aviso de tokens de contexto, que se calcula
+  // de `eventos`): el próximo comando arranca de cero. Deshabilitado con una corrida en marcha —
+  // pararla es una decisión aparte, no algo que este botón deba decidir.
   const iniciarConversacionNueva = () => {
     setError(null);
     nuevaConversacion()
       .then(() => {
-        setLineasInfo((actual) => [...actual, "Conversación nueva: el próximo mensaje empieza sin el contexto anterior."]);
+        vaciarEventos?.();
+        setPreguntaPendiente(null);
       })
       .catch(manejarError);
   };
@@ -564,11 +566,6 @@ export function ConsolaGlobal({
               });
             })()
           )}
-          {lineasInfo.map((linea, indice) => (
-            <li key={`info-${String(indice)}`} className="text-2xs text-text-faint">
-              {linea}
-            </li>
-          ))}
         </ul>
         {corridaActiva &&
           (() => {

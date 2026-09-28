@@ -1,21 +1,23 @@
 # PRÓXIMOS PASOS — Agente-QA-Web
 
-Actualizado: 2026-09-26 (publicado `agente-qa@1.0.0` en npm y Release `v1.0.0`; quedan pasos manuales
-de la cuenta de npm para mañana, arriba del todo)
+Actualizado: 2026-09-28 (hechos los pasos manuales de npm: trusted publisher, tokens revocados,
+`@agente-qa/core` obsoleto)
 
 Cola priorizada. **Una tarea = una línea.** El detalle vive en la spec.
 
 Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`](docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md)
 
-## Para mañana (2026-09-27) — pasos manuales en npmjs.com
+## Siguiente
 
-- [ ] **Configurar el trusted publisher** de `agente-qa`: página del paquete → Settings → Trusted
-      Publisher → GitHub Actions, organización `Nicolascarames`, repo `Agente-QA-Web`, workflow
-      `publicar.yml`. **Sin esto, el próximo tag falla en `npm publish`** (la 1.0.0 fue a mano).
-- [ ] **Revocar los tres tokens de npm** creados el 2026-09-26 para publicar la 1.0.0 (quedaron
-      escritos en la conversación). Con el trusted publisher no hace falta ningún token.
-- [ ] **Marcar como obsoleto `@agente-qa/core`** (resto del monorepo antiguo `Agente_QA`, `0.1.6`):
-      `npm deprecate @agente-qa/core "Sustituido por agente-qa"`. Opcional; decide el usuario.
+- [ ] **Primer tag publicado por CI** (`v1.0.1` o la que toque): confirmará de punta a punta que el
+      trusted publisher funciona. Hasta entonces no está probado.
+
+### Cerradas 2026-09-28 — pasos manuales en npmjs.com
+
+- [x] Trusted publisher de `agente-qa` configurado (GitHub Actions, `Nicolascarames/Agente-QA-Web`,
+      `publicar.yml`, sin environment, permiso de publicar).
+- [x] Revocados los tres tokens de npm del 2026-09-26.
+- [x] `@agente-qa/core` marcado como obsoleto («Sustituido por agente-qa»).
 
 ## Dónde lo dejamos (2026-09-14)
 
@@ -213,9 +215,9 @@ Lo demás de la lista es deuda menor, ninguna bloquea nada.
       que avise ni que reinstale sola. Por ahora, tocar la skill y luego correr
       `agente-qa instalar` en cualquier proyecto que ya la tuviera. Sin decidir si merece un aviso
       automático (p.ej. el `doctor` comparando hashes) o si con documentarlo basta. Detalle en
-      `ESTADO.md`. **Pendiente ya: reinstalar en `pruebas/sauce` y `pruebas/babia` (y cualquier repo
-      que la tuviera) — `SKILL.md` cambió con las capturas el 2026-09-26.**
-- [ ] **Comprobar un ciclo completo con Sonnet contra `pruebas/babia`** y comparar coste y turnos con
+      `ESTADO.md`. (`pruebas/` se retira del repo el 2026-09-28: las pruebas pasan a un repo aparte
+      instalado desde npm.)
+- [ ] **Comprobar un ciclo completo con Sonnet contra un repo real** y comparar coste y turnos con
       los 8 $ / 90 turnos del 2026-09-25 (Opus). Si falla en flujos largos, subir a Opus solo esa
       petición desde Configuración, no cambiar el defecto.
 
@@ -225,7 +227,7 @@ Lo demás de la lista es deuda menor, ninguna bloquea nada.
       o que `playwright.config.ts` las lea de `agente-qa.credenciales.json`.
 
 - [ ] **Falta la prueba MANUAL de la interfaz de capturas en el navegador** (Configuración, Ejecutar
-      «Añadir capturas»/«Ver informe», Reports con iframe) contra `pruebas/sauce`: el pipeline de
+      «Añadir capturas»/«Ver informe», Reports con iframe) contra un repo real: el pipeline de
       Playwright/archivado está verificado en vivo, la UI solo por typecheck/lint/revisión.
 - [ ] **Comprobar con UNA ejecución real del agente** que antepone `AGENTE_QA_CAPTURAS=…` al comando:
       las capturas de Configuración le llegan solo si el modelo obedece el `system prompt`.
@@ -253,6 +255,11 @@ Lo demás de la lista es deuda menor, ninguna bloquea nada.
       [`docs/superpowers/specs/2026-09-26-capturas-e-informe-visual.md`](docs/superpowers/specs/2026-09-26-capturas-e-informe-visual.md);
       plan: [`docs/superpowers/plans/2026-09-26-capturas-e-informe-visual.md`](docs/superpowers/plans/2026-09-26-capturas-e-informe-visual.md).
       Detalle en `ESTADO.md`.
+
+### Cerradas 2026-09-28
+
+- [x] Redactar marcaba «desincronizado» todo spec generado: `server/trazabilidad.ts` solo leía `test.step(` y la skill escribe `paso(`. Ahora reconoce ambos.
+- [x] «Nueva conversación» vacía el chat de la consola (y con él el aviso de tokens de contexto); antes solo añadía una línea.
 
 ### Cerradas 2026-09-25
 
