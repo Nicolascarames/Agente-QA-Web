@@ -1,6 +1,6 @@
 # ESTADO — Agente-QA-Web
 
-Actualizado: 2026-09-26 (publicado `agente-qa@1.0.0` en npm y Release `v1.0.0` en GitHub; CI y publicación por tag en `.github/workflows/`).
+Actualizado: 2026-09-28 (`agente-qa@1.0.1` publicado por CI con trusted publishing; Release `v1.0.1` en GitHub).
 
 ## Qué es esto
 
@@ -28,10 +28,10 @@ y el usuario acepta o rechaza. Quien juzga es Playwright, ejecutando el test.
 ## Qué funciona hoy
 
 **Los nueve bloques del plan están cerrados**, y también la instalación guiada. **Publicado en npm**
-como `agente-qa@1.0.0` (Release `v1.0.0` en GitHub); queda la deuda anotada en `PROXIMOS-PASOS.md`.
+como `agente-qa@1.0.1` (Release `v1.0.1` en GitHub, la primera publicada por CI); queda la deuda anotada en `PROXIMOS-PASOS.md`.
 **Publicación**: `ci.yml` verifica cada push/PR a `main`; `publicar.yml`, con cada tag `v*`, comprueba
 que el tag coincide con `package.json`, verifica, publica por trusted publishing (salta la publicación
-si esa versión ya está en npm, caso de la 1.0.0, que se publicó a mano) y crea la Release. `main`
+si esa versión ya está en npm, caso de la 1.0.0, que se publicó a mano; la 1.0.1 ya salió así) y crea la Release. `main`
 tiene regla de PR, pero la cuenta del dueño la salta al empujar.
 `npx agente-qa` (o `node bin/agente-qa.mjs` en local) arranca sobre `process.cwd()`. La primera vez
 —cuando no existe `agente-qa.config.json`— corre el asistente, que comprueba Node, sesión de Claude,

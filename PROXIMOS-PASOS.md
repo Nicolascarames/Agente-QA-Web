@@ -9,8 +9,7 @@ Plan vigente: [`docs/superpowers/specs/2026-09-11-de-la-frase-al-test-verde.md`]
 
 ## Siguiente
 
-- [ ] **Primer tag publicado por CI** (`v1.0.1` o la que toque): confirmará de punta a punta que el
-      trusted publisher funciona. Hasta entonces no está probado.
+- [ ] (Cola vacía: lo próximo sale del uso real.)
 
 ### Cerradas 2026-09-28 — pasos manuales en npmjs.com
 
@@ -258,6 +257,7 @@ Lo demás de la lista es deuda menor, ninguna bloquea nada.
 
 ### Cerradas 2026-09-28
 
+- [x] Primer tag publicado por CI: `v1.0.1` subió a npm por trusted publishing (con provenance) y creó su Release. Probado de punta a punta.
 - [x] Redactar marcaba «desincronizado» todo spec generado: `server/trazabilidad.ts` solo leía `test.step(` y la skill escribe `paso(`. Ahora reconoce ambos.
 - [x] «Nueva conversación» vacía el chat de la consola (y con él el aviso de tokens de contexto); antes solo añadía una línea.
 
