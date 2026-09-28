@@ -12,6 +12,7 @@ function depsBase(overrides: Partial<DependenciasAsistente> = {}): Partial<Depen
     confirmar: () => Promise.resolve(false),
     ejecutar: () => Promise.resolve(true),
     existeDirectorio: () => Promise.resolve(false),
+    existeFichero: () => Promise.resolve(true),
     leerNombrePackageJson: () => Promise.resolve("un-repo-cualquiera"),
     doctor: {
       ejecutarDoctor: () => Promise.resolve({ ok: true, comprobaciones: [{ nombre: "Versión de Node", ...OK }] }),
@@ -52,10 +53,10 @@ describe("ejecutarAsistente — detección de rama", () => {
     expect(resultado.rama).toBe("usuario");
   });
 
-  it("rama B (desarrollo) cuando el package.json del cwd es qa-web-agent", async () => {
+  it("rama B (desarrollo) cuando el package.json del cwd es agente-qa", async () => {
     const resultado = await ejecutarAsistente(
       "C:/GitHub/Agente-QA-Web",
-      depsBase({ esTty: false, leerNombrePackageJson: () => Promise.resolve("qa-web-agent") }),
+      depsBase({ esTty: false, leerNombrePackageJson: () => Promise.resolve("agente-qa") }),
     );
     expect(resultado.rama).toBe("desarrollo");
   });
@@ -117,6 +118,27 @@ describe("ejecutarAsistente — rama A con TTY", () => {
     expect(lineas.some((l) => l.includes("✅ ya estaba: https://ejemplo.test"))).toBe(true);
     expect(resultado.continuar).toBe(true);
     expect(resultado.codigoSalida).toBe(0);
+  });
+
+  it("sin package.json en el cwd, crea uno antes de instalar Playwright (si no, npm lo instala en el repo padre)", async () => {
+    const mandatos: string[] = [];
+    await ejecutarAsistente(
+      "C:/repo-sin-package-json",
+      depsBase({
+        confirmar: (mensaje) => Promise.resolve(mensaje.includes("Playwright")),
+        existeFichero: () => Promise.resolve(false),
+        ejecutar: (mandato, args) => {
+          mandatos.push(`${mandato} ${args.join(" ")}`);
+          return Promise.resolve(true);
+        },
+        doctor: {
+          ...(depsBase().doctor as DependenciasAsistente["doctor"]),
+          comprobarPlaywright: () => Promise.resolve({ nombre: "Playwright en el proyecto", ok: false, mensaje: "falta instalar" }),
+        },
+      }),
+    );
+
+    expect(mandatos.slice(0, 2)).toEqual(["npm init -y", "npm i -D @playwright/test"]);
   });
 
   it("un 'no' en un paso opcional (Playwright) no aborta los siguientes pasos", async () => {

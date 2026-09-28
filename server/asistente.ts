@@ -15,10 +15,9 @@ import { configRaizPath, credencialesPath, escribirConfigRaiz, escribirCredencia
 import type { ConfigRaiz, ResultadoComprobacion } from "../shared/tipos.js";
 
 /** Nombre en `package.json` de este mismo paquete (Pieza 1). Si el repo destino lo comparte, el
- *  asistente sabe que trabaja sobre su propio código y toma la rama B — hoy es literalmente el
- *  criterio que fija la spec ("hoy es qa-web-agent"); si el paquete se renombra otra vez, este
- *  literal se actualiza con él. */
-const NOMBRE_PROPIO = "qa-web-agent";
+ *  asistente sabe que trabaja sobre su propio código y toma la rama B. Si el paquete se renombra
+ *  otra vez, este literal se actualiza con él (ya pasó: era `qa-web-agent`). */
+const NOMBRE_PROPIO = "agente-qa";
 
 export type Rama = "usuario" | "desarrollo";
 
@@ -39,6 +38,7 @@ export interface DependenciasAsistente {
   esTty: boolean;
   ejecutar: (mandato: string, args: string[], cwd: string) => Promise<boolean>;
   existeDirectorio: (ruta: string) => Promise<boolean>;
+  existeFichero: (ruta: string) => Promise<boolean>;
   leerNombrePackageJson: (rootDir: string) => Promise<string | null>;
   doctor: {
     ejecutarDoctor: typeof ejecutarDoctor;
@@ -90,6 +90,14 @@ async function existeDirectorio(ruta: string): Promise<boolean> {
   }
 }
 
+async function existeFichero(ruta: string): Promise<boolean> {
+  try {
+    return (await fs.stat(ruta)).isFile();
+  } catch {
+    return false;
+  }
+}
+
 async function leerNombrePackageJson(rootDir: string): Promise<string | null> {
   try {
     const raw = JSON.parse(await fs.readFile(path.join(rootDir, "package.json"), "utf8")) as { name?: unknown };
@@ -109,6 +117,7 @@ function dependenciasPorDefecto(): DependenciasAsistente {
     esTty: Boolean(process.stdin.isTTY),
     ejecutar: ejecutarComando,
     existeDirectorio,
+    existeFichero,
     leerNombrePackageJson,
     doctor: { ejecutarDoctor, comprobarNode, comprobarCredenciales, comprobarBinarioSdk, comprobarPlaywright },
     proyecto: { leerConfigRaiz, escribirConfigRaiz, leerCredenciales, escribirCredenciales },
@@ -162,6 +171,11 @@ async function ejecutarRamaA(cwd: string, deps: DependenciasAsistente): Promise<
   if (playwright.ok) {
     escribir(`✅ ya estaba: ${playwright.mensaje}`);
   } else if (await confirmar("¿Instalo Playwright en este repo?")) {
+    // Sin package.json propio, `npm i` sube al primero que encuentra y lo instala en el repo padre
+    // (visto en uso real): el doctor, que mira `cwd/node_modules`, seguiría diciendo que falta.
+    if (!(await deps.existeFichero(path.join(cwd, "package.json")))) {
+      await deps.ejecutar("npm", ["init", "-y"], cwd);
+    }
     await deps.ejecutar("npm", ["i", "-D", "@playwright/test"], cwd);
     await deps.ejecutar("npx", ["playwright", "install"], cwd);
   } else {

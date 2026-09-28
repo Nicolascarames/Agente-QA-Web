@@ -37,7 +37,7 @@ export function elegirCartel(env, argv, raizPaquete) {
   }
 
   if (env.npm_config_global === "true") {
-    return "✅ Instalado. Ve al repo de tu web y ejecuta: qa-web-agent";
+    return "✅ Instalado. Ve al repo de tu web y ejecuta: agente-qa";
   }
 
   return null;

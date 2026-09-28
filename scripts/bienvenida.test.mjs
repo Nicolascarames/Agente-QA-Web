@@ -2,7 +2,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { elegirCartel } from "./bienvenida.mjs";
 
-const RAIZ = path.resolve("C:/paquete/qa-web-agent");
+const RAIZ = path.resolve("C:/paquete/agente-qa");
 
 describe("elegirCartel", () => {
   it("--dev con INIT_CWD igual a la raíz del paquete devuelve el cartel de desarrollo", () => {
@@ -20,7 +20,7 @@ describe("elegirCartel", () => {
   it("sin --dev y con npm_config_global=true devuelve el cartel de instalación global", () => {
     const cartel = elegirCartel({ npm_config_global: "true" }, [], RAIZ);
 
-    expect(cartel).toContain("qa-web-agent");
+    expect(cartel).toContain("ejecuta: agente-qa");
   });
 
   it("--dev con un INIT_CWD que no es la raíz del paquete no imprime nada", () => {
